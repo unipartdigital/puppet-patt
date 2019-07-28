@@ -91,7 +91,7 @@ class ssh_client:
     """
     def new_channel(self):
         if not self.client:
-            self.open()
+            self.open(timeout=1)
         return self.client._transport.open_session()
 
     """
