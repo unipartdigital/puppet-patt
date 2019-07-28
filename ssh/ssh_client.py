@@ -2,6 +2,15 @@
 ssh_client a high level paramiko http://www.paramiko.org/ wrapper
 
 ref: https://github.com/paramiko/paramiko/blob/master/demos/demo_simple.py
+
+
+exec command return a dict
+        r['stdin']  : file type (w)
+        r['stdout'] : file type (r)
+        r['stderr'] : file type (r)
+        r['pid']    : int
+        r['status'] : int
+
 """
 
 import base64
@@ -43,14 +52,14 @@ class ssh_client:
         )  # enable "gssapi-kex" key exchange, if supported by your python installation
 
 
-    def open(self):
+    def open(self, timeout=None):
         try:
             self.client = paramiko.SSHClient()
             self.client.load_system_host_keys()
             self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
             print("*** Connecting...")
             if not self.UseGSSAPI and not self.DoGSSAPIKeyExchange:
-                self.client.connect(self.hostname, self.port, self.username, self.password)
+                self.client.connect(self.hostname, self.port, self.username, self.password, timeout=timeout)
             else:
                 try:
                     self.client.connect(
@@ -59,9 +68,14 @@ class ssh_client:
                         self.username,
                         gss_auth=UseGSSAPI,
                         gss_kex=DoGSSAPIKeyExchange,
+                        timeout=timeout
                     )
                 except Exception:
-                    self.client.connect(self.hostname, self.port, self.username, self.password)
+                    self.client.connect(self.hostname,
+                                        self.port,
+                                        self.username,
+                                        self.password,
+                                        timeout=timeout)
         except Exception as e:
             print("*** Caught exception: %s: %s" % (e.__class__, e))
             traceback.print_exc()
@@ -100,3 +114,38 @@ class ssh_client:
         c.get_pty(term, int (columns), int (rows), 0, 0)
         c.invoke_shell()
         interactive.interactive_shell(c)
+
+    """
+    exec command
+    """
+    def exec (self, cmd, bufsize=-1):
+        cmd = 'echo $$ && exec ' + cmd
+        r = {}
+        try:
+            c = self.new_channel()
+            c.exec_command(cmd)
+            r['stdin'] = c.makefile_stdin("wb", bufsize)
+            r['stdout'] = c.makefile("r", bufsize)
+            r['stderr'] = c.makefile_stderr("r", bufsize)
+            r['pid'] = int(r['stdout'].readline())
+            r['status'] = c.recv_exit_status()
+            return r
+        except:
+            raise
+
+    """
+    exec command on channel
+    """
+    def exec_channel (self, c,  cmd, bufsize=-1):
+        r = {}
+        try:
+            cmd = 'echo $$ && exec ' + cmd
+            c.exec_command(cmd)
+            r['stdin'] = c.makefile_stdin("wb", bufsize)
+            r['stdout'] = c.makefile("r", bufsize)
+            r['stderr'] = c.makefile_stderr("r", bufsize)
+            r['pid'] = int(r['stdout'].readline())
+            r['status'] = c.recv_exit_status()
+            return r
+        except:
+            raise
