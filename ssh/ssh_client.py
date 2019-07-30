@@ -53,6 +53,9 @@ class ssh_client:
 
 
     def open(self, timeout=None):
+        if self.client:
+            if self.client._transport is not None:
+                return
         try:
             self.client = paramiko.SSHClient()
             self.client.load_system_host_keys()
@@ -91,7 +94,7 @@ class ssh_client:
     """
     def new_channel(self):
         if not self.client:
-            self.open(timeout=1)
+            self.open()
         return self.client._transport.open_session()
 
     """
@@ -149,3 +152,25 @@ class ssh_client:
             return r
         except:
             raise
+
+    """
+    send a single file using mktemp on target
+    mode set the mode in remote file as os.chmod()
+    """
+    def mktemp_send_file (self, src, mode=None):
+        tmp_dir = None
+        try:
+            r = self.exec ('mktemp -d')
+            if r['status'] == 0:
+                tmp_dir = r['stdout'].read().decode().strip()
+                sftp = self.new_sftp()
+                src = os.path.abspath (src)
+                file_name = os.path.basename (src)
+                dst = tmp_dir + '/' + file_name
+                sftp.put (src, dst)
+                if mode:
+                    sftp.chmod (dst, mode)
+                return dst
+        except:
+            raise
+            return None
