@@ -3,7 +3,10 @@
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
-trap 'echo "$0 FAILED on line $LINENO!" | tee $srcdir/$(basename $0).log' ERR
+trap '{echo "$0 FAILED on line $LINENO!; rm -f $0}" | tee $srcdir/$(basename $0).log' ERR
+# clean up on exit
+#trap "{ rm -f $0; }" EXIT
+
 # Catch unitialized variables:
 set -u
 P1=${1:-1}
@@ -32,14 +35,11 @@ init() {
     sudo yum install -y etcd
 
     # ETCD_LISTEN_CLIENT_URLS all
-    sed -i -e "s|^[[:space:]]*\(ETCD_LISTEN_CLIENT_URLS=\).*|\1\"http://0.0.0.0:2379,http://[::]:2379\"|" \
-        "${ETCD_CONF}"
+    sed -i -e "s|^[[:space:]]*\(ETCD_LISTEN_CLIENT_URLS=\).*|\1\"http://0.0.0.0:2379,http://[::]:2379\"|" "${ETCD_CONF}"
     # ETCD_LISTEN_PEER_URLS
-    sed -i -e "s|^#*\(ETCD_LISTEN_PEER_URLS=\).*|\1|\"http://0.0.0.0:2380,http://[::]:2380\"|" \
-        "${ETCD_CONF}"
+    sed -i -e "s|^#*\(ETCD_LISTEN_PEER_URLS=\).*|\1\"http://0.0.0.0:2380,http://[::]:2380\"|"  "${ETCD_CONF}"
     # ETCD_INITIAL_CLUSTER_TOKEN
-    sed -i -e "s|^#*\(ETCD_INITIAL_CLUSTER_TOKEN=\).*|\1\"${cluster_name}\"|" \
-        "${ETCD_CONF}"
+    sed -i -e "s|^#*\(ETCD_INITIAL_CLUSTER_TOKEN=\).*|\1\"${cluster_name}\"|" "${ETCD_CONF}"
     # ETCD_INITIAL_CLUSTER_STATE
     sed -i -e "s|^#*\(ETCD_INITIAL_CLUSTER_STATE=\).*|\1\"new\"|" "${ETCD_CONF}"
 
