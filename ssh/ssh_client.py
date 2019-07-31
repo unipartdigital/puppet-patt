@@ -28,7 +28,17 @@ try:
 except ImportError:
     from . import interactive
 
+
 class ssh_client:
+
+    class CmdResp:
+        def __init__(self, hostname=None):
+            self.hostname = ""
+            self.stdin = -1
+            self.stdout = -1
+            self.stderr = -1
+            self.pid = -1
+            self.status = -1
 
     """
     mandatory param:
@@ -60,7 +70,7 @@ class ssh_client:
             self.client = paramiko.SSHClient()
             self.client.load_system_host_keys()
             self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
-            print("*** Connecting...")
+            print("Connecting:{}".format(self.hostname))
             if not self.UseGSSAPI and not self.DoGSSAPIKeyExchange:
                 self.client.connect(self.hostname, self.port, self.username, self.password, timeout=timeout)
             else:
@@ -123,15 +133,18 @@ class ssh_client:
     """
     def exec (self, cmd, bufsize=-1):
         cmd = 'echo $$ && exec ' + cmd
-        r = {}
+        # print ("exec {} ".format(cmd))
         try:
             c = self.new_channel()
             c.exec_command(cmd)
-            r['stdin'] = c.makefile_stdin("wb", bufsize)
-            r['stdout'] = c.makefile("r", bufsize)
-            r['stderr'] = c.makefile_stderr("r", bufsize)
-            r['pid'] = int(r['stdout'].readline())
-            r['status'] = c.recv_exit_status()
+            r = ssh_client.CmdResp()
+            r.hostname = self.hostname
+            r.stdin = c.makefile_stdin("wb", bufsize)
+            r.stdout = c.makefile("r", bufsize)
+            r.stderr = c.makefile_stderr("r", bufsize)
+            r.pid = int(r.stdout.readline())
+            r.status = c.recv_exit_status()
+            # print ("r : {}".format(r))
             return r
         except:
             raise
@@ -140,15 +153,16 @@ class ssh_client:
     exec command on channel
     """
     def exec_channel (self, c,  cmd, bufsize=-1):
-        r = {}
         try:
             cmd = 'echo $$ && exec ' + cmd
             c.exec_command(cmd)
-            r['stdin'] = c.makefile_stdin("wb", bufsize)
-            r['stdout'] = c.makefile("r", bufsize)
-            r['stderr'] = c.makefile_stderr("r", bufsize)
-            r['pid'] = int(r['stdout'].readline())
-            r['status'] = c.recv_exit_status()
+            r = ssh_client.CmdResp()
+            r.hostname = self.hostname
+            r.stdin = c.makefile_stdin("wb", bufsize)
+            r.stdout = c.makefile("r", bufsize)
+            r.stderr = c.makefile_stderr("r", bufsize)
+            r.pid = int(r.stdout.readline())
+            r.status = c.recv_exit_status()
             return r
         except:
             raise
@@ -160,9 +174,10 @@ class ssh_client:
     def mktemp_send_file (self, src, mode=None):
         tmp_dir = None
         try:
+            r = ssh_client.CmdResp()
             r = self.exec ('mktemp -d')
-            if r['status'] == 0:
-                tmp_dir = r['stdout'].read().decode().strip()
+            if r.status == 0:
+                tmp_dir = r.stdout.read().decode().strip()
                 sftp = self.new_sftp()
                 src = os.path.abspath (src)
                 file_name = os.path.basename (src)
