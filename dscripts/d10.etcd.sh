@@ -1,15 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
 trap '{echo "$0 FAILED on line $LINENO!; rm -f $0}" | tee $srcdir/$(basename $0).log' ERR
 # clean up on exit
-#trap "{ rm -f $0; }" EXIT
+trap "{ rm -f $0; }" EXIT
 
 # Catch unitialized variables:
 set -u
-P1=${1:-1}
 
 #
 ETCD_CONF="/etc/etcd/etcd.conf"
@@ -19,7 +18,7 @@ ETCD_CONF="/etc/etcd/etcd.conf"
 # 1: cluster_name <string>
 # 2,n cluster_nodes <machineID | HostID>:<Hostname | IPV4 | [IPV6]>
 init() {
-    cluster_name=$1
+    cluster_name="$1"
     shift
     cluster_nodes=($@)
     (
@@ -49,7 +48,7 @@ init() {
 
     # ETCD_INITIAL_CLUSTER
     initial_cluster=""
-    for n in ${cluster_nodes[@]}; do
+    for n in ${cluster_nodes[@]+"${cluster_nodes[@]}"}; do
         ID=$(echo ${n} | cut -d ':' -f 1)
         HT=$(echo ${n} | cut -d ':' -f 2)
         initial_cluster+="${ID}=http://${HT}:2380,"
