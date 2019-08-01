@@ -63,7 +63,7 @@ init() {
     for n in ${cluster_nodes}; do
         ID=$(echo ${n} | cut -d '_' -f 1)
         IP=$(echo ${n} | cut -d '_' -f 2)
-        etcd_initial_cluster="${etcd_initial_cluster},${ID}=http://[${IP}]:2380"
+        etcd_initial_cluster="${etcd_initial_cluster},${ID}=https://[${IP}]:2380"
     done
     etcd_initial_cluster=$(echo ${etcd_initial_cluster} | sed -e 's|^,||')
 
@@ -74,14 +74,30 @@ init() {
     cat <<EOF > /etc/etcd/etcd.conf
 #[Member]
 ETCD_DATA_DIR="${ETCD_DATA_DIR}"
-ETCD_LISTEN_PEER_URLS="http://[::]:2380"
+ETCD_LISTEN_PEER_URLS="https://[::]:2380"
 ETCD_LISTEN_CLIENT_URLS="http://[::]:2379"
 ETCD_NAME="${self_id}"
 #[Clustering]
-ETCD_INITIAL_ADVERTISE_PEER_URLS="http://[${self_ip}]:2380"
+ETCD_INITIAL_ADVERTISE_PEER_URLS="https://[${self_ip}]:2380"
 ETCD_ADVERTISE_CLIENT_URLS="http://[${self_ip}]:2379"
 ETCD_INITIAL_CLUSTER="${etcd_initial_cluster}"
 ETCD_INITIAL_CLUSTER_TOKEN="${cluster_name}"
+#[Security]
+#ETCD_CERT_FILE=""
+#ETCD_KEY_FILE=""
+#ETCD_CLIENT_CERT_AUTH="false"
+#ETCD_TRUSTED_CA_FILE=""
+#ETCD_AUTO_TLS="false"
+#ETCD_PEER_CERT_FILE=""
+#ETCD_PEER_KEY_FILE=""
+#ETCD_PEER_CLIENT_CERT_AUTH="false"
+#ETCD_PEER_TRUSTED_CA_FILE=""
+ETCD_PEER_AUTO_TLS="true"
+#
+#[Logging]
+#ETCD_DEBUG="false"
+#ETCD_LOG_PACKAGE_LEVELS=""
+#ETCD_LOG_OUTPUT="default"
 EOF
 
     systemctl start etcd && etcdctl cluster-health
