@@ -3,14 +3,14 @@ ssh_client a high level paramiko http://www.paramiko.org/ wrapper
 
 ref: https://github.com/paramiko/paramiko/blob/master/demos/demo_simple.py
 
-
-exec command return a dict
-        r['stdin']  : file type (w)
-        r['stdout'] : file type (r)
-        r['stderr'] : file type (r)
-        r['pid']    : int
-        r['status'] : int
-
+exec command return a CmdResp object
+with the following attribute
+            hostname <string>
+            stdin    <fd wb>
+            stdout   <fd r>
+            stderr   <fd r>
+            pid      <int>
+            status   <int>
 """
 
 import base64
@@ -90,8 +90,8 @@ class ssh_client:
                                         self.password,
                                         timeout=timeout)
         except Exception as e:
-            print("*** Caught exception: %s: %s" % (e.__class__, e))
-            traceback.print_exc()
+            print("*** Caught exception: %s: %s" % (e.__class__, e), file=sys.stderr)
+            traceback.print_exc(file=sys.stderr))
             try:
                 self.client.close()
             except:
@@ -133,7 +133,6 @@ class ssh_client:
     """
     def exec (self, cmd, bufsize=-1):
         cmd = 'echo $$ && exec ' + cmd
-        # print ("exec {} ".format(cmd))
         try:
             c = self.new_channel()
             c.exec_command(cmd)
@@ -144,7 +143,6 @@ class ssh_client:
             r.stderr = c.makefile_stderr("r", bufsize)
             r.pid = int(r.stdout.readline())
             r.status = c.recv_exit_status()
-            # print ("r : {}".format(r))
             return r
         except:
             raise
@@ -170,6 +168,7 @@ class ssh_client:
     """
     send a single file using mktemp on target
     mode set the mode in remote file as os.chmod()
+    return the destination path as string or None.
     """
     def mktemp_send_file (self, src, mode=None):
         tmp_dir = None
@@ -188,4 +187,3 @@ class ssh_client:
                 return dst
         except:
             raise
-            return None
