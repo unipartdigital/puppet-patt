@@ -91,7 +91,7 @@ class ssh_client:
                                         timeout=timeout)
         except Exception as e:
             print("*** Caught exception: %s: %s" % (e.__class__, e), file=sys.stderr)
-            traceback.print_exc(file=sys.stderr))
+            traceback.print_exc(file=sys.stderr)
             try:
                 self.client.close()
             except:
