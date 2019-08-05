@@ -130,9 +130,8 @@ EOF
         sleep 3
     done
 
-    systemctl enable etcd || exit 1
-    etcdctl set /etcd/${cluster_name}/${self_id}
-    return $?
+    etcdctl set "/etcd/${cluster_name}/${self_id}" "${self_id}"
+    systemctl enable etcd
 }
 
 check () {
