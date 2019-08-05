@@ -64,7 +64,20 @@ init() {
                                            -e 's|.*name=\([[:alnum:]]\+\) .*|\1|')
         if [ "${leader}" == "${SELF_ID}" -a "${query_id}" == "${SELF_ID}" ]; then
             # run any command that need to be done only on one node (leader node)
-            :
+
+            # check if any unreachable peers need to be removed
+            {
+                for id in $(basename -a $(etcdctl ls /etcd/${cluster_name}/)); do
+                    if $(echo "${cluster_nodes}" | grep -q "[[:space:]]${id}[[:space:]]"); then
+                        # id note in the list of cli nodes
+                        # check if unreachable
+                        member_id=$(get_member_id "${id}")
+                        if $(etcdctl cluster-health | grep "[[:space:]]${member_id}[[:space:]]" | grep -q "unreachable:"); then
+                            etcdctl member remove "${member_id}"
+                        fi
+                    fi
+                done
+            }
 
         elif [ "${query_id}" == "${SELF_ID}" ]; then
             # we are already configured as member
