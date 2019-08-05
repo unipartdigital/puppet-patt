@@ -68,12 +68,16 @@ init() {
             # check if any unreachable peers need to be removed
             {
                 for id in $(basename -a $(etcdctl ls /etcd/${cluster_name}/)); do
-                    if $(echo "${cluster_nodes}" | grep -q "[[:space:]]${id}[[:space:]]"); then
-                        # id note in the list of cli nodes
+                    if ! $(echo "${cluster_nodes}" | grep -q "${id}_"); then
+                        # id not in the list of cli nodes
                         # check if unreachable
                         member_id=$(get_member_id "${id}")
                         if $(etcdctl cluster-health | grep "[[:space:]]${member_id}[[:space:]]" | grep -q "unreachable:"); then
                             etcdctl member remove "${member_id}"
+                            etcdctl rm "/etcd/${cluster_name}/${id}"
+                            # for p in $(etcdctl member list | sed -e "s|.*peerURLs=\([^[:space:]]*\).*|\1|"); do
+                            #     etcdctl member update ${p}
+                            # done
                         fi
                     fi
                 done
