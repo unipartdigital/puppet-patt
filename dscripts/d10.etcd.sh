@@ -30,6 +30,11 @@ get_self_node () {
     return 1
 }
 
+get_member_id () {
+    name=$1
+    etcdctl member list | grep "name=$name[[:space:]]\+" | cut -d : -f 1
+}
+
 # param
 # 1: cluster_name: <string>
 # 2,n cluster_nodes: <machineID | HostID>_<Hostname | IPV4 | [IPV6]>
@@ -43,15 +48,18 @@ init() {
     if systemctl status etcd; then
         # # etcd is running
         self_found=""
-        for peers in $(etcdctl member list | sed  -e 's|.*name=\([[:alnum:]]\+\) .*|\1|'); do
-            if [ "${SELF_ID}" == "$(peers)" ] ; then
+        peers=$(etcdctl member list | sed  -e 's|.*name=\([[:alnum:]]\+\) .*|\1|')
+        for peer in ${peers}; do
+            if [ "${SELF_ID}" == "${peer}" ] ; then
                 self_found="true"
             fi
         done
-        if [ "${self_found}" != "true" ]; then exit 1; fi
+        if [ "${self_found}" != "true" ]; then
+            echo "${SELF_ID} etcd running but member not in peers" 1>&2 ; exit 1
+        fi
         # we have nothing to do with this cluster
 
-        query_id="$(etcdctl get /etcd/${cluster_name}/${self_id})"
+        query_id="$(etcdctl get /etcd/${cluster_name}/${SELF_ID})"
         leader=$(etcdctl member list | sed -e '/\(.*isleader=[^true].*\)/Id' \
                                            -e 's|.*name=\([[:alnum:]]\+\) .*|\1|')
         if [ "${leader}" == "${SELF_ID}" -a "${query_id}" == "${SELF_ID}" ]; then
@@ -60,6 +68,7 @@ init() {
 
         elif [ "${query_id}" == "${SELF_ID}" ]; then
             # we are already configured as member
+            echo "${SELF_ID} already member of ${cluster_name}"
             exit 0
         fi
 
