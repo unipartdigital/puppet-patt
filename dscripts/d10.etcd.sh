@@ -40,10 +40,32 @@ init() {
 
     SELF_ID=$(hostid || cat /etc/machine-id 2> /dev/null)
 
-    # exit if etcd already running
     if systemctl status etcd; then
+        # # etcd is running
+        self_found=""
+        for peers in $(etcdctl member list | sed  -e 's|.*name=\([[:alnum:]]\+\) .*|\1|'); do
+            if [ "${SELF_ID}" == "$(peers)" ] ; then
+                self_found="true"
+            fi
+        done
+        if [ "${self_found}" != "true" ]; then exit 1; fi
+        # we have nothing to do with this cluster
+
+        query_id="$(etcdctl get /etcd/${cluster_name}/${self_id})"
+        leader=$(etcdctl member list | sed -e '/\(.*isleader=[^true].*\)/Id' \
+                                           -e 's|.*name=\([[:alnum:]]\+\) .*|\1|')
+        if [ "${leader}" == "${SELF_ID}" -a "${query_id}" == "${SELF_ID}" ]; then
+            # run any command that need to be done only on one node (leader node)
+            :
+
+        elif [ "${query_id}" == "${SELF_ID}" ]; then
+            # we are already configured as member
+            exit 0
+        fi
+
         exit 1
     fi
+
     sudo yum install -y etcd
 
     self_node=$(get_self_node "${cluster_nodes}")
@@ -100,7 +122,16 @@ ETCD_PEER_AUTO_TLS="true"
 #ETCD_LOG_OUTPUT="default"
 EOF
 
-    systemctl start etcd && etcdctl cluster-health
+    systemctl start etcd
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        etcdctl cluster-health
+        if [ "$?" -eq 0 ]; then break; fi
+        if [ "$i" -gt 9 ]; then exit 1; fi
+        sleep 3
+    done
+
+    systemctl enable etcd || exit 1
+    etcdctl set /etcd/${cluster_name}/${self_id}
     return $?
 }
 
