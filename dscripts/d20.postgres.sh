@@ -13,7 +13,7 @@ set -u
 # arch | vendor | major
 get_system_release () {
     query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return 0; fi
+    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
     if [ -f /etc/redhat-release ]; then
         release=$(rpm -q --whatprovides /etc/redhat-release)
         case $query in
