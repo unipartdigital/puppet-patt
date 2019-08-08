@@ -52,14 +52,28 @@ EOF
 
 systemd_setup () {
     postgres_version=${1:-"11"}
-    systemd_service=/lib/systemd/system/postgresql-${postgres_version}.service
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
+    release_vendor=$(get_system_release "vendor")
 
-    sed -e "/ExecStartPre=.*check-db-dir.*/d" \
-        -e "s|\(Type=\).*|\1simple|" -e "s|\(KillMode=\).*|\1process|" \
-        -e "/TimeoutSec=/a\\\nRestart=no" \
-        -e "s|\(ExecStart=\).*|\1${postgres_home}/.local/bin/patroni ${postgres_home}/patroni.yaml|" \
-        ${systemd_service} > /etc/systemd/system/postgresql-${postgres_version}_patroni.service
+    default_postgres_path=$(su - postgres -c "echo $PATH")
+
+    case "${release_vendor}" in
+        'redhat' | 'centos')
+            if [ -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service ]; then return 0; fi
+            systemd_service=/lib/systemd/system/postgresql-${postgres_version}.service
+            sed -e "/ExecStartPre=.*check-db-dir.*/d" \
+                -e "s|\(Type=\).*|\1simple|" -e "s|\(KillMode=\).*|\1process|" \
+                -e "/TimeoutSec=/a\\\nRestart=no" \
+                -e "/Environment=PGDATA/aEnvironment=PATH=/usr/pgsql-11/bin/:${default_postgres_path}" \
+                -e "s|\(ExecStart=\).*|\1${postgres_home}/.local/bin/patroni ${postgres_home}/patroni.yaml|" \
+                ${systemd_service} > /etc/systemd/system/postgresql-${postgres_version}_patroni.service
+            systemctl daemon-reload
+            ;;
+        *)
+            echo "${release_vendor} not implemented" 1>&2
+            exit 1
+            ;;
+    esac
 }
 
 init() {
@@ -94,10 +108,7 @@ pip3 install --user patroni[etcd]==${patroni_version}
 EOF
 
     bashrc_setup
-    if [ ! -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service ]; then
-        systemd_setup ${postgres_version}
-        systemctl daemon-reload
-    fi
+    systemd_setup ${postgres_version}
 }
 
 
