@@ -50,6 +50,32 @@ fi
 EOF
 }
 
+bashprofile_setup() {
+cat <<EOF | su - postgres
+if [ ! -f ~/.pgsql_profile ]; then
+cat <<\eof >  ~/.pgsql_profile
+# .pgsql_profile
+# not overridden
+#
+# Get the aliases and functions
+if [ -f ~/.bashrc ]; then
+   . ~/.bashrc
+fi
+
+# User specific environment and startup programs
+
+PATH=\$PATH:\$HOME/.local/bin:\$HOME/bin
+
+export PATH
+
+if [ -f ~/patroni.yaml ]; then
+   alias patronictl='patronictl -c ~/patroni.yaml'
+fi
+eof
+fi
+EOF
+}
+
 systemd_setup () {
     postgres_version=${1:-"11"}
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
@@ -108,6 +134,7 @@ pip3 install --user patroni[etcd]==${patroni_version}
 EOF
 
     bashrc_setup
+    bashprofile_setup
     systemd_setup ${postgres_version}
 }
 
