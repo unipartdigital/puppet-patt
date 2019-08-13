@@ -57,6 +57,11 @@ init() {
                     postgresql${postgresql_version}-contrib
                 #postgresql${postgresql_version}-devel
             fi
+
+            sed -i -e "/#[[:space:]]*TYPE[[:space:]]\+DATABASE[[:space:]]\+USER[[:space:]]\+ADDRESS[[:space:]]\+METHOD.*/q" /usr/pgsql-${postgresql_version}/share/pg_hba.conf.sample
+            cat <<EOF >> /usr/pgsql-${postgresql_version}/share/pg_hba.conf.sample
+ local  all             all                                     ident
+EOF
             ;;
         *)
             echo "unsupported release vendor: ${release_vendor}" 1>&2
