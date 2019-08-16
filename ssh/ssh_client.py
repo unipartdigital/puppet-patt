@@ -63,19 +63,31 @@ class ssh_client:
         self.DoGSSAPIKeyExchange = (
             paramiko.GSS_AUTH_AVAILABLE
         )  # enable "gssapi-kex" key exchange, if supported by your python installation
-
+        # parse ~/.ssh/config
+        try:
+            self.ssh_config = paramiko.SSHConfig()
+            with open(os.path.expanduser("~/.ssh/config")) as f:
+                self.ssh_config.parse(f)
+            self.ssh_config = self.ssh_config.lookup(self.hostname)
+        except:
+            pass
 
     def open(self, timeout=None):
         if self.client:
             if self.client._transport is not None:
                 return
         try:
+            kf = ""
             self.client = paramiko.SSHClient()
             self.client.load_system_host_keys()
             self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
-            print("Connecting:{}".format(self.hostname))
+            if 'identityfile' in self.ssh_config:
+                kf = self.ssh_config['identityfile']
+            print("Connecting:{}@{}".format(self.username, self.hostname))
+
             if not self.UseGSSAPI and not self.DoGSSAPIKeyExchange:
-                self.client.connect(self.hostname, self.port, self.username, self.password, timeout=timeout)
+                self.client.connect(self.hostname, self.port, self.username, self.password, timeout=timeout,
+                                    key_filename=kf)
             else:
                 try:
                     self.client.connect(
@@ -84,14 +96,16 @@ class ssh_client:
                         self.username,
                         gss_auth=UseGSSAPI,
                         gss_kex=DoGSSAPIKeyExchange,
-                        timeout=timeout
+                        timeout=timeout,
+                        key_filename=kf
                     )
                 except Exception:
                     self.client.connect(self.hostname,
                                         self.port,
                                         self.username,
                                         self.password,
-                                        timeout=timeout)
+                                        timeout=timeout,
+                                        key_filename=kf)
         except Exception as e:
             print("*** Caught exception: %s: %s" % (e.__class__, e), file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
