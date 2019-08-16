@@ -138,6 +138,24 @@ EOF
     systemd_setup ${postgres_version}
 }
 
+enable() {
+    postgres_version=${1:-"11"}
+    shift 1
+    patroni_version=${1:-"1.6.0"}
+    release_vendor=$(get_system_release "vendor")
+    release_major=$(get_system_release "major")
+    # release_arch=$(get_system_release "arch")
+
+    case "${release_vendor}" in
+        'redhat' | 'centos')
+            systemctl enable --now postgresql-${postgres_version}_patroni
+            ;;
+        *)
+            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            exit 1
+            ;;
+    esac
+}
 
 
 case "${1:-""}" in
@@ -145,8 +163,12 @@ case "${1:-""}" in
         shift 1
         init $*
         ;;
+    'enable')
+        shift 1
+        enable $*
+        ;;
     *)
-        echo "usage: $0 init <postgres version 11|12...> <patroni version: 1.6.0* https://github.com/zalando/patroni/releases>"
+        echo "usage: $0 init|enable <postgres version 11|12...> <patroni version: 1.6.0* https://github.com/zalando/patroni/releases>"
         exit 1
         ;;
 esac
