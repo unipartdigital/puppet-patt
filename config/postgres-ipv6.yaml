@@ -64,6 +64,8 @@ bootstrap:
   - local all all     ident
   - host all all ::/0 md5
   - host all all 0.0.0.0/0 md5
+  - host replication replication ::/0 md5
+  - host replication replication 0.0.0.0/0 md5
 
   # Additional script to be launched after initial cluster creation (will be passed the connection URL as parameter)
 # post_init: /usr/local/bin/setup_cluster.sh
