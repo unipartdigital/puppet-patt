@@ -45,9 +45,12 @@ class ssh_client:
     - destination: hostname or ip address
     """
     def __init__(self, destination, login=None, password=None, port=22, log_file=None):
-        self.hostname = destination
+        (l,s,h) = destination.rpartition('@')
+        self.hostname = h
         if login:
             self.username = login
+        elif l != '':
+            self.username = l
         else:
             self.username = getpass.getuser()
         self.port = port
@@ -185,5 +188,8 @@ class ssh_client:
                 if mode:
                     sftp.chmod (dst, mode)
                 return dst
+            else:
+                print ("{}".format (r.stderr.read().decode()), file=sys.stderr)
+                raise IOError
         except:
             raise
