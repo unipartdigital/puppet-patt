@@ -37,7 +37,7 @@ init() {
     # release_arch=$(get_system_release "arch")
 
     rel_epel="yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
-    rpm_pkg="haproxy"
+    rpm_pkg="haproxy policycoreutils"
 
     case "${release_vendor}" in
         'redhat' | 'centos')
@@ -64,6 +64,8 @@ enable () {
     case "${release_vendor}" in
         'redhat' | 'centos')
             if haproxy -f /etc/haproxy/haproxy.cfg -c; then
+                /usr/sbin/setsebool -P haproxy_connect_any 1
+                # let haproxy bind to any port even if SELinux is enforcing
                 if systemctl status haproxy; then
                     # haproxy is running
                     systemctl reload haproxy
