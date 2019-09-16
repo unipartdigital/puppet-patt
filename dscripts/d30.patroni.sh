@@ -102,6 +102,24 @@ systemd_setup () {
     esac
 }
 
+softdog_setup () {
+
+    cat <<EOF > /etc/udev/rules.d/99-patroni-softdog.rules
+KERNEL=="watchdog", GROUP="postgres", MODE="0660"
+EOF
+    cat <<EOF > /etc/modules-load.d/99-patroni-softdog.conf
+# load linux software watchdog
+softdog
+EOF
+    rmmod softdog || true
+    modprobe softdog || true
+    watchdog_gid=$(stat -c "%G" /dev/watchdog)
+    if [ "x$watchdog_gid" != "xpostgres" ]; then
+        echo "softdog_setup error" 2>&1
+        exit 1
+    fi
+}
+
 init() {
     postgres_version=${1:-"11"}
     shift 1
@@ -123,6 +141,7 @@ init() {
                 dnf install -y ${rel_epel}
                 dnf install -y "${rpm_pkg}"
             fi
+            softdog_setup
             ;;
         *)
             echo "unsupported release vendor: ${release_vendor}" 1>&2
@@ -149,6 +168,8 @@ enable() {
     case "${release_vendor}" in
         'redhat' | 'centos')
             systemctl enable --now postgresql-${postgres_version}_patroni
+            systemctl status postgresql-${postgres_version}_patroni && \
+                systemctl reload postgresql-${postgres_version}_patroni
             ;;
         *)
             echo "unsupported release vendor: ${release_vendor}" 1>&2

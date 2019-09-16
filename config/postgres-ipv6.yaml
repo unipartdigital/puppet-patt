@@ -2,6 +2,13 @@ scope: batman
 #namespace: /service/
 name: postgresql0
 
+log:
+  level: WARNING #NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL
+#  loggers: This section allows redefining logging level per python module
+#    patroni.postmaster: WARNING
+#    urllib3: DEBUG
+
+
 restapi:
   listen: "::1:8008"
   connect_address: "[::1]:8008"
@@ -103,10 +110,10 @@ postgresql:
 #   krb_server_keyfile: /var/spool/keytabs/postgres
     unix_socket_directories: '/var/run/postgresql'
 
-#watchdog:
-#  mode: automatic # Allowed values: off, automatic, required
-#  device: /dev/watchdog
-#  safety_margin: 5
+watchdog:
+  mode: automatic # Allowed values: off, automatic, required
+  device: /dev/watchdog
+  safety_margin: 5
 
 tags:
     nofailover: false
