@@ -103,6 +103,11 @@ systemd_setup () {
 }
 
 softdog_setup () {
+    if [ "x$(cat /proc/1/cgroup  | cut -d '/' -f 2 | sed -e '/^$/d')" != "x" ]; then
+        echo "softdog_setup skipped" 2>&1
+        return 0;
+    fi
+    # skip all if we are inside a container, lxc, docker ...
 
     cat <<EOF > /etc/udev/rules.d/99-patroni-softdog.rules
 KERNEL=="watchdog", GROUP="postgres", MODE="0660"
