@@ -77,7 +77,7 @@ class ssh_client:
             if self.client._transport is not None:
                 return
         try:
-            kf = ""
+            kf = None
             self.client = paramiko.SSHClient()
             self.client.load_system_host_keys()
             self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
