@@ -3,105 +3,99 @@
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
-trap '{echo "$0 FAILED on line $LINENO!; rm -f $0 ;}" | tee ${srcdir}/$(basename $0).log' ERR
+trap '{ echo "$0 FAILED on line $LINENO!; rm -f $0 ;}" | tee ${srcdir}/$(basename $0).log' ERR
 # clean up on exit
 trap "{ rm -f $0; }" EXIT
 
 # Catch unitialized variables:
 set -u
 
-#
-ETCD_CONF="/etc/etcd/etcd.conf"
-#
 
-# return self from list of ip:node_name
-# ipv6 only
-get_self_node () {
-    cluster_nodes=$*
-    for i in $(ip -6 addr show scope global | grep inet6 | awk '{print $2}' | cut -d '/' -f 1); do
-        for j in ${cluster_nodes}; do
-            if echo ${j} | grep -q ${i}; then
-                echo ${j}
-                return 0
-            fi
-        done
-    done
-    echo ""
-    return 1
+# arch | vendor | major
+get_system_release () {
+    query=$1
+    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
+    if [ -f /etc/redhat-release ]; then
+        release=$(rpm -q --whatprovides /etc/redhat-release)
+        case $query in
+            'major')
+                echo $release | rev |  cut -d '-' -f 2 | rev
+                ;;
+            'vendor')
+                echo $release | rev |  cut -d '-' -f 4 | rev
+                ;;
+            *)
+                echo "query not implemented: $query" 1>&2
+                exit 1
+        esac
+    fi
 }
 
-get_member_id () {
-    name=$1
-    etcdctl member list | grep "name=$name[[:space:]]\+" | cut -d : -f 1
-}
-
-# param
-# 1: cluster_name: <string>
-# 2,n cluster_nodes: <machineID | HostID>_<Hostname | IPV4 | [IPV6]>
 init() {
-    cluster_name="$1"
+    release_vendor=$(get_system_release "vendor")
+    release_major=$(get_system_release "major")
+    release_arch=$(get_system_release "arch")
+    case "${release_vendor}" in
+        'redhat' | 'centos')
+            if [ "${release_major}" -lt 8 ]; then
+                yum install -y etcd
+            else
+                dnf install -y etcd
+            fi
+            ;;
+        *)
+            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            exit 1
+            ;;
+    esac
+}
+
+check_healthy () {
+    ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is healthy" | cut -d ' ' -f 1
+}
+
+check_unhealthy () {
+    ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is unhealthy" | cut -d ' ' -f 1
+}
+
+config () {
+    config_type=$1
+    shift 1
+    cluster_name=$1
     shift 1
     cluster_nodes=$*
 
-    SELF_ID=$(hostid || cat /etc/machine-id 2> /dev/null)
+    self_id=$(hostid)
+    self_node=""
+    for n in ${cluster_nodes}; do
+        self_node=$(echo $n | grep $self_id) && break
+    done
 
-    if systemctl status etcd; then
-        # # etcd is running
-        self_found=""
-        peers=$(etcdctl member list | sed  -e 's|.*name=\([[:alnum:]]\+\) .*|\1|')
-        for peer in ${peers}; do
-            if [ "${SELF_ID}" == "${peer}" ] ; then
-                self_found="true"
-            fi
-        done
-        if [ "${self_found}" != "true" ]; then
-            echo "${SELF_ID} etcd running but member not in peers" 1>&2 ; exit 1
-        fi
-        # we have nothing to do with this cluster
-
-        query_id="$(etcdctl get /etcd/${cluster_name}/${SELF_ID})"
-        leader=$(etcdctl member list | sed -e '/\(.*isleader=[^true].*\)/Id' \
-                                           -e 's|.*name=\([[:alnum:]]\+\) .*|\1|')
-        if [ "${leader}" == "${SELF_ID}" -a "${query_id}" == "${SELF_ID}" ]; then
-            # run any command that need to be done only on one node (leader node)
-
-            # check if any unreachable peers need to be removed
-            {
-                for id in $(basename -a $(etcdctl ls /etcd/${cluster_name}/)); do
-                    if ! $(echo "${cluster_nodes}" | grep -q "${id}_"); then
-                        # id not in the list of cli nodes
-                        # check if unreachable
-                        member_id=$(get_member_id "${id}")
-                        if $(etcdctl cluster-health | grep "[[:space:]]${member_id}[[:space:]]" | grep -q "unreachable:"); then
-                            etcdctl member remove "${member_id}"
-                            etcdctl rm "/etcd/${cluster_name}/${id}"
-                            # for p in $(etcdctl member list | sed -e "s|.*peerURLs=\([^[:space:]]*\).*|\1|"); do
-                            #     etcdctl member update ${p}
-                            # done
-                        fi
-                    fi
-                done
-            }
-
-        elif [ "${query_id}" == "${SELF_ID}" ]; then
-            # we are already configured as member
-            echo "${SELF_ID} already member of ${cluster_name}"
-            exit 0
-        fi
-
-        exit 1
-    fi
-
-    sudo yum install -y etcd
-
-    self_node=$(get_self_node "${cluster_nodes}")
-    self_id=$(echo "$self_node" | cut -d '_' -f 1)
     self_ip=$(echo "$self_node" | cut -d '_' -f 2)
-    if [ "x${self_id}" != "x${SELF_ID}" ]; then
+
+    # validate
+    if [ "x${self_id}" != "x$(echo "$self_node" | cut -d '_' -f 1)" ]; then
+        exit 1
+    elif ! ip -6 addr show | grep "${self_ip}"; then
         exit 1
     else
         ping6 -c 1 "${self_ip}"
     fi
+
+    release_vendor=$(get_system_release "vendor")
+    release_major=$(get_system_release "major")
+    # release_arch=$(get_system_release "arch")
+
+    case "${release_vendor}" in
+        'redhat' | 'centos')
+            ETCD_CONF="/etc/etcd/etcd.conf"
+            ETCD_DATA_DIR=/var/lib/etcd/${self_id}
+            ;;
+        *)
+            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            exit 1
+            ;;
+    esac
 
     ETCD_DATA_DIR=/var/lib/etcd/${self_id}
     mkdir -p -m 700 "${ETCD_DATA_DIR}"
@@ -115,11 +109,17 @@ init() {
     done
     etcd_initial_cluster=$(echo ${etcd_initial_cluster} | sed -e 's|^,||')
 
-    if [ ! -f "/etc/etcd/etcd.conf.ori" -a -f "/etc/etcd/etcd.conf" ]; then
-        cp -a "/etc/etcd/etcd.conf" "/etc/etcd/etcd.conf.ori"
+    if [ ! -f "${ETCD_CONF}.ori" -a -f "${ETCD_CONF}" ]; then
+        cp -a "${ETCD_CONF}" "${ETCD_CONF}.ori"
     fi
 
-    cat <<EOF > /etc/etcd/etcd.conf
+    if [ "x$config_type" == "xexisting" ]; then
+        init_state=''
+    else
+        init_state="#"
+    fi
+
+    cat <<EOF > $ETCD_CONF
 #[Member]
 ETCD_DATA_DIR="${ETCD_DATA_DIR}"
 ETCD_LISTEN_PEER_URLS="https://[::]:2380"
@@ -130,6 +130,7 @@ ETCD_INITIAL_ADVERTISE_PEER_URLS="https://[${self_ip}]:2380"
 ETCD_ADVERTISE_CLIENT_URLS="http://[${self_ip}]:2379"
 ETCD_INITIAL_CLUSTER="${etcd_initial_cluster}"
 ETCD_INITIAL_CLUSTER_TOKEN="${cluster_name}"
+${init_state}ETCD_INITIAL_CLUSTER_STATE="existing"
 #[Security]
 #ETCD_CERT_FILE=""
 #ETCD_KEY_FILE=""
@@ -147,31 +148,89 @@ ETCD_PEER_AUTO_TLS="true"
 #ETCD_LOG_PACKAGE_LEVELS=""
 #ETCD_LOG_OUTPUT="default"
 EOF
+}
 
-    systemctl start etcd
-    for i in 1 2 3 4 5 6 7 8 9 10; do
-        etcdctl cluster-health
-        if [ "$?" -eq 0 ]; then break; fi
-        if [ "$i" -gt 9 ]; then exit 1; fi
-        sleep 3
+enable() {
+    cluster_name=$1
+    shift
+    cluster_nodes=$*
+
+    release_vendor=$(get_system_release "vendor")
+    release_major=$(get_system_release "major")
+    # release_arch=$(get_system_release "arch")
+
+    case "${release_vendor}" in
+        'redhat' | 'centos')
+            systemctl enable --now etcd
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+                etcdctl cluster-health
+                if [ "$?" -eq 0 ]; then break; fi
+                if [ "$i" -gt 9 ]; then exit 1; fi
+                sleep 3
+            done
+            ;;
+        *)
+            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            exit 1
+            ;;
+    esac
+
+}
+
+member_add() {
+    cluster_name=$1
+    shift
+    cluster_nodes=$*
+    for n in ${cluster_nodes}; do
+        ID=$(echo ${n} | cut -d '_' -f 1)
+        IP=$(echo ${n} | cut -d '_' -f 2)
+        ETCDCTL_API=3 etcdctl member add ${ID} --peer-urls="https://[${IP}]:2380" || true
     done
 
-    etcdctl set "/etcd/${cluster_name}/${self_id}" "${self_id}"
-    systemctl enable etcd
 }
 
-check () {
-    :
+member_remove() {
+    cluster_name=$1
+    shift
+    cluster_nodes=$*
+    for n in ${cluster_nodes[*]}; do
+        if ping6 -c 1 "${n}"; then
+            echo "$n alive not removing"
+            continue
+        fi
+        m_id=$(etcdctl member list 2>&1 | grep "$n" | cut -d ':' -f 1)
+        ETCDCTL_API=3 etcdctl member remove "${m_id}" || true
+    done
 }
+
 
 case "$1" in
     'init')
-        shift 1; init "$@"
+        shift 1
+        init "$@"
         ;;
-    'check')
-        shift 1; check "$@"
+    'check_healthy')
+        shift 1
+        check_healthy "$@"
         ;;
-    *)
-        echo "usage $0 [init cluster_name cluster_nodes (id_ipv6)]"
+    'check_unhealthy')
+        shift 1
+        check_unhealthy "$@"
+        ;;
+    'config')
+        shift 1
+        config "$@"
+        ;;
+    'enable')
+        shift 1
+        enable "$@"
+        ;;
+    'member_add')
+        shift 1
+        member_add "$@"
+        ;;
+    'member_remove')
+        shift 1
+        member_remove "$@"
         ;;
 esac
