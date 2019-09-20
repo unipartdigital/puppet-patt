@@ -58,6 +58,11 @@ check_unhealthy () {
     ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is unhealthy" | cut -d ' ' -f 1
 }
 
+check () {
+    ETCDCTL_API=3 etcdctl member list -w table
+    ETCDCTL_API=3 etcdctl endpoint --cluster health -w table  2>&1
+}
+
 config () {
     config_type=$1
     shift 1
@@ -216,6 +221,10 @@ case "$1" in
     'check_unhealthy')
         shift 1
         check_unhealthy "$@"
+        ;;
+    'check')
+        shift 1
+        check "$@"
         ;;
     'config')
         shift 1

@@ -186,6 +186,11 @@ enable() {
     esac
 }
 
+check() {
+cat <<EOF | su - postgres
+patronictl -c ~/patroni.yaml list
+EOF
+}
 
 case "${1:-""}" in
     'init')
@@ -195,6 +200,10 @@ case "${1:-""}" in
     'enable')
         shift 1
         enable $*
+        ;;
+    'check')
+        shift 1
+        check $*
         ;;
     *)
         echo "usage: $0 init|enable <postgres version 11|12...> <patroni version: 1.6.0* https://github.com/zalando/patroni/releases>"
