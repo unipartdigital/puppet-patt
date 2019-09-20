@@ -20,6 +20,7 @@ import socket
 import sys
 import traceback
 from paramiko.py3compat import input
+import logging
 
 import paramiko
 
@@ -28,6 +29,8 @@ try:
 except ImportError:
     from . import interactive
 
+logger = logging.getLogger('ssh_client')
+logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 class ssh_client:
 
@@ -83,7 +86,7 @@ class ssh_client:
             self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
             if 'identityfile' in self.ssh_config:
                 kf = self.ssh_config['identityfile']
-            print("Connecting:{}@{}".format(self.username, self.hostname))
+            logger.info ("Connecting:{}@{}".format(self.username, self.hostname))
 
             if not self.UseGSSAPI and not self.DoGSSAPIKeyExchange:
                 self.client.connect(self.hostname, self.port, self.username, self.password, timeout=timeout,
@@ -107,8 +110,8 @@ class ssh_client:
                                         timeout=timeout,
                                         key_filename=kf)
         except Exception as e:
-            print("*** Caught exception: %s: %s" % (e.__class__, e), file=sys.stderr)
-            traceback.print_exc(file=sys.stderr)
+            logger.error ("*** Caught exception: %s: %s" % (e.__class__, e))
+            logger.error (traceback.format_exc)
             try:
                 self.client.close()
             except:
@@ -203,7 +206,7 @@ class ssh_client:
                     sftp.chmod (dst, mode)
                 return dst
             else:
-                print ("{}".format (r.stderr.read().decode()), file=sys.stderr)
+                logger.error ("{}".format (r.stderr.read().decode()))
                 raise IOError
         except:
             raise
