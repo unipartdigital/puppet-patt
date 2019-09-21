@@ -105,9 +105,14 @@ systemd_setup () {
 softdog_setup () {
     if [ "x$(cat /proc/1/cgroup  | cut -d '/' -f 2 | sed -e '/^$/d')" != "x" ]; then
         echo "softdog_setup skipped" 2>&1
-        return 0;
+        return 0
     fi
     # skip all if we are inside a container, lxc, docker ...
+
+    watchdog_gid=$(stat -c "%G" /dev/watchdog 2> /dev/null)
+    if [ "x$watchdog_gid" == "xpostgres" ]; then
+        if [ "$(stat -c "%a" /dev/watchdog)" -eq "660" ]; then return 0 ; fi
+    fi
 
     cat <<EOF > /etc/udev/rules.d/99-patroni-softdog.rules
 KERNEL=="watchdog", GROUP="postgres", MODE="0660"
@@ -116,8 +121,10 @@ EOF
 # load linux software watchdog
 softdog
 EOF
-    (rmmod softdog || true)
-    (modprobe softdog || true)
+    if [ -r /dev/watchdog ]; then
+        rmmod softdog || true
+    fi
+    modprobe softdog || true
     watchdog_gid=$(stat -c "%G" /dev/watchdog)
     if [ "x$watchdog_gid" != "xpostgres" ]; then
         echo "softdog_setup error" 2>&1
