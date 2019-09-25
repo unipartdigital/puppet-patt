@@ -11,22 +11,22 @@ table ip postgres_patroni {
 table ip6 postgres_patroni {
         set etcd_peers {
                 type ipv6_addr
-                elements = { ::1, $etcd_peers}
+                elements = {$etcd_peers}
         }
 
         set patroni_peers {
                 type ipv6_addr
-                elements = { ::1, $patroni_peers}
+                elements = {$patroni_peers}
         }
 
         set haproxy_peers {
                 type ipv6_addr
-                elements = { ::1, $haproxy_peers}
+                elements = {$haproxy_peers}
         }
 
         set postgres_clients {
                 type ipv6_addr
-                elements = { ::1, $postgres_clients}
+                elements = {$postgres_clients}
         }
 
         chain incoming {
@@ -43,10 +43,17 @@ table ip6 postgres_patroni {
 
                 tcp dport { ssh } accept
 
+                # postgres
+                tcp dport { postgresql } ip6 saddr @patroni_peers accept
+                tcp dport { postgresql } ip6 saddr @haproxy_peers accept
                 tcp dport { postgresql } ip6 saddr @postgres_clients accept
+                # etcd
                 tcp dport { 2380 } ip6 saddr @etcd_peers accept
                 tcp dport { 2379 } ip6 saddr @patroni_peers accept
+                # patroni
                 tcp dport { 8008 } ip6 saddr @patroni_peers accept
-                tcp dport { 15432 } ip6 saddr @haproxy_peers accept
+                tcp dport { 8008 } ip6 saddr @haproxy_peers accept
+                # haproxy
+                tcp dport { 15432 } ip6 saddr @postgres_clients accept
         }
 }
