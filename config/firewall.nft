@@ -24,8 +24,9 @@ table ip6 postgres_patroni {
                 elements = {$haproxy_peers}
         }
 
-        set postgres_clients {
+        set pg_clients {
                 type ipv6_addr
+                flags interval
                 elements = {$postgres_clients}
         }
 
@@ -46,7 +47,7 @@ table ip6 postgres_patroni {
                 # postgres
                 tcp dport { postgresql } ip6 saddr @patroni_peers accept
                 tcp dport { postgresql } ip6 saddr @haproxy_peers accept
-                tcp dport { postgresql } ip6 saddr @postgres_clients accept
+                tcp dport { postgresql } ip6 saddr @pg_clients accept
                 # etcd
                 tcp dport { 2380 } ip6 saddr @etcd_peers accept
                 tcp dport { 2379 } ip6 saddr @patroni_peers accept
@@ -54,6 +55,6 @@ table ip6 postgres_patroni {
                 tcp dport { 8008 } ip6 saddr @patroni_peers accept
                 tcp dport { 8008 } ip6 saddr @haproxy_peers accept
                 # haproxy
-                tcp dport { 15432 } ip6 saddr @postgres_clients accept
+                tcp dport { 15432 } ip6 saddr @pg_clients accept
         }
 }
