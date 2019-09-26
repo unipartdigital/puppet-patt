@@ -1,3 +1,5 @@
+#! /usr/sbin/nft -f
+
 table ip postgres_patroni {
         chain incoming {
                 type filter hook input priority 0; policy drop;
