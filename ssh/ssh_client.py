@@ -47,7 +47,7 @@ class ssh_client:
     mandatory param:
     - destination: hostname or ip address
     """
-    def __init__(self, destination, login=None, password=None, port=22, log_file=None):
+    def __init__(self, destination, login=None, password=None, port=22, log_file=None, keyfile=None):
         (l,s,h) = destination.rpartition('@')
         self.hostname = h
         if login:
@@ -74,23 +74,27 @@ class ssh_client:
             self.ssh_config = self.ssh_config.lookup(self.hostname)
         except:
             pass
+        self.keyfile = os.path.expanduser(keyfile)
+        if not os.path.exists(self.keyfile):
+            self.keyfile = None
 
     def open(self, timeout=None):
         if self.client:
             if self.client._transport is not None:
                 return
         try:
-            kf = None
             self.client = paramiko.SSHClient()
             self.client.load_system_host_keys()
-            self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
-            if 'identityfile' in self.ssh_config:
-                kf = self.ssh_config['identityfile']
+            self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            if self.keyfile:
+                pass
+            elif 'identityfile' in self.ssh_config:
+                self.keyfile = self.ssh_config['identityfile']
             logger.info ("Connecting:{}@{}".format(self.username, self.hostname))
 
             if not self.UseGSSAPI and not self.DoGSSAPIKeyExchange:
                 self.client.connect(self.hostname, self.port, self.username, self.password, timeout=timeout,
-                                    key_filename=kf)
+                                    key_filename=self.keyfile)
             else:
                 try:
                     self.client.connect(
@@ -100,7 +104,7 @@ class ssh_client:
                         gss_auth=UseGSSAPI,
                         gss_kex=DoGSSAPIKeyExchange,
                         timeout=timeout,
-                        key_filename=kf
+                        key_filename=self.keyfile
                     )
                 except Exception:
                     self.client.connect(self.hostname,
@@ -108,7 +112,7 @@ class ssh_client:
                                         self.username,
                                         self.password,
                                         timeout=timeout,
-                                        key_filename=kf)
+                                        key_filename=self.keyfile)
         except Exception as e:
             logger.error ("*** Caught exception: %s: %s" % (e.__class__, e))
             logger.error (traceback.format_exc)
