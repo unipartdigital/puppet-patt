@@ -36,7 +36,7 @@ init() {
     release_major=$(get_system_release "major")
     # release_arch=$(get_system_release "arch")
 
-    rel_epel="yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
+    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
     rpm_pkg="haproxy policycoreutils"
 
     case "${release_vendor}" in

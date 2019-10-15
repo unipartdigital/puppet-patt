@@ -140,7 +140,7 @@ init() {
     release_major=$(get_system_release "major")
     # release_arch=$(get_system_release "arch")
 
-    rel_epel="yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
+    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
     rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel haproxy python36-PyYAML"
     # psycopg2 is shipped by epel on centos 7
 

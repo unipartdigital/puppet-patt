@@ -38,7 +38,7 @@ init() {
     release_arch=$(get_system_release "arch")
 
     rel_repo="https://download.postgresql.org/pub/repos/yum/reporpms/EL-${release_major}-${release_arch}/pgdg-redhat-repo-latest.noarch.rpm"
-    rel_epel="yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
+    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
 
     case "${release_vendor}" in
         'redhat' | 'centos')
