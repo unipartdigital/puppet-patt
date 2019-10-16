@@ -74,7 +74,7 @@ EOF
 case "${1:-""}" in
     'init')
         shift 1
-        init $*
+        init "$@"
         ;;
     *)
         echo "usage: $0 init <postgres version: 9.6 | 10 | 11* | 12 ...>"

@@ -109,8 +109,11 @@ softdog_setup () {
     fi
     # skip all if we are inside a container, lxc, docker ...
 
-    watchdog_gid=$(stat -c "%G" /dev/watchdog 2> /dev/null)
-    if [ "x$watchdog_gid" == "xpostgres" ]; then
+    watchdog_gid=""
+    if [ -r "/dev/watchdog" ]; then
+        watchdog_gid=$(stat -c "%G" /dev/watchdog 2> /dev/null)
+    fi
+    if [ -r "/dev/watchdog" -a "x$watchdog_gid" == "xpostgres" ]; then
         if [ "$(stat -c "%a" /dev/watchdog)" -eq "660" ]; then return 0 ; fi
     fi
 
@@ -127,15 +130,14 @@ EOF
     modprobe softdog || true
     watchdog_gid=$(stat -c "%G" /dev/watchdog)
     if [ "x$watchdog_gid" != "xpostgres" ]; then
-        echo "softdog_setup error" 2>&1
-        exit 1
+        echo "$watchdog_gid: ${watchdog_gid}" 2>&1
+        return 1
     fi
 }
 
 init() {
     postgres_version=${1:-"11"}
-    shift 1
-    patroni_version=${1:-"1.6.0"}
+    patroni_version=${2:-"1.6.0"}
     release_vendor=$(get_system_release "vendor")
     release_major=$(get_system_release "major")
     # release_arch=$(get_system_release "arch")
@@ -147,13 +149,11 @@ init() {
     case "${release_vendor}" in
         'redhat' | 'centos')
             if [ "${release_major}" -lt 8 ]; then
-                yum install -y ${rel_epel}
-                yum install -y ${rpm_pkg}
+                yum install -y ${rel_epel} ${rpm_pkg}
             else
-                dnf install -y ${rel_epel}
-                dnf install -y "${rpm_pkg}"
+                dnf install -y ${rel_epel} ${rpm_pkg}
             fi
-            softdog_setup
+            softdog_setup || softdog_setup || { echo "warning: watchdog setup error" 1>&2; }
             ;;
         *)
             echo "unsupported release vendor: ${release_vendor}" 1>&2
@@ -171,19 +171,16 @@ EOF
 
 enable() {
     postgres_version=${1:-"11"}
-    shift 1
-    patroni_version=${1:-"1.6.0"}
+    patroni_version=${2:-"1.6.0"}
     release_vendor=$(get_system_release "vendor")
     release_major=$(get_system_release "major")
     # release_arch=$(get_system_release "arch")
 
     case "${release_vendor}" in
         'redhat' | 'centos')
-            systemctl enable --now postgresql-${postgres_version}_patroni
-            if systemctl status postgresql-${postgres_version}_patroni; then
-                systemctl reload postgresql-${postgres_version}_patroni
-            else
-                systemctl start postgresql-${postgres_version}_patroni
+            if [ "x$(ps --no-header -C patroni -o pid)" == "x" ]; then
+                systemctl start postgresql-${postgres_version}_patroni && {
+                    systemctl enable postgresql-${postgres_version}_patroni; }
             fi
             ;;
         *)
@@ -202,15 +199,15 @@ EOF
 case "${1:-""}" in
     'init')
         shift 1
-        init $*
+        init "$@"
         ;;
     'enable')
         shift 1
-        enable $*
+        enable "$@"
         ;;
     'check')
         shift 1
-        check $*
+        check "$@"
         ;;
     *)
         echo "usage: $0 init|enable <postgres version 11|12...> <patroni version: 1.6.0* https://github.com/zalando/patroni/releases>"

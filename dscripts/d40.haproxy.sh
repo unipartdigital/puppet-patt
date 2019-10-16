@@ -42,11 +42,9 @@ init() {
     case "${release_vendor}" in
         'redhat' | 'centos')
             if [ "${release_major}" -lt 8 ]; then
-                yum install -y ${rel_epel}
-                yum install -y ${rpm_pkg}
+                yum install -y ${rel_epel} ${rpm_pkg}
             else
-                dnf install -y ${rel_epel}
-                dnf install -y ${rpm_pkg}
+                dnf install -y ${rel_epel} ${rpm_pkg}
             fi
             ;;
         *)
@@ -89,11 +87,11 @@ enable () {
 case "${1:-""}" in
     'init')
         shift 1
-        init $*
+        init "$@"
         ;;
     'enable')
         shift 1
-        enable $*
+        enable "$@"
         ;;
     *)
         echo "usage: $0 init"
