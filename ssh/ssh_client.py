@@ -74,8 +74,10 @@ class ssh_client:
             self.ssh_config = self.ssh_config.lookup(self.hostname)
         except:
             pass
-        self.keyfile = os.path.expanduser(keyfile)
-        if not os.path.exists(self.keyfile):
+        self.keyfile = None
+        if keyfile:
+            self.keyfile = os.path.expanduser(keyfile)
+        if self.keyfile and not os.path.exists(self.keyfile):
             self.keyfile = None
 
     def open(self, timeout=None):
