@@ -25,13 +25,20 @@ class Iproute2Error (Exception):
 send a network advertissement packet
 to advertise our source ipv6 address
 """
-def neighbour_advertisement (source):
+def neighbour_advertisement (source, iface=None):
+    logger.warning ("neighbour_advertisement source: {} iface: {}".format(source, iface))
     try:
         ipaddress.IPv6Address(source)
         # will raise if it is an invalid ipv6 address
-        send (IPv6(src=source,dst="ff02::1")/ICMPv6ND_NA())
+        adv = IPv6(src=source,dst="ff02::1")/ICMPv6ND_NA()
+        if iface:
+            send (adv, iface=iface)
+        else:
+            send (adv)
+        logger.warning ("send network advertissement {}".format (source))
+        logger.warning ("na packet {}".format (adv.show()))
     except ipaddress.AddressValueError as e:
-        pass
+        logger.error (e)
     except Exception as e:
         logger.error (e)
 
@@ -95,9 +102,10 @@ def ip_address_do (cmd, ip_iface=[(None, None)], default_iface=None):
             if cmd == 'add':
                 if (ip, iface) in ip_seen:
                     logger.warning ("addr add: {} {} exists".format (str (ip), iface))
+                    neighbour_advertisement (str (ip), iface)
                     continue
                 iproute2 ("addr", ["add", str (ip), "dev", iface, "scope", "global", "noprefixroute" ,"nodad"])
-                neighbour_advertisement (str (ip))
+                neighbour_advertisement (str (ip), iface)
             elif cmd == 'del':
                 if (ip, iface) in ip_seen:
                     iproute2 ("addr", ["del", str (ip), "dev", iface])

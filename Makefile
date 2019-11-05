@@ -6,7 +6,7 @@ main: ip_takeover
 
 scapy:
 # install from pip if no system module
-	$(shell $(PYTHON) -c "import scapy" || pip3 install --user scapy[basic])
+	-$(shell $(PYTHON) -c "import scapy" || pip3 install --user scapy[basic])
 
 ip_takeover.py: scapy
 
