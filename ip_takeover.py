@@ -31,12 +31,12 @@ def neighbour_advertisement (source, iface=None):
         ipaddress.IPv6Address(source)
         # will raise if it is an invalid ipv6 address
         adv = IPv6(src=source,dst="ff02::1")/ICMPv6ND_NA()
+        logger.warning ("sending network advertissement {}".format (source))
         if iface:
             send (adv, iface=iface)
         else:
             send (adv)
-        logger.warning ("send network advertissement {}".format (source))
-        logger.warning ("na packet {}".format (adv.show()))
+        logger.warning ("neighbour_advertisement packet {}".format (adv.show()))
     except ipaddress.AddressValueError as e:
         logger.error (e)
     except Exception as e:
@@ -104,7 +104,7 @@ def ip_address_do (cmd, ip_iface=[(None, None)], default_iface=None):
                     logger.warning ("addr add: {} {} exists".format (str (ip), iface))
                     neighbour_advertisement (str (ip), iface)
                     continue
-                iproute2 ("addr", ["add", str (ip), "dev", iface, "scope", "global", "noprefixroute" ,"nodad"])
+                iproute2 ("addr", ["add", str (ip), "dev", iface, "scope", "global", "noprefixroute" ,"nodad", "preferred_lft", "0"])
                 neighbour_advertisement (str (ip), iface)
             elif cmd == 'del':
                 if (ip, iface) in ip_seen:
