@@ -11,6 +11,7 @@ import logging
 import sys, os
 import ipaddress
 import subprocess
+from scapy.all import IPv6, ICMPv6ND_NA, send
 
 #from patroni.utils import Retry, RetryFailedError
 
@@ -19,6 +20,20 @@ logger = logging.getLogger(__name__)
 class Iproute2Error (Exception):
     def __init__(self, message=None):
         self.message = message
+
+"""
+send a network advertissement packet
+to advertise our source ipv6 address
+"""
+def neighbour_advertisement (source):
+    try:
+        ipaddress.IPv6Address(source)
+        # will raise if it is an invalid ipv6 address
+        send (IPv6(src=source,dst="ff02::1")/ICMPv6ND_NA())
+    except ipaddress.AddressValueError as e:
+        pass
+    except Exception as e:
+        logger.error (e)
 
 def iproute2 (objects=None, command=[], options=['-6', '-br']):
     logger.warning ("{}".format (["/sbin/ip"] + options + [objects] + command))
@@ -82,6 +97,7 @@ def ip_address_do (cmd, ip_iface=[(None, None)], default_iface=None):
                     logger.warning ("addr add: {} {} exists".format (str (ip), iface))
                     continue
                 iproute2 ("addr", ["add", str (ip), "dev", iface, "scope", "global", "noprefixroute" ,"nodad"])
+                neighbour_advertisement (str (ip))
             elif cmd == 'del':
                 if (ip, iface) in ip_seen:
                     iproute2 ("addr", ["del", str (ip), "dev", iface])
