@@ -12,25 +12,105 @@ import sys, os
 import ipaddress
 import subprocess
 from scapy.all import IPv6, ICMPv6ND_NA, send
+import psycopg2
+import time
 
 #from patroni.utils import Retry, RetryFailedError
 
 logger = logging.getLogger(__name__)
 
+def blackhole_add (ipv6=[], table="postgres_patroni"):
+    try:
+        ipv6_str = ", ".join (ipv6)
+        cmd_list = ["nft", "add",  "element", "ip6", table, "pg_blackhole", '{', ipv6_str, '}']
+        logger.warning ("pg_blackhole: {}".format (cmd_list))
+        cmd = subprocess.run (cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
+        if cmd.returncode == 0:
+            pass
+        else:
+            logger.error (cmd.stderr)
+    except Exception as e:
+        logger.error (e)
+
+def blackhole_del (ipv6=[], table="postgres_patroni"):
+    try:
+        ipv6_str = ", ".join (ipv6)
+        cmd_list = ["nft", "delete",  "element", "ip6", table, "pg_blackhole", '{', ipv6_str, '}']
+        logger.warning ("pg_blackhole: {}".format (cmd_list))
+        cmd = subprocess.run (cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
+        if cmd.returncode == 0:
+            pass
+        else:
+            logger.error (cmd.stderr)
+    except Exception as e:
+        logger.error (e)
+
+def blackhole_list (table="postgres_patroni", set="pg_blackhole"):
+    cmd_list = ["nft", "list", "set", "ip6", table, set]
+    try:
+        logger.warning ("pg_blackhole: {}".format (cmd_list))
+        cmd = subprocess.run (cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
+        if cmd.returncode == 0:
+            logger.warning ("{}".format (cmd.stdout))
+        else:
+            logger.error ("{}".format (cmd.stderr))
+    except Exception as e:
+        logger.error (e)
+
+"""
+connect using the default local socket and
+return True if postgres is readwrite, False if not
+return None in case of error
+"""
+def is_postgres_read_write():
+    conn = psycopg2.connect("dbname=postgres")
+    try:
+        cur = conn.cursor()
+        cur.execute("SHOW transaction_read_only;")
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+    except:
+        pass
+    else:
+        if type (result) == tuple:
+            return result[0] == 'off'
+    finally:
+        conn.close()
+
 class Iproute2Error (Exception):
     def __init__(self, message=None):
         self.message = message
 
+
+def get_ipv6_link_local (iface, net6=False):
+    cmd = subprocess.run(["/sbin/ip", "-6", "-br", "addr", "show", "scope", "link", "dev", iface],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
+    if cmd.returncode == 0:
+        iface, state, link = cmd.stdout.split(maxsplit=2)
+        if net6:
+            return link
+        return link.split('/')[0]
+    else:
+        logger.error ("{}".format (cmd.stderr))
+        return None
+
 """
-send a network advertissement packet
-to advertise our source ipv6 address
+send an unsolicited advertisements.
+
+https://tools.ietf.org/html/rfc4861#page-23
+Router flag    0
+Solicited flag 0
+Override flag  1
+Target link-layer address
 """
 def neighbour_advertisement (source, iface=None):
     logger.warning ("neighbour_advertisement source: {} iface: {}".format(source, iface))
     try:
         ipaddress.IPv6Address(source)
         # will raise if it is an invalid ipv6 address
-        adv = IPv6(src=source,dst="ff02::1")/ICMPv6ND_NA()
+        target_address = get_ipv6_link_local (iface)
+        adv = IPv6(src=source,dst="ff02::1")/ICMPv6ND_NA(R=0, S=0, O=1, tgt=target_address)
         logger.warning ("sending network advertissement {}".format (source))
         if iface:
             send (adv, iface=iface)
@@ -45,7 +125,7 @@ def neighbour_advertisement (source, iface=None):
 def iproute2 (objects=None, command=[], options=['-6', '-br']):
     logger.warning ("{}".format (["/sbin/ip"] + options + [objects] + command))
     cmd = subprocess.run(["/sbin/ip"] + options + [objects] + command,
-                         stdout=subprocess.PIPE, encoding='utf8')
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
     if cmd.returncode == 0:
         return cmd.stdout.strip()
     else:
@@ -148,21 +228,46 @@ class IPTakeOver(object):
     def ip_del (self):
         ip_address_del (self.floating_ip, self.default_iface)
 
+    def ip_lock (self):
+        blackhole_add ([i[0] for i in self.floating_ip])
+
+    def ip_unlock (self):
+        blackhole_del (i[0] for i in self.floating_ip)
+
+    def wait_master_rw (timeout=60):
+        try:
+            for i in range (timeout * 2):
+                if is_postgres_read_write:
+                    break
+                time.sleep (0.5)
+        except Exception as e:
+            logger.error ("wait master rw {}".format(e))
+
 # callback
     def on_reload (self, role):
     # run this script when configuration reload is triggered.
         logger.warning ("[{}] {} {}".format (self.cluster_name, "on_reload", role))
+        blackhole_list()
         if role == "replica":
+            self.ip_lock()
             self.ip_del()
         elif role == "master":
+            self.wait_master_rw
+            self.ip_unlock()
             self.ip_add()
+        blackhole_list()
 
     def on_restart (self, role):
     # run this script when the postgres restarts (without changing role).
         logger.warning ("[{}] {} {}".format (self.cluster_name, "on_restart", role))
+        blackhole_list()
         if role == "replica":
+            self.ip_lock()
             self.ip_del()
-
+        elif role == "master":
+            self.wait_master_rw
+            self.ip_unlock()
+        blackhole_list()
     def on_role_change (self, role):
     # run this script when the postgres is being promoted or demoted.
     # role here represent the new role:
@@ -170,22 +275,31 @@ class IPTakeOver(object):
         # if role == replica -> demoted old_role == master
         logger.warning ("[{}] {} {}".format (self.cluster_name, "on_role_change", role))
         if role == "replica":
+            self.ip_lock()
             self.ip_del()
         elif role == "master":
             self.ip_add()
+            self.wait_master_rw
+            self.ip_unlock()
 
     def on_start (self, role):
     # run this script when the postgres starts.
         logger.warning ("[{}] {} {}".format (self.cluster_name, "on_start", role))
+        blackhole_list()
         if role == "replica":
+            self.ip_lock()
             self.ip_del
         elif role == "master":
+            self.wait_master_rw
+            self.ip_unlock()
             self.ip_add()
-
+        blackhole_list
     def on_stop (self, role):
     # run this script when the postgres stops.
         logger.warning ("[{}] {} {}".format (self.cluster_name, "on_stop", role))
-
+        blackhole_list()
+        self.ip_lock()
+        blackhole_list()
 
 def main():
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=logging.WARNING)

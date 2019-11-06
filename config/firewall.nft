@@ -32,8 +32,18 @@ table ip6 postgres_patroni {
                 elements = {$postgres_clients}
         }
 
+        set pg_blackhole {
+                type ipv6_addr
+        }
+
         chain incoming {
                 type filter hook input priority 0; policy drop;
+
+                # postgres floating ips
+                # floating ips will be added into pg_blackhole as long as the database is read-only
+                # and removed only from master when ready (read-write transaction)
+                tcp dport { postgresql } ip6 daddr @pg_blackhole drop
+
                 ct state established,related accept
                 ct state invalid drop
                 iifname "lo" accept
