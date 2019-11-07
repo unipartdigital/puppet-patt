@@ -4,14 +4,13 @@
  callback script: action, role and cluster name
  add vip on master
  del vip on replica
-
 """
 
 import logging
 import sys, os
 import ipaddress
 import subprocess
-from scapy.all import IPv6, ICMPv6ND_NA, send
+import scapy.all as sca
 import psycopg2
 import time
 
@@ -78,22 +77,13 @@ def is_postgres_read_write():
     finally:
         conn.close()
 
-class Iproute2Error (Exception):
-    def __init__(self, message=None):
-        self.message = message
-
-
-def get_ipv6_link_local (iface, net6=False):
-    cmd = subprocess.run(["/sbin/ip", "-6", "-br", "addr", "show", "scope", "link", "dev", iface],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
-    if cmd.returncode == 0:
-        iface, state, link = cmd.stdout.split(maxsplit=2)
-        if net6:
-            return link
-        return link.split('/')[0]
-    else:
-        logger.error ("{}".format (cmd.stderr))
-        return None
+"""
+return the fist link local address found on the specified interface
+"""
+def get_ipv6_link_local (iface):
+    lla = [l[0] for l in sca.in6_getifaddr() if l[2] == iface and l[0].startswith("fe80")]
+    if len (lla) > 0:
+        return lla[0]
 
 """
 send an unsolicited advertisements.
@@ -104,23 +94,21 @@ Solicited flag 0
 Override flag  1
 Target link-layer address
 """
-def neighbour_advertisement (source, iface=None):
-    logger.warning ("neighbour_advertisement source: {} iface: {}".format(source, iface))
+def neighbour_advertisement (addr, iface):
     try:
-        ipaddress.IPv6Address(source)
-        # will raise if it is an invalid ipv6 address
-        target_address = get_ipv6_link_local (iface)
-        adv = IPv6(src=source,dst="ff02::1")/ICMPv6ND_NA(R=0, S=0, O=1, tgt=target_address)
-        logger.warning ("sending network advertissement {}".format (source))
-        if iface:
-            send (adv, iface=iface)
-        else:
-            send (adv)
+        lla = get_ipv6_link_local (iface)
+        adv = sca.IPv6(src=lla, dst="ff02::1")/sca.ICMPv6ND_NA(R=0, S=0, O=1, tgt=addr)
+        opt = sca.ICMPv6NDOptDstLLAddr (lladdr=sca.get_if_hwaddr(iface))
+        adv.add_payload(opt)
         logger.warning ("neighbour_advertisement packet {}".format (adv.show()))
-    except ipaddress.AddressValueError as e:
-        logger.error (e)
+        sca.send (adv, iface=iface)
+        logger.warning ("neighbour_advertisement packet send {}".format (adv.show()))
     except Exception as e:
         logger.error (e)
+
+class Iproute2Error (Exception):
+    def __init__(self, message=None):
+        self.message = message
 
 def iproute2 (objects=None, command=[], options=['-6', '-br']):
     logger.warning ("{}".format (["/sbin/ip"] + options + [objects] + command))
@@ -184,7 +172,10 @@ def ip_address_do (cmd, ip_iface=[(None, None)], default_iface=None):
                     logger.warning ("addr add: {} {} exists".format (str (ip), iface))
                     neighbour_advertisement (str (ip), iface)
                     continue
-                iproute2 ("addr", ["add", str (ip), "dev", iface, "scope", "global", "noprefixroute" ,"nodad", "preferred_lft", "0"])
+                iproute2 (
+                    "addr",
+                    ["add", str (ip), "dev", iface, "scope", "global",
+                     "noprefixroute" ,"nodad", "preferred_lft", "0"])
                 neighbour_advertisement (str (ip), iface)
             elif cmd == 'del':
                 if (ip, iface) in ip_seen:
@@ -202,6 +193,7 @@ def ip_address_del (ip_iface=[(None, None)], default_iface=None):
     return ip_address_do ('del', ip_iface=ip_iface, default_iface=default_iface)
 
 class IPTakeOver(object):
+
     def __init__(self, cluster_name, floating_ip_file_name="/usr/local/etc/patroni_floating_ip.conf"):
         self.cluster_name = cluster_name if cluster_name is not None else 'unknown'
         self.floating_ip = read_ip_iface_from_file (floating_ip_file_name)
@@ -268,6 +260,7 @@ class IPTakeOver(object):
             self.wait_master_rw
             self.ip_unlock()
         blackhole_list()
+
     def on_role_change (self, role):
     # run this script when the postgres is being promoted or demoted.
     # role here represent the new role:
@@ -294,6 +287,7 @@ class IPTakeOver(object):
             self.ip_unlock()
             self.ip_add()
         blackhole_list
+
     def on_stop (self, role):
     # run this script when the postgres stops.
         logger.warning ("[{}] {} {}".format (self.cluster_name, "on_stop", role))
