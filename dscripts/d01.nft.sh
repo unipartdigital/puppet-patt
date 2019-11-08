@@ -88,6 +88,7 @@ nftables_enable() {
                     systemctl reload nftables
                 fi
             else
+                rm -f /etc/nftables/postgres_patroni.nft
                 exit 1
             fi
             systemctl status nftables
