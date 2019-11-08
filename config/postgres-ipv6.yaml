@@ -35,7 +35,7 @@ bootstrap:
     retry_timeout: 10
     maximum_lag_on_failover: 1048576
 #    master_start_timeout: 300
-#    synchronous_mode: false
+    synchronous_mode: true
     #standby_cluster:
       #host: 127.0.0.1
       #port: 1111
@@ -109,6 +109,22 @@ postgresql:
     # same as KRB5CCNAME used by the GSS
 #   krb_server_keyfile: /var/spool/keytabs/postgres
     unix_socket_directories: '/var/run/postgresql'
+  callbacks:
+# run this script when configuration reload is triggered.
+    on_reload:
+      /usr/local/sbin/ip_takeover
+# run this script when the postgres restarts (without changing role).
+    on_restart:
+      /usr/local/sbin/ip_takeover
+# run this script when the postgres is being promoted or demoted.
+    on_role_change:
+      /usr/local/sbin/ip_takeover
+# run this script when the postgres starts.
+    on_start:
+      /usr/local/sbin/ip_takeover
+# run this script when the postgres stops.
+    on_stop:
+      /usr/local/sbin/ip_takeover
 
 watchdog:
   mode: automatic # Allowed values: off, automatic, required
