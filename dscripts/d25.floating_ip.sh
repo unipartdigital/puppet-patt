@@ -18,7 +18,7 @@ get_system_release () {
         release=$(rpm -q --whatprovides /etc/redhat-release)
         case $query in
             'major')
-                echo $release | rev |  cut -d '-' -f 2 | rev
+                echo  | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
                 ;;
             'vendor')
                 echo $release | rev |  cut -d '-' -f 4 | rev
@@ -36,7 +36,7 @@ init() {
     # release_arch=$(get_system_release "arch")
 
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
-    rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel python36-Cython"
+    rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel python36-Cython python3*-scapy"
     # psycopg2 is shipped by epel on centos 7
 
     case "${release_vendor}" in
