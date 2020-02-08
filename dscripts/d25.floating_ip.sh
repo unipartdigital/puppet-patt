@@ -46,7 +46,7 @@ init() {
             else
                 rpm_pkg="python3-psycopg2 python3-pip gcc python3-devel python3-Cython python3-scapy make"
                 # psycopg2 is shipped by epel on centos 7
-                dnf install -y ${rel_epel} ${rpm_pkg}
+                dnf install -y epel-release ${rpm_pkg}
             fi
             ;;
         *)

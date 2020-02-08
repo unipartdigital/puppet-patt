@@ -44,7 +44,7 @@ init() {
             if [ "${release_major}" -lt 8 ]; then
                 yum install -y ${rel_epel} ${rpm_pkg}
             else
-                dnf install -y ${rel_epel} ${rpm_pkg}
+                dnf install -y epel-release ${rpm_pkg}
             fi
             ;;
         *)
