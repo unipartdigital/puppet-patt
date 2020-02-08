@@ -162,7 +162,7 @@ init() {
             ;;
     esac
     cat <<EOF | su - postgres
-pip3 install --user patroni[etcd]==${patroni_version}
+pip3 install -U --user patroni[etcd]==${patroni_version}
 EOF
     cat <<EOF > ${srcdir}/patroni.te
 
@@ -171,6 +171,7 @@ module patroni 1.0;
 require {
         type postgresql_db_t;
         type init_t;
+        type postgresql_var_run_t;
         type unreserved_port_t;
         type postgresql_port_t;
         class file { append create execute execute_no_trans getattr ioctl map open read rename setattr unlink write };
@@ -192,6 +193,10 @@ allow init_t postgresql_port_t:tcp_socket name_connect;
 
 #!!!! This avc is allowed in the current policy
 allow init_t unreserved_port_t:tcp_socket name_connect;
+
+#!!!! This avc is allowed in the current policy
+allow init_t postgresql_var_run_t:file create;
+allow init_t postgresql_var_run_t:file write;
 EOF
 
     # Build a MLS/MCS-enabled non-base policy module.
