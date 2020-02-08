@@ -164,6 +164,40 @@ init() {
     cat <<EOF | su - postgres
 pip3 install --user patroni[etcd]==${patroni_version}
 EOF
+    cat <<EOF > ${srcdir}/patroni.te
+
+module patroni 1.0;
+
+require {
+        type postgresql_db_t;
+        type init_t;
+        type unreserved_port_t;
+        type postgresql_port_t;
+        class file { append create execute execute_no_trans getattr ioctl map open read rename setattr unlink write };
+        class dir rename;
+        class tcp_socket name_connect;
+}
+
+#============= init_t ==============
+
+#!!!! This avc is allowed in the current policy
+allow init_t postgresql_db_t:dir rename;
+
+#!!!! This avc is allowed in the current policy
+#!!!! This av rule may have been overridden by an extended permission av rule
+allow init_t postgresql_db_t:file { append create execute execute_no_trans getattr ioctl map open read rename setattr unlink write };
+
+#!!!! This avc is allowed in the current policy
+allow init_t postgresql_port_t:tcp_socket name_connect;
+
+#!!!! This avc is allowed in the current policy
+allow init_t unreserved_port_t:tcp_socket name_connect;
+EOF
+
+    # Build a MLS/MCS-enabled non-base policy module.
+    checkmodule -M -m ${srcdir}/patroni.te -o ${srcdir}/patroni.mod
+    semodule_package -o ${srcdir}/patroni.pp -m ${srcdir}/patroni.mod
+    semodule -X 300 -i ${srcdir}/patroni.pp
 
     bashrc_setup
     bashprofile_setup
