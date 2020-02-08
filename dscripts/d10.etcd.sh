@@ -19,7 +19,7 @@ get_system_release () {
         release=$(rpm -q --whatprovides /etc/redhat-release)
         case $query in
             'major')
-                echo  | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
+                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
                 ;;
             'vendor')
                 echo $release | rev |  cut -d '-' -f 4 | rev
@@ -40,7 +40,8 @@ init() {
             if [ "${release_major}" -lt 8 ]; then
                 yum install -y etcd
             else
-                dnf install -y etcd
+                # centos8 don't provide etcd yet
+                dnf install --nogpgcheck -y etcd
             fi
             ;;
         *)
@@ -70,7 +71,9 @@ config () {
     shift 1
     cluster_nodes=$*
 
-    self_id=$(hostid)
+    #self_id=$(hostid)
+    self_id=$(< /etc/machine-id)
+
     self_node=""
     for n in ${cluster_nodes}; do
         self_node=$(echo $n | grep $self_id) && break
@@ -80,6 +83,7 @@ config () {
 
     # validate
     if [ "x${self_id}" != "x$(echo "$self_node" | cut -d '_' -f 1)" ]; then
+        echo "id error ${self_id} != $(echo $self_node | cut -d '_' -f 1)" 1>&2
         exit 1
     elif ! ip -6 addr show | grep "${self_ip}"; then
         exit 1

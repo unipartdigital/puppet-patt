@@ -18,7 +18,7 @@ get_system_release () {
         release=$(rpm -q --whatprovides /etc/redhat-release)
         case $query in
             'major')
-                echo  | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
+                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
                 ;;
             'vendor')
                 echo $release | rev |  cut -d '-' -f 4 | rev
@@ -36,14 +36,16 @@ init() {
     # release_arch=$(get_system_release "arch")
 
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
-    rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel python36-Cython python3*-scapy"
-    # psycopg2 is shipped by epel on centos 7
 
     case "${release_vendor}" in
         'redhat' | 'centos')
             if [ "${release_major}" -lt 8 ]; then
+                rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel python36-Cython python3*-scapy make"
+                # psycopg2 is shipped by epel on centos 7
                 yum install -y ${rel_epel} ${rpm_pkg}
             else
+                rpm_pkg="python3-psycopg2 python3-pip gcc python3-devel python3-Cython python3-scapy make"
+                # psycopg2 is shipped by epel on centos 7
                 dnf install -y ${rel_epel} ${rpm_pkg}
             fi
             ;;
@@ -59,7 +61,7 @@ build () {
 
     cat <<'EOF' > ./Makefile
 
-CYTHON3 := $(shell which cython3 2> /dev/null || which cython3.8 2> /dev/null || which cython3.6 2> /dev/null)
+CYTHON3 := $(shell which cython3 2> /dev/null || which cython 2> /dev/null || which cython3.8 2> /dev/null || which cython3.6 2> /dev/null)
 PYTHON := python3
 
 main: ip_takeover

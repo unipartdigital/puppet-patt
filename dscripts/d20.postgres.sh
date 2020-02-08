@@ -18,7 +18,7 @@ get_system_release () {
         release=$(rpm -q --whatprovides /etc/redhat-release)
         case $query in
             'major')
-                echo  | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
+                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
                 ;;
             'vendor')
                 echo $release | rev |  cut -d '-' -f 4 | rev
@@ -50,7 +50,9 @@ init() {
                     postgresql${postgresql_version}-contrib
                 #postgresql${postgresql_version}-devel
             else
-                dnf install -y ${rel_repo} ${rel_epel}
+                dnf install -y ${rel_repo} epel-release
+                dnf -qy module disable postgresql
+                # disable default shipped version
                 dnf install -y \
                     postgresql${postgresql_version} \
                     postgresql${postgresql_version}-server \

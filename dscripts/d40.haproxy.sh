@@ -18,7 +18,7 @@ get_system_release () {
         release=$(rpm -q --whatprovides /etc/redhat-release)
         case $query in
             'major')
-                echo  | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
+                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
                 ;;
             'vendor')
                 echo $release | rev |  cut -d '-' -f 4 | rev
