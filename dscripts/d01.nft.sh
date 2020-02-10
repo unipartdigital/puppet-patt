@@ -70,7 +70,6 @@ EOF
 }
 
 nftables_enable() {
-
     release_vendor=$(get_system_release "vendor")
     release_major=$(get_system_release "major")
     # release_arch=$(get_system_release "arch")
@@ -101,6 +100,19 @@ nftables_enable() {
     esac
 }
 
+disable_firewalld () {
+    if systemctl is-enabled nftables; then
+        if systemctl is-enabled firewalld; then
+            systemctl stop firewalld
+            systemctl disable firewalld
+        fi
+    else
+        if ! systemctl is-enabled firewalld; then
+            systemctl enable firewalld
+        fi
+    fi
+}
+
 case "$1" in
     'init')
         shift 1
@@ -109,6 +121,9 @@ case "$1" in
     'nftables_enable')
         shift 1
         nftables_enable "$@"
+        # disable firewalld if nftables is enabled
+        # and re enable firewalld if nftables is disabled
+        disable_firewalld
         ;;
     *)
         echo "$0 error : $1" 1>&2 ; exit 1
