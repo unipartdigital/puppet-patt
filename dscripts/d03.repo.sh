@@ -45,6 +45,11 @@ add_repo () {
 
     case "${release_vendor}" in
         'redhat' | 'centos')
+            # some images may not provide the config-manager plugin
+            if [ "${release_major}" -ge 8 ]; then
+                dnf config-manager || dnf install 'dnf-command(config-manager)' -y
+            fi
+
             for r in "${repo_url[*]}"; do
                 if [ "x$r" == "x" ]; then
                     continue
