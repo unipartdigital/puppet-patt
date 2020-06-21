@@ -46,7 +46,13 @@ init() {
             else
                 rpm_pkg="python3-psycopg2 python3-pip gcc python3-devel python3-Cython python3-scapy make"
                 # psycopg2 is shipped by epel on centos 7
-                dnf install -y epel-release ${rpm_pkg}
+                dnf install -y epel-release
+                # ensure that config-manager is installed
+                dnf config-manager || dnf install 'dnf-command(config-manager)' -y
+                # EPEL packages assume that the 'PowerTools' repository is enabled
+                dnf config-manager --set-enabled PowerTools
+                dnf install -y ${rpm_pkg}
+
             fi
             ;;
         *)
