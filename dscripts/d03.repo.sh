@@ -56,18 +56,15 @@ add_repo () {
                 fi
                 echo "curl -k ${r}" 1>&2
                 curl -k ${r} > /dev/null || continue
-                if [ "${release_major}" -lt 8 ]; then
-                    repo_name=$(echo "$r" | sed -e "s|https*://||" -e "s|[\.:/]|_|g" -e "s|\[|_|" -e "s|\]|_|" -e "s|_\+|_|g")
-                    cat <<EOF > /etc/yum.repos.d/${repo_name}.repo
+                repo_name=$(echo "$r" | sed -e "s|https*://||" -e "s|[\.:/]|_|g" -e "s|\[|_|" -e "s|\]|_|" -e "s|_\+|_|g")
+                cat <<EOF > /etc/yum.repos.d/${repo_name}.repo
 [${repo_name}]
 name=created by $0 from ${r}
 baseurl=${r}
 enabled=1
+skip_if_unavailable=true
 gpgcheck=0
 EOF
-                else
-                    dnf config-manager --nogpgcheck --add-repo "$r"
-                fi
             done
             ;;
     esac
