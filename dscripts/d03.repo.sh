@@ -50,10 +50,12 @@ add_repo () {
                 dnf config-manager || dnf install 'dnf-command(config-manager)' -y
             fi
 
-            for r in "${repo_url[*]}"; do
+            for r in ${repo_url[*]}; do
                 if [ "x$r" == "x" ]; then
                     continue
                 fi
+                echo "curl -k ${r}" 1>&2
+                curl -k ${r} > /dev/null || continue
                 if [ "${release_major}" -lt 8 ]; then
                     repo_name=$(echo "$r" | sed -e "s|https*://||" -e "s|[\.:/]|_|g" -e "s|\[|_|" -e "s|\]|_|" -e "s|_\+|_|g")
                     cat <<EOF > /etc/yum.repos.d/${repo_name}.repo
