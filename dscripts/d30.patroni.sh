@@ -161,6 +161,7 @@ init() {
             exit 1
             ;;
     esac
+    touch /tmp/patroni_pip_install
     cat <<EOF | su - postgres
 pip3 install -U --user patroni[etcd]==${patroni_version}
 EOF
@@ -220,12 +221,15 @@ enable() {
     release_vendor=$(get_system_release "vendor")
     release_major=$(get_system_release "major")
     # release_arch=$(get_system_release "arch")
+    postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
     case "${release_vendor}" in
         'redhat' | 'centos')
             if [ "x$(ps --no-header -C patroni -o pid)" == "x" ]; then
                 systemctl start postgresql-${postgres_version}_patroni && {
                     systemctl enable postgresql-${postgres_version}_patroni; }
+            elif [ "x" != "x$(find -L ${postgres_home}/.local/bin/patroni -newer /tmp/patroni_pip_install)" ]; then
+                systemctl restart postgresql-${postgres_version}_patroni
             fi
             ;;
         *)
@@ -233,6 +237,7 @@ enable() {
             exit 1
             ;;
     esac
+    rm -f /tmp/patroni_pip_install
 }
 
 check() {
