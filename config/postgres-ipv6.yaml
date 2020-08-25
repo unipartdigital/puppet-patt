@@ -95,13 +95,13 @@ postgresql:
   authentication:
     replication:
       username: replication
-      password: rep-pass
+      password:
     superuser:
       username: postgres
-      password: zalando
+      password:
     rewind:  # Has no effect on postgres 10 and lower
       username: rewind_user
-      password: rewind_password
+      password:
   # Server side kerberos spn
 #  krbsrvname: postgres
   parameters:
