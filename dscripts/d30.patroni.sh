@@ -1,5 +1,6 @@
 #!/bin/bash
 
+lock_file=/var/lock/$(basename $0 .sh).lock
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
@@ -246,21 +247,25 @@ patronictl -c ~/patroni.yaml list
 EOF
 }
 
-case "${1:-""}" in
-    'init')
-        shift 1
-        init "$@"
-        ;;
-    'enable')
-        shift 1
-        enable "$@"
-        ;;
-    'check')
-        shift 1
-        check "$@"
-        ;;
-    *)
-        echo "usage: $0 init|enable <postgres version 11|12...> <patroni version: 1.6.0* https://github.com/zalando/patroni/releases>"
-        exit 1
-        ;;
-esac
+{
+    flock -n 9 || exit 1
+
+    case "${1:-""}" in
+        'init')
+            shift 1
+            init "$@"
+            ;;
+        'enable')
+            shift 1
+            enable "$@"
+            ;;
+        'check')
+            shift 1
+            check "$@"
+            ;;
+        *)
+            echo "usage: $0 init|enable <postgres version 11|12...> <patroni version: 1.6.0* https://github.com/zalando/patroni/releases>"
+            exit 1
+            ;;
+    esac
+} 9> ${lock_file}

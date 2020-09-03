@@ -1,5 +1,6 @@
 #!/bin/bash
 
+lock_file=/var/lock/$(basename $0 .sh).lock
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
@@ -212,38 +213,41 @@ member_remove() {
     done
 }
 
+{
+    flock -n 9 || exit 1
 
-case "$1" in
-    'init')
-        shift 1
-        init "$@"
-        ;;
-    'check_healthy')
-        shift 1
-        check_healthy "$@"
-        ;;
-    'check_unhealthy')
-        shift 1
-        check_unhealthy "$@"
-        ;;
-    'check')
-        shift 1
-        check "$@"
-        ;;
-    'config')
-        shift 1
-        config "$@"
-        ;;
-    'enable')
-        shift 1
-        enable "$@"
-        ;;
-    'member_add')
-        shift 1
-        member_add "$@"
-        ;;
-    'member_remove')
-        shift 1
-        member_remove "$@"
-        ;;
-esac
+    case "$1" in
+        'init')
+            shift 1
+            init "$@"
+            ;;
+        'check_healthy')
+            shift 1
+            check_healthy "$@"
+            ;;
+        'check_unhealthy')
+            shift 1
+            check_unhealthy "$@"
+            ;;
+        'check')
+            shift 1
+            check "$@"
+            ;;
+        'config')
+            shift 1
+            config "$@"
+            ;;
+        'enable')
+            shift 1
+            enable "$@"
+            ;;
+        'member_add')
+            shift 1
+            member_add "$@"
+            ;;
+        'member_remove')
+            shift 1
+            member_remove "$@"
+            ;;
+    esac
+} 9> ${lock_file}

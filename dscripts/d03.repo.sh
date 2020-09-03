@@ -1,5 +1,6 @@
 #!/bin/bash
 
+lock_file=/var/lock/$(basename $0 .sh).lock
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
@@ -75,17 +76,21 @@ del_repo () {
     exit 1
 }
 
-case "$1" in
-    'add')
-        shift 1
-        add_repo "$@"
-        ;;
-    'del')
-        shift 1
-        del_repo "$@"
-        ;;
-    *)
-        echo "not implemented: $1" 1>&2
-        exit 1
-        ;;
-esac
+{
+    flock -n 9 || exit 1
+
+    case "$1" in
+        'add')
+            shift 1
+            add_repo "$@"
+            ;;
+        'del')
+            shift 1
+            del_repo "$@"
+            ;;
+        *)
+            echo "not implemented: $1" 1>&2
+            exit 1
+            ;;
+    esac
+} 9> ${lock_file}

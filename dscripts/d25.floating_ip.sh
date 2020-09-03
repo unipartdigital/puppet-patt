@@ -1,5 +1,6 @@
 #!/bin/bash
 
+lock_file=/var/lock/$(basename $0 .sh).lock
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
@@ -120,22 +121,26 @@ enable () {
     fi
 }
 
-case "${1:-""}" in
-    'init')
-        shift 1
-        init "$@"
-        ;;
-    'build')
-        cd ${srcdir}
-        shift 1
-        build "$@"
-        ;;
-    'enable')
-        shift 1
-        enable "$@"
-        ;;
-    *)
-        echo "usage: $0 init|build|enable <list of floating_ip>"
-        exit 1
-        ;;
-esac
+{
+    flock -n 9 || exit 1
+
+    case "${1:-""}" in
+        'init')
+            shift 1
+            init "$@"
+            ;;
+        'build')
+            cd ${srcdir}
+            shift 1
+            build "$@"
+            ;;
+        'enable')
+            shift 1
+            enable "$@"
+            ;;
+        *)
+            echo "usage: $0 init|build|enable <list of floating_ip>"
+            exit 1
+            ;;
+    esac
+} 9> ${lock_file}
