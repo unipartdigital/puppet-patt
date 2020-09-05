@@ -1,6 +1,7 @@
 #!/bin/bash
 
-lock_file=/var/lock/$(basename $0 .sh).lock
+lock_file=/tmp/$(basename $0 .sh).lock
+touch ${lock_file} 2> /dev/null; chmod o+r+w ${lock_file}
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
