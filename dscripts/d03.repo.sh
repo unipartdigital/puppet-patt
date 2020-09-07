@@ -6,7 +6,7 @@ srcdir=$(cd $(dirname $0); pwd)
 set -e
 trap '{ echo "$0 FAILED on line $LINENO!; rm -f $0 ;}" | tee ${srcdir}/$(basename $0).log' ERR
 # clean up on exit
-trap "{ rm -f $0; }" EXIT
+trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
 
 self=$(basename $0 .sh)
 
