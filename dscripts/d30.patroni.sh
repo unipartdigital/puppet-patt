@@ -210,7 +210,7 @@ EOF
     checkmodule -M -m ${srcdir}/patroni.te -o ${srcdir}/patroni.mod
     semodule_package -o ${srcdir}/patroni.pp -m ${srcdir}/patroni.mod
     semodule -X 300 -i ${srcdir}/patroni.pp
-
+    rm -f ${srcdir}/patroni.te ${srcdir}/patroni.mod ${srcdir}/patroni.pp
     bashrc_setup
     bashprofile_setup
     systemd_setup ${postgres_version}

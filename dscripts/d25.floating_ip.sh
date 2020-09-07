@@ -102,6 +102,7 @@ distclean: clean
 EOF
 
     make install || exit 1
+    rm -f ./Makefile ./ip_takeover ./ip_takeover.c
 }
 
 enable () {
