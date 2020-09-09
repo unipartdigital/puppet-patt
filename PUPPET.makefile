@@ -1,3 +1,6 @@
+DESTDIR := $(shell mktemp -d)
+PWD := $(CURDIR)
+
 puppet-module:
 	mkdir -p $(DESTDIR)/pgcrt/files/pgcrt
 	mkdir -m 755 $(DESTDIR)/pgcrt/files/pgcrt/config
@@ -56,3 +59,10 @@ puppet-module:
 	install -m 755 puppet/modules/pgcrt/ssh-keys/00-generator.sh $(DESTDIR)/pgcrt/ssh-keys/
 
 	install -m 644 puppet/modules/pgcrt/templates/pgcrt.yaml.epp $(DESTDIR)/pgcrt/templates/
+
+pgcrt-puppet.tar.xz: puppet-module
+	cd $(DESTDIR) && chmod 0755 . && tar Jcvpf $(PWD)/$@ --owner root --group root .
+	rm -rf $(DESTDIR)
+	@echo
+	@echo "use --preserve-permissions if extracting the archive as non root user"
+	@echo
