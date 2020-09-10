@@ -6,18 +6,13 @@ PY_MOD := $(shell grep -v '\#' ${CURDIR}/requirements.txt)
 .phony: main depend paramiko puppet-module help
 
 help:
-	@echo "before run:"
-	@echo " make main"
-	@echo ""
+
 	@echo "to create a puppet module archive:"
 	@echo " make pgcrt-puppet.tar.xz"
 	@echo
 	@echo "other target:"
 	@echo " make depend"
 	@echo " make $(PY_MOD)"
-
-main:
-	$(MAKE) depend
 
 $(PY_MOD):
 	@echo DEP $@
