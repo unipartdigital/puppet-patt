@@ -67,7 +67,7 @@ def _get_patroni_config (patroni_config='/var/lib/pgsql/patroni.yaml'):
 class PatroniConfig(object):
 
     def __init__(self, cluster_name, template_file, nodes, etcd_peers,
-                 sys_user_pass, dst_file, name_space="/service"):
+                 sys_user_pass, postgres_parameters, dst_file, name_space="/service"):
         self.tmpl=None
         self.file_name=dst_file
         self.user_pass_dict = {} if sys_user_pass == None else dict(ast.literal_eval(sys_user_pass))
@@ -75,6 +75,7 @@ class PatroniConfig(object):
         self.pass_rew = ''
         self.pass_sup = ''
         self.prev=_get_patroni_config(self.file_name)
+        self.postgres_parameters = list(ast.literal_eval(postgres_parameters))
 
         with open(template_file, 'r') as t:
             try:
@@ -111,6 +112,15 @@ class PatroniConfig(object):
             self.tmpl['postgresql']['authentication']['rewind']['password'] = self.pass_rew
         if not self.tmpl['postgresql']['authentication']['superuser']['password']:
             self.tmpl['postgresql']['authentication']['superuser']['password'] = self.pass_sup
+
+        if 'parameters' in self.tmpl['postgresql']:
+            tmp = self.tmpl['postgresql']['parameters']
+            if type(tmp) is list:
+                self.tmpl['postgresql']['parameters'] = tmp + postgres_parameters
+            else:
+                self.tmpl['postgresql']['parameters'] = postgres_parameters
+        else:
+            self.tmpl['postgresql']['parameters'] = postgres_parameters
 
         my_ip = _get_ip(nodes)
         # override Global/Universal
@@ -149,6 +159,7 @@ if __name__ == "__main__":
     # peers argument should be called like: '-p p1 p2 p3'
     parser.add_argument('-e','--etcd_peers', help='etcd peers', required=True, nargs='+')
     parser.add_argument('-s','--sys_user_pass', help='system user password dict', required=True, type=str)
+    parser.add_argument('-pp','--postgres_parameters', help='list of configuration settings for Postgres', required=True, type=str)
     parser.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
 
     args = parser.parse_args()
@@ -167,6 +178,7 @@ if __name__ == "__main__":
                         nodes=args.postgres_peers,
                         etcd_peers=args.etcd_peers,
                         sys_user_pass=args.sys_user_pass,
+                        postgres_parameters=args.postgres_parameters,
                         dst_file=args.destination_file)
     pc.write ()
 
