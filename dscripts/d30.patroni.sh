@@ -231,6 +231,9 @@ enable() {
                     systemctl enable postgresql-${postgres_version}_patroni; }
             elif [ "x" != "x$(find -L ${postgres_home}/.local/bin/patroni -newer /tmp/patroni_pip_install)" ]; then
                 systemctl restart postgresql-${postgres_version}_patroni
+            elif [ -f "/tmp/patroni.reload" ]; then
+                systemctl reload postgresql-${postgres_version}_patroni && \
+                    rm -f "/tmp/patroni.reload"
             fi
             ;;
         *)

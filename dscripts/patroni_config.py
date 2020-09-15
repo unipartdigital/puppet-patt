@@ -9,6 +9,7 @@ import socket
 import sys
 import ast
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
+import hashlib
 
 """
 use ip addr show to return a list of setup ip address
@@ -127,12 +128,31 @@ class PatroniConfig(object):
         # provide a static list of etcd peers
         self.tmpl['etcd']['hosts'] = ",".join([str(i) + ":2379" for i in etcd_peers])
 
+    """
+    write only on change
+    """
     def write (self):
+        old_md5 = hashlib.md5()
+        new_md5 = hashlib.md5()
+        if os.path.isfile(self.file_name):
+            with open(self.file_name, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    old_md5.update(chunk)
+        new_md5.update(yaml.dump(self.tmpl, default_flow_style=False).encode('utf-8'))
+        if old_md5.hexdigest() == new_md5.hexdigest():
+            return
         try:
             with open(self.file_name, 'w') as f:
                 print(yaml.dump(self.tmpl, default_flow_style=False), file=f)
         except:
             raise
+        try:
+            with open('/tmp/patroni.reload', 'w') as f:
+                pass
+        except:
+            raise
+        finally:
+            f.close()
 
     def dump (self):
         try:
