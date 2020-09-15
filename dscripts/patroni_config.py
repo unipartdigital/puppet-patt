@@ -10,6 +10,7 @@ import sys
 import ast
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
 import hashlib
+import io
 
 """
 use ip addr show to return a list of setup ip address
@@ -138,7 +139,11 @@ class PatroniConfig(object):
             with open(self.file_name, "rb") as f:
                 for chunk in iter(lambda: f.read(4096), b""):
                     old_md5.update(chunk)
-        new_md5.update(yaml.dump(self.tmpl, default_flow_style=False).encode('utf-8'))
+
+        buf = io.StringIO()
+        print(yaml.dump(tmpl, default_flow_style=False), file=buf)
+        new_md5.update(buf.getvalue().encode('utf8'))
+
         if old_md5.hexdigest() == new_md5.hexdigest():
             return
         try:
