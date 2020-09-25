@@ -19,22 +19,39 @@ class Object(object):
 class Config(object):
     def __init__(self):
 
-        self.certificate = {'subject': {}, 'meta': {}, 'data': {}}
-        self.private_key = {}
+        self.ca   = {'subject': {}, 'meta': {}, 'data': {}, 'key': {}}
+        self.cert = {'subject': {}, 'meta': {}, 'data': {}, 'key': {}}
 
     def from_argparse_cli(self, args):
         self.private_key['path'] = args.private_key_path
         self.private_key['pass_phrase'] = args.private_key_pass_phrase
         self.private_key['size'] = args.private_key_size
-        self.certificate['subject']['country_name'] = args.cert_country_name
-        self.certificate['subject']['state_or_province_name'] = args.cert_state_or_province_name
-        self.certificate['subject']['locality_name'] = args.cert_locality_name
-        self.certificate['subject']['organization_name'] = args.cert_organization_name
-        self.certificate['subject']['common_name'] = args.cert_common_name
-        self.certificate['meta']['path'] = args.cert_path
-        self.certificate['data']['not_valid_after_days'] = args.cert_not_valid_after
-        self.certificate['data']['dns'] = args.cert_dns
-        self.certificate['data']['ip'] = args.cert_ip
+
+        self.ca['subject']['country_name'] = args.ca_country_name
+        self.ca['subject']['state_or_province_name'] = args.ca_state_or_province_name
+        self.ca['subject']['locality_name'] = args.ca_locality_name
+        self.ca['subject']['organization_name'] = args.ca_organization_name
+        self.ca['subject']['common_name'] = args.ca_common_name
+        self.ca['meta']['path'] = args.ca_path
+        self.ca['data']['not_valid_after_days'] = args.ca_not_valid_after
+        self.ca['data']['dns'] = args.ca_dns
+        self.ca['data']['ip'] = args.ca_ip
+        self.ca['key']['path'] = args.ca_key_path
+        self.ca['key']['pass_phrase'] = args.ca_key_pass_phrase
+        self.ca['key']['size'] = args.ca_key_size
+
+        self.cert['subject']['country_name'] = args.cert_country_name
+        self.cert['subject']['state_or_province_name'] = args.cert_state_or_province_name
+        self.cert['subject']['locality_name'] = args.cert_locality_name
+        self.cert['subject']['organization_name'] = args.cert_organization_name
+        self.cert['subject']['common_name'] = args.cert_common_name
+        self.cert['meta']['path'] = args.cert_path
+        self.cert['data']['not_valid_after_days'] = args.cert_not_valid_after
+        self.cert['data']['dns'] = args.cert_dns
+        self.cert['data']['ip'] = args.cert_ip
+        self.cert['key']['path'] = args.cert_key_path
+        self.cert['key']['pass_phrase'] = args.cert_key_pass_phrase
+        self.cert['key']['size'] = args.cert_key_size
 
     def to_yaml(self):
         result = yaml.dump(self)
@@ -82,16 +99,34 @@ def private_key (pass_phrase=None, key_path=None, key_size=4096):
             ))
     return key
 
-def mk_certificate (country_name,
-                    state_or_province_name,
-                    locality_name,
-                    organization_name,
-                    common_name,
-                    private_key,
-                    certificat_path=None,
-                    not_valid_after_days=365,
-                    dns=[],
-                    ip=[]):
+"""
+create a certificate,
+will load the certificate from path if provided and suitable
+"""
+def mk_certificate_thin (country_name,
+                         state_or_province_name,
+                         locality_name,
+                         organization_name,
+                         common_name,
+                         private_key,
+                         public_key=None,
+                         certificate_path=None,
+                         ca_path=None,
+                         is_root=False,
+                         not_valid_after_days=365,
+                         dns=[],
+                         ip=[]):
+    ca=None
+    if certificate_path and os.path.isfile (certificate_path):
+        with open(certificate_path, "rb") as f:
+            cert=f.read()
+            cert = x509.load_pem_x509_certificate(cert)
+            return cert
+    if ca_path and os.path.isfile (ca_path):
+        with open(ca_path, "rb") as f:
+            ca=f.read()
+            ca = x509.load_pem_x509_certificate(ca)
+
     # Various details about who we are. For a self-signed certificate the
     # subject and issuer are always the same.
     subject = issuer = x509.Name([
@@ -101,17 +136,23 @@ def mk_certificate (country_name,
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization_name),
         x509.NameAttribute(NameOID.COMMON_NAME, common_name),
     ])
+    #
+    if isinstance(ca, x509.Certificate):
+        issuer = ca.issuer
 
     ext = []
     ext += [x509.DNSName(d) for d in dns]
     ext += [x509.IPAddress(ip_address(i)) for i in ip]
+
+    if public_key is None:
+        public_key=private_key.public_key()
 
     cert = x509.CertificateBuilder().subject_name(
         subject
     ).issuer_name(
         issuer
     ).public_key(
-        key.public_key()
+        public_key
     ).serial_number(
         x509.random_serial_number()
     ).not_valid_before(
@@ -123,14 +164,56 @@ def mk_certificate (country_name,
         x509.SubjectAlternativeName(ext),
         critical=False,
         # Sign our certificate with our private key
-    ).sign(key, hashes.SHA256())
+    )
+    if is_root:
+        cert = cert.add_extension(
+            x509.BasicConstraints(ca=True, path_length=None), critical=True,
+        )
+    cert = cert.sign(private_key, hashes.SHA256())
+
     # Write our certificate out to disk.
 
-    if certificat_path:
-        with open(certificat_path, "wb") as f:
+    if certificate_path:
+        with open(certificate_path, "wb") as f:
             f.write(cert.public_bytes(serialization.Encoding.PEM))
     return cert.public_bytes(serialization.Encoding.PEM)
 
+"""
+use openssl cli to verify the certificate chain
+"""
+def x509_verify(cfg):
+    import subprocess
+    ca_path=None
+    cmd=['/usr/bin/openssl', 'verify']
+    if 'path' in cfg.ca['meta']:
+        cmd.append('-CAfile')
+        cmd.append(cfg.ca['meta']['path'])
+        if 'path' in cfg.cert['meta']:
+            cmd.append(cfg.cert['meta']['path'])
+    try:
+        res = subprocess.run(cmd, shell=False, check=False, capture_output=True, text=True)
+        print (res.stdout)
+        print (res.stderr,file=sys.stderr)
+        sys.exit(res.returncode)
+    except:
+        raise
+
+def x509_show(cfg):
+    import subprocess
+    ca_path=None
+    inf=[]
+    cmd=['/usr/bin/openssl', 'x509', '-text', '-noout']
+    if 'path' in cfg.ca['meta']:
+        inf.append(cfg.ca['meta']['path'])
+        if cfg.cert['meta'] and 'path' in cfg.cert['meta']:
+            inf.append(cfg.cert['meta']['path'])
+    try:
+        for i in inf:
+            res = subprocess.run(cmd + ['-in', i], shell=False, check=True, capture_output=True, text=True)
+            print (res.stdout)
+            print (res.stderr,file=sys.stderr)
+    except:
+        raise
 
 if __name__ == "__main__":
     cfg = Config()
@@ -139,11 +222,26 @@ if __name__ == "__main__":
 
     yml = subparsers.add_parser('yaml')
     yml.add_argument('-f','--yaml_config_file', help='config file', required=True)
+    yml.add_argument('--verify', help='run openssl verify', required=False, action='store_true')
+    yml.add_argument('--show', help='output certificate in text format', required=False, action='store_true')
 
     cli = subparsers.add_parser('cli')
     cli.add_argument('--private_key_pass_phrase', help='private key passphrase', default=None, required=False)
     cli.add_argument('--private_key_size', help='private key size', default=4096, required=False)
     cli.add_argument('--private_key_path', help='path to private key', default=None, required=False)
+
+    cli.add_argument('--ca-country_name', help='Country Name', required=True)
+    cli.add_argument('--ca-state_or_province_name', help='State or Province Name', required=True)
+    cli.add_argument('--ca-locality_name', help='Locality Name', required=True)
+    cli.add_argument('--ca-organization_name', help='Organization Name', required=True)
+    cli.add_argument('--ca-common_name', help='Common Name', required=True)
+    cli.add_argument('--ca-dns', help='list of dns names', action='append', required=False, default=[])
+    cli.add_argument('--ca-ip', help='list of IPs', action='append', required=False, default=[])
+    cli.add_argument('--ca-not_valid_after', help='not valid after n days', default=365, required=False)
+    cli.add_argument('--ca-path', help='path to ca certificat', default=None, required=False)
+    cli.add_argument('--ca_key_pass_phrase', help='private key passphrase', default=None, required=False)
+    cli.add_argument('--ca_key_size', help='private key size', default=4096, required=False)
+    cli.add_argument('--ca_key_path', help='path to private key', default=None, required=False)
 
     cli.add_argument('--cert-country_name', help='Country Name', required=True)
     cli.add_argument('--cert-state_or_province_name', help='State or Province Name', required=True)
@@ -154,7 +252,11 @@ if __name__ == "__main__":
     cli.add_argument('--cert-ip', help='list of IPs', action='append', required=False, default=[])
     cli.add_argument('--cert-not_valid_after', help='not valid after n days', default=365, required=False)
     cli.add_argument('--cert-path', help='path to certificat', default=None, required=False)
-    cli.add_argument('--yaml_dump', help="dump the cli options in yaml format", action='store_true', required=False)
+    cli.add_argument('--cert_key_pass_phrase', help='private key passphrase', default=None, required=False)
+    cli.add_argument('--cert_key_size', help='private key size', default=4096, required=False)
+    cli.add_argument('--cert_key_path', help='path to private key', default=None, required=False)
+
+    cli.add_argument('--yaml_dump', help="dump the cli options in yaml format", action='store_true')
 
     args = parser.parse_args()
     if args.interface == 'cli':
@@ -163,25 +265,56 @@ if __name__ == "__main__":
             cfg.to_yaml()
     elif args.interface == 'yaml':
         cfg.from_yaml_file (args.yaml_config_file)
+        if args.verify:
+            x509_verify(cfg)
+        if args.show:
+            x509_show(cfg)
     else:
         parser.print_help()
         sys.exit(1)
 
-    key = private_key(key_path=cfg.private_key['path'],
-                      pass_phrase=cfg.private_key['pass_phrase'],
-                      key_size=cfg.private_key['size']
-                      )
+    public_key=None
 
-    crt = mk_certificate(country_name=cfg.certificate['subject']['country_name'],
-                         state_or_province_name=cfg.certificate['subject']['state_or_province_name'],
-                         locality_name=cfg.certificate['subject']['locality_name'],
-                         organization_name=cfg.certificate['subject']['organization_name'],
-                         common_name=cfg.certificate['subject']['common_name'],
-                         private_key=key,
-                         certificat_path=cfg.certificate['meta']['path'],
-                         not_valid_after_days=cfg.certificate['data']['not_valid_after_days'],
-                         dns=cfg.certificate['data']['dns'],
-                         ip=cfg.certificate['data']['ip']
-                         )
-    if cfg.certificate['meta']['path'] is None:
-        print (crt.decode('utf8'))
+    if 'common_name' in cfg.ca['subject']:
+        ca_key = private_key(key_path=cfg.ca['key']['path'],
+                             pass_phrase=cfg.ca['key']['pass_phrase'],
+                             key_size=cfg.ca['key']['size']
+                             )
+        ca_crt = mk_certificate_thin(country_name=cfg.ca['subject']['country_name'],
+                                     state_or_province_name=cfg.ca['subject']['state_or_province_name'],
+                                     locality_name=cfg.ca['subject']['locality_name'],
+                                     organization_name=cfg.ca['subject']['organization_name'],
+                                      common_name=cfg.ca['subject']['common_name'],
+                                     private_key=ca_key,
+                                     certificate_path=cfg.ca['meta']['path'],
+                                     is_root=True,
+                                     not_valid_after_days=cfg.ca['data']['not_valid_after_days'],
+                                     dns=cfg.ca['data']['dns'],
+                                     ip=cfg.ca['data']['ip']
+                                     )
+
+    srv_key = private_key(key_path=cfg.cert['key']['path'],
+                          pass_phrase=cfg.cert['key']['pass_phrase'],
+                          key_size=cfg.cert['key']['size']
+                          )
+
+    certificate_path=None
+    if cfg.cert['meta'] and 'path' in cfg.cert['meta']:
+        certificate_path=cfg.cert['meta']['path']
+
+    srv_crt = mk_certificate_thin(country_name=cfg.cert['subject']['country_name'],
+                                  state_or_province_name=cfg.cert['subject']['state_or_province_name'],
+                                  locality_name=cfg.cert['subject']['locality_name'],
+                                  organization_name=cfg.cert['subject']['organization_name'],
+                                  common_name=cfg.cert['subject']['common_name'],
+                                  private_key=ca_key,
+                                  public_key=srv_key.public_key(),
+                                  certificate_path=certificate_path,
+                                  ca_path=cfg.ca['meta']['path'],
+                                  not_valid_after_days=cfg.cert['data']['not_valid_after_days'],
+                                  dns=cfg.cert['data']['dns'],
+                                  ip=cfg.cert['data']['ip']
+                                  )
+
+    if args.verify is None:
+        print (srv_crt.public_bytes(serialization.Encoding.PEM).decode('utf8'))
