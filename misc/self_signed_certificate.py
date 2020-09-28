@@ -138,11 +138,14 @@ def mk_certificate_thin (country_name,
     ])
     #
     if isinstance(ca, x509.Certificate):
+        # update the issuer info if a CA is provided
         issuer = ca.issuer
 
     ext = []
-    ext += [x509.DNSName(d) for d in dns]
-    ext += [x509.IPAddress(ip_address(i)) for i in ip]
+    if not is_root:
+        # add DNS & IP extension if not CA
+        ext += [x509.DNSName(d) for d in dns]
+        ext += [x509.IPAddress(ip_address(i)) for i in ip]
 
     if public_key is None:
         public_key=private_key.public_key()
@@ -158,12 +161,10 @@ def mk_certificate_thin (country_name,
     ).not_valid_before(
         datetime.datetime.utcnow()
     ).not_valid_after(
-        # Our certificate will be valid for 10 years
         datetime.datetime.utcnow() + datetime.timedelta(days=not_valid_after_days)
     ).add_extension(
         x509.SubjectAlternativeName(ext),
         critical=False,
-        # Sign our certificate with our private key
     )
     if is_root:
         cert = cert.add_extension(
