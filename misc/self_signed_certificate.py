@@ -224,6 +224,10 @@ if __name__ == "__main__":
     yml.add_argument('-f','--yaml_config_file', help='config file', required=True)
     yml.add_argument('--verify', help='run openssl verify', required=False, action='store_true')
     yml.add_argument('--show', help='output certificate in text format', required=False, action='store_true')
+    yml.add_argument('--over_ca_path', help='override path to ca certificat', default=None, required=False)
+    yml.add_argument('--over_ca_key_path', help='override path to private key', default=None, required=False)
+    yml.add_argument('--over_cert_path', help='override path to certificat', default=None, required=False)
+    yml.add_argument('--over_cert_key_path', help='override path to private key', default=None, required=False)
 
     cli = subparsers.add_parser('cli')
     cli.add_argument('--private_key_pass_phrase', help='private key passphrase', default=None, required=False)
@@ -265,6 +269,16 @@ if __name__ == "__main__":
             cfg.to_yaml()
     elif args.interface == 'yaml':
         cfg.from_yaml_file (args.yaml_config_file)
+
+        if args.over_ca_path:
+            cfg.ca['meta']['path'] = args.over_ca_path
+        if args.over_ca_key_path:
+            cfg.ca['key']['path'] = args.over_ca_key_path
+        if args.over_cert_path:
+            cfg.cert['meta']['path'] = args.over_cert_path
+        if args.over_cert_key_path:
+            cfg.cert['key']['path'] = args.over_cert_key_path
+
         if args.verify:
             x509_verify(cfg)
         if args.show:

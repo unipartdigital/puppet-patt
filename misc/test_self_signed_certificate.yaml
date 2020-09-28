@@ -28,7 +28,7 @@ cert:
   meta:
     path: ./srv.pem
   subject:
-    common_name: self signed cert
+    common_name: server cert
     country_name: UK
     locality_name: Cambridge
     organization_name: snake oil
