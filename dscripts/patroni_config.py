@@ -141,7 +141,7 @@ class PatroniConfig(object):
                     old_md5.update(chunk)
 
         buf = io.StringIO()
-        print(yaml.dump(tmpl, default_flow_style=False), file=buf)
+        print(yaml.dump(self.tmpl, default_flow_style=False), file=buf)
         new_md5.update(buf.getvalue().encode('utf8'))
 
         if old_md5.hexdigest() == new_md5.hexdigest():
