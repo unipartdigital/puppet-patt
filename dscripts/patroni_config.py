@@ -11,6 +11,7 @@ import ast
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
 import hashlib
 import io
+import pwd
 
 """
 use ip addr show to return a list of setup ip address
@@ -128,6 +129,34 @@ class PatroniConfig(object):
 
         # provide a static list of etcd peers
         self.tmpl['etcd']['hosts'] = ",".join([str(i) + ":2379" for i in etcd_peers])
+
+        # enable ssl if not set or explicitly disabled (and if possible)
+        def is_ssl_set (tmpl_str):
+            if not 'postgresql' in tmpl_str: return False
+            if not 'parameters' in tmpl_str['postgresql']: return False
+            if not 'ssl' in tmpl_str['postgresql']['parameters']: return False
+        if is_ssl_set (self.tmpl):
+            pass
+        else:
+            from os import access, R_OK
+            from os.path import isfile
+            pg_home=pwd.getpwnam('postgres').pw_dir
+            try:
+                for f in [pg_home + '/server.crt', pg_home + '/server.key']:
+                    assert isfile(f) and access(f, R_OK)
+            except AssertionError:
+                pass
+            else:
+                self.tmpl['postgresql']['parameters']['ssl'] = True
+                self.tmpl['postgresql']['parameters']['ssl_cert_file'] = pg_home + '/server.crt'
+                self.tmpl['postgresql']['parameters']['ssl_key_file']  = pg_home + '/server.key'
+                try:
+                    f = pg_home + '/.postgresql/root.crt'
+                    assert isfile(f) and access(f, R_OK)
+                except AssertionError:
+                    pass
+                else:
+                    self.tmpl['postgresql']['parameters']['ssl_ca_file'] = pg_home + '/.postgresql/root.crt'
 
     """
     write only on change
