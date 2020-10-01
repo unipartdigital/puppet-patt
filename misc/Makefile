@@ -43,8 +43,9 @@ $(CA_PASS_OPT)                               \
 ;
 	openssl x509 -text -noout -in root.pem
 	@echo "=================================="
-	openssl x509 -noout -modulus -in root.pem | openssl md5
-	openssl rsa -noout -modulus -in root.key $(CA_PASS_OPT_OPENSSL) | openssl md5
+	$(eval A := $(shell openssl x509 -noout -modulus -in root.pem | openssl md5 | cut -d' ' -f 2))
+	$(eval B := $(shell openssl rsa -noout -modulus -in root.key $(CA_PASS_OPT_OPENSSL) | openssl md5 | cut -d' ' -f 2))
+	if [ "$(A)" == "$(B)" ]; then echo "modulus OK"; else echo "modulus error"; exit 1; fi
 	openssl verify -CAfile root.pem  root.pem
 	@echo "=================================="
 
@@ -69,9 +70,10 @@ $(CA_PASS_OPT)                                  \
 ;
 	openssl x509 -text -noout -in srv.pem
 	@echo "================================="
+	$(eval A := $(shell openssl x509 -noout -modulus -in srv.pem | openssl md5 | cut -d' ' -f 2))
+	$(eval B := $(shell openssl rsa -noout -modulus -in srv.key $(CA_PASS_OPT_OPENSSL) | openssl md5 | cut -d' ' -f 2))
+	if [ "$(A)" == "$(B)" ]; then echo "modulus OK"; else echo "modulus error"; exit 1; fi
 	openssl verify -CAfile root.pem  srv.pem
-	openssl x509 -noout -modulus -in srv.pem | openssl md5
-	openssl rsa -noout -modulus -in srv.key | openssl md5
 	@echo "================================="
 
 cli_test_self_srv:
@@ -93,8 +95,9 @@ cli_test_self_srv:
 	openssl x509 -text -noout -in srv.pem
 	@echo "================================="
 	openssl verify -CAfile srv.pem srv.pem
-	openssl x509 -noout -modulus -in srv.pem | openssl md5
-	openssl rsa -noout -modulus -in srv.key | openssl md5
+	$(eval A := $(shell openssl x509 -noout -modulus -in srv.pem | openssl md5 | cut -d' ' -f 2))
+	$(eval B := $(shell openssl rsa -noout -modulus -in srv.key $(CA_PASS_OPT_OPENSSL) | openssl md5 | cut -d' ' -f 2))
+	if [ "$(A)" == "$(B)" ]; then echo "modulus OK"; else echo "modulus error"; exit 1; fi
 	@echo "================================="
 
 cli_test_cert:
