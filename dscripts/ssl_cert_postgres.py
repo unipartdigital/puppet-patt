@@ -64,7 +64,7 @@ if __name__ == "__main__":
         "--cert_state_or_province_name", args.cert_state_or_province_name,
         "--cert_locality_name", args.cert_locality_name,
         "--cert_organization_name", args.cert_organization_name,
-        "--cert_common_name", args.cluster_name,
+        "--cert_common_name", "Peer {}".format(args.cluster_name),
         "--cert_not_valid_after", str(args.cert_not_valid_after),
         "--cert_path", pgh + '/server.crt',
         "--cert_key_size", str(args.cert_key_size),
