@@ -6,6 +6,7 @@ puppet-module:
 	mkdir -m 755 $(DESTDIR)/pgcrt/files/pgcrt/config
 	mkdir -m 755 $(DESTDIR)/pgcrt/files/pgcrt/dscripts
 	mkdir -m 755 $(DESTDIR)/pgcrt/files/pgcrt/ssh
+	mkdir -m 755 $(DESTDIR)/pgcrt/files/pgcrt/misc
 
 	install -m 644 Makefile $(DESTDIR)/pgcrt/files/pgcrt/.
 	install -m 644 README.md $(DESTDIR)/pgcrt/files/pgcrt/.
@@ -27,7 +28,9 @@ puppet-module:
 	install -m 644 dscripts/nft_config.py $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
 	install -m 644 dscripts/patroni_config.py $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
 	install -m 644 dscripts/patroni_info.py $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
+	install -m 644 dscripts/ssl_cert_postgres.py $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
 
+	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/pgcrt/files/pgcrt/misc/
 	install -m 644 ip_takeover.py $(DESTDIR)/pgcrt/files/pgcrt/.
 	install -m 644 pgcrt.py $(DESTDIR)/pgcrt/files/pgcrt/.
 	install -m 755 pgcrt_cli.py $(DESTDIR)/pgcrt/files/pgcrt/.
@@ -45,7 +48,6 @@ puppet-module:
 	install -m 644 ssh/ssh_client.py $(DESTDIR)/pgcrt/files/pgcrt/ssh
 
 	mkdir -m 0755 -p $(DESTDIR)/pgcrt/manifests/
-	mkdir -m 1777 -p $(DESTDIR)/pgcrt/ssh-keys/
 	mkdir -m 0755 -p $(DESTDIR)/pgcrt/templates/
 
 	install -m 644 puppet/modules/pgcrt/manifests/service.pp $(DESTDIR)/pgcrt/manifests/
@@ -56,9 +58,19 @@ puppet-module:
 	install -m 644 puppet/modules/pgcrt/manifests/sshkeys.pp $(DESTDIR)/pgcrt/manifests/
 	install -m 644 puppet/modules/pgcrt/manifests/packages.pp $(DESTDIR)/pgcrt/manifests/
 
-	install -m 755 puppet/modules/pgcrt/ssh-keys/00-generator.sh $(DESTDIR)/pgcrt/ssh-keys/
-
 	install -m 644 puppet/modules/pgcrt/templates/pgcrt.yaml.epp $(DESTDIR)/pgcrt/templates/
+
+# SSH keys
+	mkdir -m 1777 -p $(DESTDIR)/pgcrt/ssh-keys/
+	install -m 755 puppet/modules/pgcrt/ssh-keys/00-generator.sh $(DESTDIR)/pgcrt/ssh-keys/
+	install -m 644 puppet/modules/pgcrt/manifests/sshkeys.pp $(DESTDIR)/pgcrt/manifests/
+
+# SSL certs
+	mkdir -m 1777 -p $(DESTDIR)/pgcrt/ssl-cert/
+	install -m 755 puppet/modules/pgcrt/ssl-cert/00-generator.sh $(DESTDIR)/pgcrt/ssl-cert/
+	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/pgcrt/ssl-cert/
+	install -m 644 puppet/modules/pgcrt/manifests/sslcerts.pp $(DESTDIR)/pgcrt/manifests/
+
 
 pgcrt-puppet.tar.xz: puppet-module
 	cd $(DESTDIR) && chmod 0755 . && tar Jcvpf $(PWD)/$@ --owner root --group root .
