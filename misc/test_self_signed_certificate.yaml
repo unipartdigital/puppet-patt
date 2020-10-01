@@ -1,8 +1,6 @@
 #!!python/object:__main__.Config
 ca:
   data:
-    dns: []
-    ip: []
     not_valid_after_days: 365
   meta:
     path:  ./root.pem
@@ -10,7 +8,7 @@ ca:
     common_name: root CA self-signed
     country_name: UK
     locality_name: Cambridge
-    organization_name: snake oil
+    organization_name: YAML CA Test
     state_or_province_name: United Kingdom
   key:
     pass_phrase: null
@@ -23,7 +21,7 @@ cert:
     - www.foo.bar
     ip:
     - 127.0.0.1
-    - 2001:470:1abc:3:d57:3bbf:cd8e:fe39
+    - 2001:DB8:1abc::d57:3bbf:cd8e:fe39
     not_valid_after_days: 365
   meta:
     path: ./srv.pem
@@ -31,7 +29,7 @@ cert:
     common_name: server cert
     country_name: UK
     locality_name: Cambridge
-    organization_name: snake oil
+    organization_name: YAML SRV Test
     state_or_province_name: United Kingdom
   key:
     pass_phrase: null
