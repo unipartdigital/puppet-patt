@@ -26,7 +26,7 @@ cli_test:
 	@$(MAKE) cli_test_self_srv
 	@$(MAKE) clean
 
-cli_test_ca:
+root.pem root.key:
 	@echo "--------"
 	@echo $@
 	@echo "--------"
@@ -41,6 +41,8 @@ cli_test_ca:
 --ca_path               "root.pem"           \
 $(CA_PASS_OPT)                               \
 ;
+
+cli_test_ca:root.pem root.key
 	openssl x509 -text -noout -in root.pem
 	@echo "=================================="
 	$(eval A := $(shell openssl x509 -noout -modulus -in root.pem | openssl md5 | cut -d' ' -f 2))
@@ -49,7 +51,7 @@ $(CA_PASS_OPT)                               \
 	openssl verify -CAfile root.pem  root.pem
 	@echo "=================================="
 
-cli_test_ca_srv: cli_test_ca
+srv.pem srv.key:root.pem
 	@echo "--------"
 	@echo $@
 	@echo "--------"
@@ -68,6 +70,8 @@ $(CA_PASS_OPT)                                  \
 --cert_ip  "127.0.0.1" "2001:DB8:1abc::d57:3bbf:cd8e:fe39" \
 --cert_dns "foo.bar" "www.foo.bar" \
 ;
+
+cli_test_ca_srv:srv.pem srv.key
 	openssl x509 -text -noout -in srv.pem
 	@echo "================================="
 	$(eval A := $(shell openssl x509 -noout -modulus -in srv.pem | openssl md5 | cut -d' ' -f 2))
@@ -76,7 +80,7 @@ $(CA_PASS_OPT)                                  \
 	openssl verify -CAfile root.pem  srv.pem
 	@echo "================================="
 
-cli_test_self_srv:
+srv-self.pem srv-self.key:
 	@echo "--------"
 	@echo $@
 	@echo "--------"
@@ -87,28 +91,23 @@ cli_test_self_srv:
 --cert_organization_name  "Self-Signed SRV"     \
 --cert_common_name        "CLI SRV Test"        \
 --cert_not_valid_after  9                       \
---cert_key_path           "srv.key"             \
---cert_path               "srv.pem"             \
+--cert_key_path           "srv-self.key"             \
+--cert_path               "srv-self.pem"             \
 --cert_ip  "127.0.0.1" "2001:DB8:1abc::d57:3bbf:cd8e:fe39" \
 --cert_dns "foo.bar" "www.foo.bar" \
 ;
-	openssl x509 -text -noout -in srv.pem
+
+cli_test_self_srv: srv-self.pem srv-self.key
+	openssl x509 -text -noout -in srv-self.pem
 	@echo "================================="
-	openssl verify -CAfile srv.pem srv.pem
-	$(eval A := $(shell openssl x509 -noout -modulus -in srv.pem | openssl md5 | cut -d' ' -f 2))
-	$(eval B := $(shell openssl rsa -noout -modulus -in srv.key $(CA_PASS_OPT_OPENSSL) | openssl md5 | cut -d' ' -f 2))
+	openssl verify -CAfile srv-self.pem srv-self.pem
+	$(eval A := $(shell openssl x509 -noout -modulus -in srv-self.pem | openssl md5 | cut -d' ' -f 2))
+	$(eval B := $(shell openssl rsa -noout -modulus -in srv-self.key $(CA_PASS_OPT_OPENSSL) | openssl md5 | cut -d' ' -f 2))
 	if [ "$(A)" == "$(B)" ]; then echo "modulus OK"; else echo "modulus error"; exit 1; fi
 	@echo "================================="
 
-cli_test_cert:
-	@echo "--------"
-	@echo $@
-	@echo "--------"
-	$(MAKE) clean
-	./self_signed_certificate.py cli
-
 clean:
-	$(RM) root.key root.pem srv.key srv.pem
+	$(RM) root.key root.pem srv.key srv.pem srv-self.pem srv-self.key
 
 help:
 	@echo make yaml_test
