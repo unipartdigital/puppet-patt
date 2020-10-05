@@ -8,13 +8,28 @@ import os
 from string import Template
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
 
+def get_cert (path):
+    result = None
+    if os.path.isfile(path):
+        with open(path, 'rb') as p:
+            try:
+                result=p.read()
+                return result
+            except:
+                raise
+    return result
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
+    parser.add_argument('--get_ca_crt', help='return ca crt if exist', action='store_true')
+    parser.add_argument('--get_ca_key', help='return ca key if exist', action='store_true')
+
     parser.add_argument('-c','--cluster_name', help='postgres system user', default="postgres")
     parser.add_argument('-u','--postgres_user', help='postgres system user', default="postgres")
-    parser.add_argument('-s','--ssl_script', help='cert_generator script', required=True)
+    parser.add_argument('-s','--ssl_script', help='cert_generator script', required=False)
     # peers arguments should look like: -p p1 p2 p3 -e e1 e2 e3 -x x1 x2 x3 -c c1 c2 c3
-    parser.add_argument('-p','--peers', help='postgres peers', required=True, nargs='+')
+    parser.add_argument('-p','--peers', help='postgres peers', required=False, nargs='+')
 
     parser.add_argument('--ca_path', help='path to ca certificat', default=None, required=False)
     parser.add_argument('--ca_key_path', help='path to private key', default=None, required=False)
@@ -46,7 +61,19 @@ if __name__ == "__main__":
     flock(lock_fd, LOCK_EX | LOCK_NB)
     ###
 
-    pgh=pwd.getpwnam(args.postgres_user).pw_dir
+    pg_home=pwd.getpwnam(args.postgres_user).pw_dir
+    uid=pwd.getpwnam(args.postgres_user).pw_uid
+    gid=pwd.getpwnam(args.postgres_user).pw_gid
+    ca_path = pg_home + '/.postgresql/root.crt'
+    ca_key_path = pg_home + '/.postgresql/root.key'
+
+    if args.get_ca_crt:
+        print (get_cert (ca_path).decode('utf8'))
+        sys.exit(0)
+    if args.get_ca_key:
+        print (get_cert (ca_key_path).decode('utf8'))
+        sys.exit(0)
+
     cmd=None
     ip_arg=[]
     dns_arg=[]
@@ -58,17 +85,17 @@ if __name__ == "__main__":
         "/usr/bin/python3",
         args.ssl_script,
         "cli",
-        "--ca_path", pgh + '/.postgresql/root.crt',
-        "--ca_key_path", pgh + '/.postgresql/root.key',
+        "--ca_path", ca_path,
+        "--ca_key_path", ca_key_path,
         "--cert_country_name", args.cert_country_name,
         "--cert_state_or_province_name", args.cert_state_or_province_name,
         "--cert_locality_name", args.cert_locality_name,
         "--cert_organization_name", args.cert_organization_name,
         "--cert_common_name", "Peer {}".format(args.cluster_name),
         "--cert_not_valid_after", str(args.cert_not_valid_after),
-        "--cert_path", pgh + '/server.crt',
+        "--cert_path", pg_home + '/server.crt',
         "--cert_key_size", str(args.cert_key_size),
-        "--cert_key_path", pgh + '/server.key'] +  ip_arg + dns_arg
+        "--cert_key_path", pg_home + '/server.key'] +  ip_arg + dns_arg
 
     if args.cert_key_pass_phrase is not None:
             cmd_list.append("--cert_key_pass_phrase")
@@ -83,10 +110,7 @@ if __name__ == "__main__":
     except:
         raise
 
-    pg_home=pwd.getpwnam(args.postgres_user).pw_dir
-    uid=pwd.getpwnam(args.postgres_user).pw_uid
-    gid=pwd.getpwnam(args.postgres_user).pw_gid
-    for f in [pgh + '/server.crt', pgh + '/server.key']:
+    for f in [ca_path, ca_key_path]:
         os.chown(f, uid, gid)
         os.chmod(f, 0o600)
 

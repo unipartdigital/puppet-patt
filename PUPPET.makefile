@@ -29,6 +29,8 @@ puppet-module:
 	install -m 644 dscripts/patroni_config.py $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
 	install -m 644 dscripts/patroni_info.py $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
 	install -m 644 dscripts/ssl_cert_postgres.py $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
+	install -m 644 dscripts/ssl_cert_postgres.sh $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
+
 
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/pgcrt/files/pgcrt/misc/
 	install -m 644 ip_takeover.py $(DESTDIR)/pgcrt/files/pgcrt/.
