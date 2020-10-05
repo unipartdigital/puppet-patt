@@ -68,10 +68,16 @@ if __name__ == "__main__":
     ca_key_path = pg_home + '/.postgresql/root.key'
 
     if args.get_ca_crt:
-        print (get_cert (ca_path).decode('utf8'))
+        try:
+            print (get_cert (ca_path).decode('utf8'))
+        except AttributeError:
+            print ()
         sys.exit(0)
     if args.get_ca_key:
-        print (get_cert (ca_key_path).decode('utf8'))
+        try:
+            print (get_cert (ca_key_path).decode('utf8'))
+        except AttributeError:
+            print ()
         sys.exit(0)
 
     cmd=None
