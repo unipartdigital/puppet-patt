@@ -13,6 +13,7 @@ import argparse
 import yaml
 import sys
 import os
+from pathlib import Path
 
 class Object(object):
     pass
@@ -98,12 +99,14 @@ def private_key (pass_phrase=None, key_path=None, key_size=4096):
         e=serialization.NoEncryption()
     # Write our key to disk for safe keeping
     if key_path is not None:
+        Path(os.path.dirname(key_path)).mkdir(parents=True, exist_ok=True, mode=0o711)
         with open(key_path, "wb") as f:
             f.write(key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.TraditionalOpenSSL,
                 encryption_algorithm=e,
             ))
+        os.chmod (key_path, 0o600)
     return key
 
 """
@@ -186,6 +189,7 @@ def mk_certificate_thin (country_name,
     # Write our certificate out to disk.
 
     if certificate_path:
+        Path(os.path.dirname(certificate_path)).mkdir(parents=True, exist_ok=True, mode=0o711)
         with open(certificate_path, "wb") as f:
             f.write(cert.public_bytes(serialization.Encoding.PEM))
     return cert.public_bytes(serialization.Encoding.PEM)
