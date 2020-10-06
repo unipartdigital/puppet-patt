@@ -31,8 +31,17 @@ if __name__ == "__main__":
     # peers arguments should look like: -p p1 p2 p3 -e e1 e2 e3 -x x1 x2 x3 -c c1 c2 c3
     parser.add_argument('-p','--peers', help='postgres peers', required=False, nargs='+')
 
-    parser.add_argument('--ca_path', help='path to ca certificat', default=None, required=False)
-    parser.add_argument('--ca_key_path', help='path to private key', default=None, required=False)
+    # parser.add_argument('--ca_path', help='path to ca certificat', default=None, required=False, default='')
+    # parser.add_argument('--ca_key_path', help='path to private key', default=None, required=False, default='')
+
+    parser.add_argument('--ca_country_name', help='Country Name', required=False, default='')
+    parser.add_argument('--ca_state_or_province_name', help='State or Province Name', required=False, default='')
+    parser.add_argument('--ca_locality_name', help='Locality Name', required=False, default='')
+    parser.add_argument('--ca_organization_name', help='Organization Name', required=False, default='')
+    parser.add_argument('--ca_common_name', help='Common Name', required=False, default='')
+    parser.add_argument('--ca_not_valid_after', help='not valid after n days', default=365, type=int)
+
+
     parser.add_argument('--cert_country_name', help='Country Name', default="UK")
     parser.add_argument('--cert_state_or_province_name', help='State or Province Name', default="United Kingdom")
     parser.add_argument('--cert_locality_name', help='Locality Name', default="Cambridge")
@@ -93,6 +102,14 @@ if __name__ == "__main__":
         "cli",
         "--ca_path", ca_path,
         "--ca_key_path", ca_key_path,
+
+        '--ca_country_name', args.ca_country_name,
+        '--ca_state_or_province_name', args.ca_state_or_province_name,
+        '--ca_locality_name', args.ca_locality_name,
+        '--ca_organization_name', args.ca_organization_name,
+        '--ca_common_name', args.ca_common_name,
+        '--ca_not_valid_after', str(args.ca_not_valid_after),
+
         "--cert_country_name", args.cert_country_name,
         "--cert_state_or_province_name", args.cert_state_or_province_name,
         "--cert_locality_name", args.cert_locality_name,
