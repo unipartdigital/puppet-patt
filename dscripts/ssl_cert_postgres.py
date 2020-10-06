@@ -133,9 +133,10 @@ if __name__ == "__main__":
     except:
         raise
 
-    for f in [ca_path, ca_key_path]:
-        os.chown(f, uid, gid)
-        os.chmod(f, 0o600)
+    for f in [ca_path, ca_key_path, pg_home + '/server.crt', pg_home + '/server.key']:
+        if os.path.isfile(f):
+            os.chown(f, uid, gid)
+            os.chmod(f, 0o600)
 
     ###
     flock(lock_fd, LOCK_UN)
