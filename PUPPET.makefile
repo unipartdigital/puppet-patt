@@ -64,11 +64,16 @@ puppet-module:
 
 # SSH keys
 	mkdir -m 1777 -p $(DESTDIR)/pgcrt/ssh-keys/
+	echo '*'     >   $(DESTDIR)/pgcrt/ssh-keys/.gitignore
+	echo '!*.sh' >>  $(DESTDIR)/pgcrt/ssh-keys/.gitignore
 	install -m 755 puppet/modules/pgcrt/ssh-keys/00-generator.sh $(DESTDIR)/pgcrt/ssh-keys/
 	install -m 644 puppet/modules/pgcrt/manifests/sshkeys.pp $(DESTDIR)/pgcrt/manifests/
 
 # SSL certs
 	mkdir -m 1777 -p $(DESTDIR)/pgcrt/ssl-cert/
+	echo '*'     >   $(DESTDIR)/pgcrt/ssl-cert/.gitignore
+	echo '!*.sh' >>  $(DESTDIR)/pgcrt/ssl-cert/.gitignore
+	echo '!*.py' >>  $(DESTDIR)/pgcrt/ssl-cert/.gitignore
 	install -m 755 puppet/modules/pgcrt/ssl-cert/00-generator.sh $(DESTDIR)/pgcrt/ssl-cert/
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/pgcrt/ssl-cert/
 	install -m 644 puppet/modules/pgcrt/manifests/sslcerts.pp $(DESTDIR)/pgcrt/manifests/
