@@ -14,6 +14,8 @@ puppet-module:
 	install -m 644 config/haproxy.cfg.tmpl $(DESTDIR)/pgcrt/files/pgcrt/config
 	install -m 644 config/firewall.nft $(DESTDIR)/pgcrt/files/pgcrt/config
 	install -m 644 config/postgres-ipv6.yaml $(DESTDIR)/pgcrt/files/pgcrt/config
+	install -m 644 config/pg_create_role.tmpl $(DESTDIR)/pgcrt/files/pgcrt/config
+	install -m 644 config/pg_create_database.tmpl $(DESTDIR)/pgcrt/files/pgcrt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
 	install -m 644 dscripts/d02.dsk2fs.sh $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
@@ -30,6 +32,7 @@ puppet-module:
 	install -m 644 dscripts/patroni_info.py $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
 	install -m 644 dscripts/ssl_cert_postgres.py $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
 	install -m 644 dscripts/ssl_cert_postgres.sh $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
+	install -m 644 dscripts/postgres_exec.sh $(DESTDIR)/pgcrt/files/pgcrt/dscripts/
 
 
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/pgcrt/files/pgcrt/misc/
