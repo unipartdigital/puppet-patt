@@ -1,0 +1,46 @@
+#!!python/object:__main__.Config
+add_repo:
+<% [$patt::add_repo].flatten.each |$repo| { -%>
+- <%= $repo %>
+<% } -%>
+cluster_name: <%=$patt::cluster_name%>
+etcd_peers:
+<% [$patt::etcd_peers].flatten.each |$peer| { -%>
+- <%= $peer %>
+<% } -%>
+floating_ip:
+<% [$patt::floating_ip].flatten.each |$fip| { -%>
+- <%= $fip %>
+<% } -%>
+haproxy_peers:
+<% [$patt::haproxy_peers].flatten.each |$peer| { -%>
+- <%= $peer %>
+<% } -%>
+haproxy_template_file: <%=$patt::haproxy_template_file%>
+log_file: <%=$patt::log_file%>
+loglevel: <%=$patt::patt_loglevel%>
+nodes:
+<% [$patt::nodes].flatten.each |$n| { -%>
+- <%= $n %>
+<% } -%>
+patroni_release: <%=$patt::patroni_release%>
+patroni_template_file: <%=$patt::patroni_template_file%>
+postgres_peers:
+<% [$patt::postgres_peers].flatten.each |$peer| { -%>
+- <%= $peer %>
+<% } -%>
+postgres_parameters:
+<% [$patt::postgres_parameters].flatten.each |$pp| { -%>
+- <%= $pp %>
+<% } -%>
+postgres_release: <%=$patt::postgres_release%>
+ssh_keyfile: <%=$patt::ssh_keyfile%>
+ssh_login: <%=$patt::ssh_login%>
+create_role:
+<% $patt::pg_create_role.flatten.each|$n| { -%>
+- {name: <%= $n['name'] %>, options: <%= $n['options'] %>}
+<% } -%>
+create_database:
+<% $patt::pg_create_database.flatten.each|$n| { -%>
+- {name: <%= $n['name'] %>, owner: <%= $n['owner'] %>}
+<% } -%>

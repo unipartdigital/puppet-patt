@@ -8,7 +8,7 @@ PY_MOD := $(shell grep -v '\#' ${CURDIR}/requirements.txt)
 help:
 
 	@echo "to create a puppet module archive:"
-	@echo " make pgcrt-puppet.tar.xz"
+	@echo " make patt-puppet.tar.xz"
 	@echo
 	@echo "other target:"
 	@echo " make depend"
