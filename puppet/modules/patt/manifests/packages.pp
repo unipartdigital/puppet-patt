@@ -21,8 +21,13 @@ class patt::packages()
   source => 'https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm',
  }
 
+ exec { 'dnf_module_disable_postgresql':
+    command => "/usr/bin/dnf -qy module disable postgresql",
+    require => Package['pgdg-redhat-repo'],
+ }
+
  $pg_pkg = [ "postgresql${patt::postgres_release}", "postgresql${patt::postgres_release}-server", "postgresql${patt::postgres_release}-contrib" ]
- package { $pg_pkg: ensure => 'installed' }
+ package { $pg_pkg: ensure => 'installed', require => Exec['dnf_module_disable_postgresql'] }
 
 # TODO
 # conditional
