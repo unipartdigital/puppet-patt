@@ -18,8 +18,8 @@ class patt (
  Optional[String]        $postgres_release,
  Optional[String]        $ssh_keyfile,
  Optional[String]        $ssh_login,
- Optional[Array[Struct[{name => String, options => Optional[Array[String]]}]]] $pg_create_role,
- Optional[Array[Struct[{name => String, owner => String}]]] $pg_create_database,
+ Optional[Array[Struct[{name => String, options => Optional[Array[String]]}]]] $pg_create_role = [],
+ Optional[Array[Struct[{name => String, owner => String}]]] $pg_create_database = [],
 
 )
 {
