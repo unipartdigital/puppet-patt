@@ -96,3 +96,16 @@ def add_repo (repo_url, nodes):
     result = patt.exec_script (nodes=nodes, src="./dscripts/d03.repo.sh",
                                 args=['add'] + [" ".join(repo_url)], sudo=True)
     log_results (result)
+
+"""
+add a tuned postgresql profile and enable it
+"""
+def tuned_postgresql(nodes):
+    nodes = list ({n.hostname: n for n in nodes}.values())
+    logger.debug ("tuned postgresql {}".format (nodes))
+    patt.host_id(nodes)
+    patt.check_dup_id (nodes)
+
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d22_tuned.sh",
+                               args=['enable'], sudo=True)
+    log_results (result)

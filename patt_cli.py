@@ -189,6 +189,10 @@ if __name__ == "__main__":
 
     progress_bar (5, 14)
 
+    patt_syst.tuned_postgresql (postgres_peers)
+
+    progress_bar (5, 14)
+
     patt_postgres.postgres_init(cfg.postgres_release, postgres_peers)
 
     progress_bar (5, 14)

@@ -33,6 +33,7 @@ puppet-module:
 	install -m 644 dscripts/ssl_cert_postgres.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/ssl_cert_postgres.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/postgres_exec.sh $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/d22_tuned.sh $(DESTDIR)/patt/files/patt/dscripts/
 
 
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/patt/files/patt/misc/
