@@ -238,13 +238,16 @@ if __name__ == "__main__":
                 pass_dict[u] = s
 
         patt_patroni.patroni_configure(postgres_version=cfg.postgres_release,
-                                        cluster_name=cfg.cluster_name,
-                                        template_src=cfg.patroni_template_file,
-                                        nodes=postgres_peers,
-                                        etcd_peers=etcd_peers,
-                                        config_file_target='/var/lib/pgsql/patroni.yaml',
-                                        sysuser_pass=pass_dict,
-                                        postgres_parameters=cfg.postgres_parameters)
+                                       cluster_name=cfg.cluster_name,
+                                       template_src=cfg.patroni_template_file,
+                                       nodes=postgres_peers,
+                                       etcd_peers=etcd_peers,
+                                       config_file_target='/var/lib/pgsql/patroni.yaml',
+                                       sysuser_pass=pass_dict,
+                                       postgres_parameters=cfg.postgres_parameters,
+                                       pg_hba_list=patt_patroni.cert_pg_hba_list(
+                                           db_user=cfg.create_database, key_db='name', key_user='owner')
+                                       )
         progress_bar (11, 14)
 
         patroni_report = patt_patroni.patroni_enable(cfg.postgres_release, cfg.patroni_release,

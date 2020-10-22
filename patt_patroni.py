@@ -11,6 +11,27 @@ import yaml
 
 logger = logging.getLogger('patt_patroni')
 
+
+"""
+take a list of {'database': '', 'user': ''}
+"""
+def cert_pg_hba_list (db_user=[], key_db='database', key_user='user'):
+    default_pg_hba_list = [
+        'local    all         all                   ident',
+        'host     all         all         ::/0      md5',
+        'host     all         all         0.0.0.0/0 md5',
+        'host     replication replication ::/0      md5',
+        'host     replication replication 0.0.0.0/0 md5'
+    ]
+    result = ["# TYPE   DATABASE   USER   ADDRESS   METHOD"]
+    db_user = db_user if db_user else []
+    for i in db_user:
+        if (key_db or key_user) not in i: continue
+        if not i[key_db] or not i[key_user]: continue
+        result.append ("hostssl  {}          {}    ::/0      cert".format (i[key_db], i[key_user]))
+        result.append ("hostssl  {}          {}    0.0.0.0/0 cert".format (i[key_db], i[key_user]))
+    return result + default_pg_hba_list
+
 def log_results(result):
     error_count=0
     for r in result:
@@ -56,7 +77,7 @@ def patroni_enable(postgres_version, patroni_version, nodes):
         logger.warn ("error: {}".format (r.error))
 
 def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_peers,
-                      config_file_target, sysuser_pass, postgres_parameters):
+                      config_file_target, sysuser_pass, postgres_parameters, pg_hba_list=cert_pg_hba_list()):
     tmpl=""
     with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as tmpl_file:
         if os.path.isfile(template_src):
@@ -72,6 +93,8 @@ def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_
                 for p in postgres_parameters:
                     key,val = p.split ('=')
                     tmpl['postgresql']['parameters'][key.strip()] = val.strip()
+            if pg_hba_list:
+                tmpl['postgresql']['pg_hba'] = pg_hba_list
             print(yaml.dump(tmpl, default_flow_style=False), file=tmpl_file)
             tmpl_file.flush()
 
