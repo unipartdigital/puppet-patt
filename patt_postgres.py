@@ -133,6 +133,39 @@ def postgres_ssl_cert(cluster_name,
                                 sudo=True)
     log_results (result)
 
+
+"""
+lookup ~/.patt/ca/ for cluster_name-root.crt and cluster_name-root.key
+if found generate a user cert ~/.patt/ca/cluster_name-user_name.crt/key
+"""
+def postgres_ssl_user_cert(cluster_name, user_names=[]):
+    self_home = os.path.expanduser("~")
+    self_ca_dir = self_home + '/' + '.patt/ca'
+    ca_path_crt = self_ca_dir + '/' + cluster_name + '-' + 'root.crt'
+    ca_path_key = self_ca_dir + '/' + cluster_name + '-' + 'root.key'
+
+    if os.path.isfile (ca_path_crt) and os.path.isfile (ca_path_key):
+        import misc.self_signed_certificate as ssl_gen
+        ca_key = ssl_gen.private_key(key_path=ca_path_key)
+        for i in user_names:
+            usr_path_crt = self_ca_dir + '/' + cluster_name + '-' + i + '.crt'
+            usr_path_key = self_ca_dir + '/' + cluster_name + '-' + i + '.key'
+            usr_key = ssl_gen.private_key(key_path=usr_path_key)
+            usr_crt = ssl_gen.mk_certificate_thin(country_name="UK",
+                                                  state_or_province_name="United Kingdom",
+                                                  locality_name="Cambridge",
+                                                  organization_name="Patroni Postgres Cluster",
+                                                  common_name=i,
+                                                  private_key=ca_key,
+                                                  public_key=usr_key.public_key(),
+                                                  certificate_path=usr_path_crt,
+                                                  ca_path=ca_path_crt,
+                                                  not_valid_after_days=365,
+                                                  dns=[],
+                                                  ip=[]
+                                                  )
+
+
 """
 exec the script file as user postgres
 if the script file is local, it will be first copyed on the nodes

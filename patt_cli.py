@@ -199,6 +199,9 @@ if __name__ == "__main__":
 
     patt_postgres.postgres_ssl_cert(cfg.cluster_name, nodes=postgres_peers)
 
+    cert_users = [i['name'] for i in cfg.create_role if 'name' in i]
+    patt_postgres.postgres_ssl_user_cert(cfg.cluster_name, user_names=cert_users)
+
     progress_bar (6, 14)
 
     patt_patroni.floating_ip_init(nodes=postgres_peers)
