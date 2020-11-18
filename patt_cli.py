@@ -21,6 +21,8 @@ class Config(object):
     def __init__(self):
         self.add_repo = None
         self.cluster_name = None
+        self.vol_size_etcd = None
+        self.vol_size_pgsl = None
         self.etcd_peers = None
         self.floating_ip = None
         self.haproxy_peers = None
@@ -181,7 +183,11 @@ if __name__ == "__main__":
                                    postgres_clients=["::0/0"])
     progress_bar (3, 14)
 
-    patt_syst.disk_init (cfg.cluster_name, etcd_peers +  postgres_peers)
+    if cfg.vol_size_etcd:
+        patt_syst.disk_init (etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd)
+
+    if cfg.vol_size_pgsql:
+        patt_syst.disk_init (postgres_peers, mnt="/var/lib/pgsql", vol_size=cfg.vol_size_pgsql)
 
     progress_bar (4, 14)
 

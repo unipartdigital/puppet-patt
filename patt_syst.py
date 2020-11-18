@@ -72,14 +72,14 @@ def nftables_configure(cluster_name, template_src, config_file_target,
 """
 setup the free disks on each nodes
 """
-def disk_init(cluster_name, nodes):
+def disk_init(nodes, mnt, vol_size):
     nodes = list ({n.hostname: n for n in nodes}.values())
     logger.debug ("disk init {}".format (nodes))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
 
-    result = patt.exec_script (nodes=nodes, src="./dscripts/d02.dsk2fs.sh",
-                                args=['init'] + [cluster_name], sudo=True)
+    result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
+                                args=['-m'] + [mnt] + ['-s'] + [vol_size], sudo=True)
     log_results (result)
 
 
