@@ -83,6 +83,16 @@ def skip_dev_fs (device):
       mount_cmd = subprocess.run(["/bin/mount", d, mntp, "-o", "ro"],
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       result = mount_cmd.returncode == 0
+      if result == 0:
+         try:
+            luksdump_cmd = subprocess.run(["/sbin/cryptsetup", "luksDump", d],
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+         except FileNotFoundError:
+            result = True
+         except:
+            result = False
+         else:
+            result = luksdump_cmd.returncode == 0
    except:
       pass
    finally:
@@ -121,7 +131,7 @@ def volume_data_extend (mnt, created_pv=[], extend_full=False, lv_size="1G"):
             if vg_extend_cmd.returncode == 0:
                print (vg_extend_cmd.stdout.decode())
             else:
-               print (vg_extend_cmd.stderr.decode())
+               print (vg_extend_cmd.stderr.decode(), file=sys.stderr)
          except:
             raise
 
@@ -136,7 +146,7 @@ def volume_data_extend (mnt, created_pv=[], extend_full=False, lv_size="1G"):
          if lv_extend_cmd.returncode == 0:
             print (lv_extend_cmd.stdout.decode())
          else:
-            print (lv_extend_cmd.stderr.decode())
+            print (lv_extend_cmd.stderr.decode(), file=sys.stderr)
       except:
          raise
 
@@ -157,7 +167,7 @@ def volume_data_create (mnt, created_pv=[], extend_full=False, lv_size="1G"):
                if vg_create_cmd.returncode == 0:
                   print (vg_create_cmd.stdout.decode())
                else:
-                  print (vg_create_cmd.stderr.decode())
+                  print (vg_create_cmd.stderr.decode(), file=sys.stderr)
       except:
          raise
       try:
@@ -170,7 +180,7 @@ def volume_data_create (mnt, created_pv=[], extend_full=False, lv_size="1G"):
             if lv_create_cmd.returncode == 0:
                print (lv_create_cmd.stdout.decode())
             else:
-               print (lv_create_cmd.stderr.decode())
+               print (lv_create_cmd.stderr.decode(), file=sys.stderr)
       except:
          raise
 
@@ -264,7 +274,7 @@ def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
                created_pv.append (n)
                print (pvcreate_cmd.stdout.decode())
             else:
-               print (pvcreate_cmd.stderr.decode())
+               print (pvcreate_cmd.stderr.decode(), file=sys.stderr)
                continue
          except:
             raise
