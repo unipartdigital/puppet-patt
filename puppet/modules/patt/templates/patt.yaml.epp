@@ -44,3 +44,5 @@ create_database:
 <% $patt::pg_create_database.flatten.each|$n| { -%>
 - {name: <%= $n['name'] %>, owner: <%= $n['owner'] %>}
 <% } -%>
+vol_size_etcd: <%=$patt::vol_size_etcd%>
+vol_size_pgsql: <%=$patt::vol_size_pgsql%>

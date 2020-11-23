@@ -21,6 +21,9 @@ class patt (
  Optional[Array[Struct[{name => String, options => Optional[Array[String]]}]]] $pg_create_role = [],
  Optional[Array[Struct[{name => String, owner => String}]]] $pg_create_database = [],
 
+ Optional[String]        $vol_size_etcd = '2G',
+ Optional[String]        $vol_size_pgsql = '2G',
+ # size may be increased between run but not shrinked
 )
 {
 
