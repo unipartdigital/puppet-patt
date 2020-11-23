@@ -18,7 +18,7 @@ puppet-module:
 	install -m 644 config/pg_create_database.tmpl $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
-	install -m 644 dscripts/d02.dsk2fs.sh $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/data_vol.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d03.repo.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d10.etcd.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d20.postgres.sh $(DESTDIR)/patt/files/patt/dscripts/
