@@ -90,6 +90,9 @@ def etcd_init(cluster_name, nodes):
     logger.info ("member ok {}".format (good_members))
     logger.info ("member ko {}".format (bad_members))
 
+    source = patt.Source()
+    running_node = source.whoami(nodes)
+
     if not initialized:
 
         heartbeat_interval=10
@@ -100,7 +103,10 @@ def etcd_init(cluster_name, nodes):
         # else:
         #     election_timeout=int (10 * heartbeat_interval)
 
-        first_node = [nodes[0]]
+        first_node = [running_node]
+
+        assert running_node.id == first_node[0].id
+
         id_hosts = [n.id + '_' +  n.hostname for n in first_node]
 
         result = patt.exec_script (nodes=first_node, src="./dscripts/d10.etcd.sh",
@@ -113,8 +119,8 @@ def etcd_init(cluster_name, nodes):
                                     args=['enable'] + [cluster_name] + id_hosts, sudo=True)
         log_results (result)
 
-        good_members = get_members(nodes, cluster_name, 'ok')
-        bad_members = get_members(nodes, cluster_name, 'bad')
+        good_members = get_members([running_node], cluster_name, 'ok')
+        bad_members = get_members([running_node], cluster_name, 'bad')
 
         logger.info ("member ok {}".format (good_members))
         logger.info ("member ko {}".format (bad_members))
@@ -123,8 +129,8 @@ def etcd_init(cluster_name, nodes):
             raise EtcdError ('cluster init error', "error initialising new cluster {}".format(cluster_name))
 
     # process any remaining members one by one using one of the healthy nodes as a controller
-    good_members = get_members(nodes, cluster_name, 'ok')
-    bad_members = get_members(nodes, cluster_name, 'bad')
+    good_members = get_members([running_node], cluster_name, 'ok')
+    bad_members = get_members([running_node], cluster_name, 'bad')
 
     ctrl = [n for n in nodes if n.hostname in good_members]
     members = ctrl
@@ -136,8 +142,8 @@ def etcd_init(cluster_name, nodes):
                                     args=['member_remove'] + [cluster_name] + nodes_to_remove, sudo=True)
         log_results (result)
 
-    good_members = get_members(nodes, cluster_name, 'ok')
-    bad_members = get_members(nodes, cluster_name, 'bad')
+    good_members = get_members([running_node], cluster_name, 'ok')
+    bad_members = get_members([running_node], cluster_name, 'bad')
 
     nodes_to_process = [n for n in nodes if n.hostname not in good_members and n.hostname not in bad_members]
     logger.info ("to process: {}".format ([n.hostname for n in nodes_to_process]))
@@ -164,14 +170,15 @@ def etcd_init(cluster_name, nodes):
                                     args=['enable'] + [cluster_name] + id_hosts, sudo=True)
         log_results (result)
 
-        good_members = get_members(nodes, cluster_name, 'ok')
-        bad_members = get_members(nodes, cluster_name, 'bad')
+        good_members = get_members([running_node], cluster_name, 'ok')
+        bad_members = get_members([running_node], cluster_name, 'bad')
 
         if m.hostname not in good_members:
             raise EtcdError ('cluster init error', "error initialising member {}".format(m.hostname))
 
-    good_members = get_members(nodes, cluster_name, 'ok')
-    bad_members = get_members(nodes, cluster_name, 'bad')
+    good_members = get_members([running_node], cluster_name, 'ok')
+    bad_members = get_members([running_node], cluster_name, 'bad')
+    assert not bad_members
     logger.warn ("member ok {}".format (good_members))
     logger.warn ("member ko {}".format (bad_members))
 
