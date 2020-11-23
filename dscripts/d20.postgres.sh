@@ -61,6 +61,13 @@ init() {
                 #postgresql${postgresql_version}-devel
             fi
 
+            pg_home=$(getent passwd postgres | cut -d':' -f 6)
+            if [ -n "${pg_home}" ]; then
+                chown postgres.postgres ${pg_home}
+                chmod 711 ${pg_home}
+            fi
+            # ensure sane permission
+
             sed -i -e "/#[[:space:]]*TYPE[[:space:]]\+DATABASE[[:space:]]\+USER[[:space:]]\+ADDRESS[[:space:]]\+METHOD.*/q" /usr/pgsql-${postgresql_version}/share/pg_hba.conf.sample
             cat <<EOF >> /usr/pgsql-${postgresql_version}/share/pg_hba.conf.sample
  local  all             all                                     ident

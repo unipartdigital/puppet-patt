@@ -102,6 +102,7 @@ def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_
                                     args=['-c'] + [cluster_name] + ['-t'] +
                                     [os.path.basename (tmpl_file.name)] +
                                     ['-d'] + [config_file_target] +
+                                    ['-v'] + [postgres_version] +
                                     ['-p'] + [n.hostname for n in nodes] +
                                     ['-e'] + [n.hostname for n in etcd_peers] +
                                     ['-s'] + ['"' + str(sysuser_pass) + '"'],

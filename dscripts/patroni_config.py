@@ -70,7 +70,7 @@ def _get_patroni_config (patroni_config='/var/lib/pgsql/patroni.yaml'):
 class PatroniConfig(object):
 
     def __init__(self, cluster_name, template_file, nodes, etcd_peers,
-                 sys_user_pass, dst_file, name_space="/service"):
+                 sys_user_pass, dst_file, postgres_version, name_space="/service"):
         self.tmpl=None
         self.file_name=dst_file
         self.user_pass_dict = {} if sys_user_pass == None else dict(ast.literal_eval(sys_user_pass))
@@ -121,6 +121,9 @@ class PatroniConfig(object):
         self.tmpl['namespace'] = name_space
         self.tmpl['scope'] = cluster_name
         self.tmpl['postgresql']['connect_address'] = my_ip + ':5432'
+
+        self.tmpl['postgresql']['data_dir'] = "/var/lib/pgsql/{}/data".format (postgres_version.strip())
+        self.tmpl['postgresql']['bin_dir'] = "/usr/pgsql-{}/bin".format (postgres_version.strip())
 
         # restapi should be globaly accessible for haproxy
         self.tmpl['restapi']['listen'] = ':::8008'
@@ -199,6 +202,7 @@ if __name__ == "__main__":
     parser.add_argument('-c','--cluster_name', help='cluster name', required=True)
     parser.add_argument('-t','--template_file', help='patroni yaml template file', required=True)
     parser.add_argument('-d','--destination_file', help='patroni yaml destination file', required=True)
+    parser.add_argument('-v','--postgres_version', help='postgres version', required=True)
     parser.add_argument('-p','--postgres_peers', help='postgres peers', required=True, nargs='+')
     # peers argument should be called like: '-p p1 p2 p3'
     parser.add_argument('-e','--etcd_peers', help='etcd peers', required=True, nargs='+')
@@ -218,6 +222,7 @@ if __name__ == "__main__":
 
     pc = PatroniConfig (cluster_name=args.cluster_name,
                         template_file=args.template_file,
+                        postgres_version=args.postgres_version,
                         nodes=args.postgres_peers,
                         etcd_peers=args.etcd_peers,
                         sys_user_pass=args.sys_user_pass,
