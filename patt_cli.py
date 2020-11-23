@@ -103,7 +103,7 @@ if __name__ == "__main__":
     cli.add_argument('--log_file', help="log file (full path)", required=False)
     cli.add_argument('--floating_ip', action='append', help="IP addresses hold by the primary node", required=False)
     cli.add_argument('--add-repo', help="add (and enable) the repo from the specified URL", action='append', required=False,
-                        default=["https://copr.fedorainfracloud.org/coprs/alijkl/etcd/repo/epel-8/alijkl-etcd-epel-8.repo"])
+                        default=["https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo"])
     cli.add_argument('--yaml_dump', help="dump the cli options in yaml format", action='store_true', required=False)
     cli.add_argument('--pg_master_exec', help="script list to exec on master as postgres, could be local or remote)", action='append', required=False, default=[])
 
