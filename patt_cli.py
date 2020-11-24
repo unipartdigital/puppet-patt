@@ -7,6 +7,7 @@ import patt_postgres
 import patt_patroni
 import patt_haproxy
 import logging
+from logging.handlers import TimedRotatingFileHandler
 
 import secrets
 import string
@@ -123,11 +124,13 @@ if __name__ == "__main__":
     else:
         log_file = "/tmp/{}.log".format (cfg.cluster_name)
 
-    logging.basicConfig(filename=log_file,
-                        level=cfg.loglevel,
-                        format='%(asctime)s %(levelname)-8s %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+    time_logger_handler = TimedRotatingFileHandler(filename=log_file, when='D', # 'H' Hours 'D' Days
+                                                   interval=1, backupCount=0, encoding=None, utc=False)
 
+    logging.basicConfig(level=cfg.loglevel,
+                        format='%(asctime)s %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        handlers=[time_logger_handler])
 
     ssh_login = None
     if cfg.ssh_login:
