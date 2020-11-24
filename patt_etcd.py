@@ -103,9 +103,10 @@ def etcd_init(cluster_name, nodes):
         # else:
         #     election_timeout=int (10 * heartbeat_interval)
 
-        first_node = [running_node]
+        first_node = [running_node] if running_node else [nodes[0]]
 
-        assert running_node.id == first_node[0].id
+        if running_node:
+            assert running_node.id == first_node[0].id
 
         id_hosts = [n.id + '_' +  n.hostname for n in first_node]
 
