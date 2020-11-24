@@ -62,6 +62,7 @@ table ip6 postgres_patroni {
                 tcp dport { postgresql } ip6 saddr @pg_clients accept
                 # etcd
                 tcp dport { 2380 } ip6 saddr @etcd_peers accept
+                tcp dport { 2379 } ip6 saddr @etcd_peers accept
                 tcp dport { 2379 } ip6 saddr @patroni_peers accept
                 # patroni
                 tcp dport { 8008 } ip6 saddr @patroni_peers accept
