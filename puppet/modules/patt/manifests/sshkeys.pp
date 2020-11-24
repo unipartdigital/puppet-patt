@@ -1,6 +1,6 @@
 class patt::sshkeys(
- $base_dir="/etc/puppetlabs/code/environments/production/modules/patt/ssh-keys"
- $key_dir="/dev/shm/patt"
+ $base_dir="/etc/puppetlabs/code/environments/production/modules/patt/ssh-keys",
+ $key_dir="/dev/shm/patt",
  # don't store keys across reboot
 )
 {
