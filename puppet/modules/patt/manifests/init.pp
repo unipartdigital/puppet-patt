@@ -24,6 +24,13 @@ class patt (
  Optional[String]        $vol_size_etcd  = '2G',
  Optional[String]        $vol_size_pgsql = '2G',
  # size may be increased between run but not shrinked
+
+ #Optional[String]        $installer_user_name   = 'patt',
+ ## not emplemented
+ Optional[String]        $installer_ssh_id_pub  = '',
+ Optional[String]        $installer_ssh_id_priv = '',
+ # installer ssh pub/priv Identity, if not provided RSA Identity will be generated
+
 )
 {
 

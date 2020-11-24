@@ -1,9 +1,21 @@
 class patt::sshkeys(
- $keydir="/etc/puppetlabs/code/environments/production/modules/patt/ssh-keys"
+ $base_dir="/etc/puppetlabs/code/environments/production/modules/patt/ssh-keys"
+ $key_dir="/dev/shm/patt"
+ # don't store keys across reboot
 )
 {
-$prv=generate("$keydir/00-generator.sh", "$patt::cluster_name", "private", "$keydir")
-$pub=generate("$keydir/00-generator.sh", "$patt::cluster_name", "public" , "$keydir")
+
+$is_any_empty = reduce([$patt::installer_ssh_id_pub, $patt::installer_ssh_id_priv], false) |$a, $b| {
+    $a or ($b == '')
+}
+
+if $is_any_empty {
+ $prv=generate("$base_dir/00-generator.sh", "$patt::cluster_name", "private", "$key_dir")
+ $pub=generate("$base_dir/00-generator.sh", "$patt::cluster_name", "public" , "$key_dir")
+}else{
+ $prv=$patt::installer_ssh_id_priv
+ $pub=$patt::installer_ssh_id_pub
+}
 
  file{"/home/patt/.ssh/":
     ensure  =>  directory,
