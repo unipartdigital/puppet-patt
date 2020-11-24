@@ -4,8 +4,17 @@ class patt::sslcerts(
 )
 {
 
+$is_any_empty = reduce([$patt::pg_root_crt, $patt::pg_root_key], false) |$a, $b| {
+    $a or ($b == '')
+}
+
+if $is_any_empty {
  $ca_crt=generate("$ssl_cert_dir/00-generator.sh", "$patt::cluster_name", "root_cert")
  $ca_key=generate("$ssl_cert_dir/00-generator.sh", "$patt::cluster_name", "root_key")
+}else{
+ $ca_crt=$patt::pg_root_crt
+ $ca_key=$patt::pg_root_key
+}
 
  file{"${postgres_home}/.postgresql/":
     ensure  =>  directory,

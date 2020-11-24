@@ -31,6 +31,10 @@ class patt (
  Optional[String]        $installer_ssh_id_priv = '',
  # installer ssh pub/priv Identity, if not provided RSA Identity will be generated
 
+ Optional[String]        $pg_root_crt = '',
+ Optional[String]        $pg_root_key = '',
+ # PostgreSQL root certificat,  if not provided CA will be generated
+
 )
 {
 
