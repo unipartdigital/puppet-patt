@@ -82,3 +82,13 @@ class patt (
 #
 # # echo -n "md5" | echo -n "SeCrEtPasSwOrDexample_user" | md5sum
 #
+# installer_ssh_id_pub: >
+#     ENC[PKCS7,MIIEbQYJKoZIhvcNAQcDoIIEXjCCBFoCAQAxggEhMIIBHQIBADAFMAACAQEw...]
+#
+# installer_ssh_id_priv: ENC[PKCS7,MIIOvQYJKo...]
+#
+# pg_root_crt: ENC[PKCS7,MIIJjQYS7,MDFosJKLjn...]
+#
+# pg_root_key: ENC[PKCS7,MIIOHQYJKoZIhvcNAQcD...]
+#
+#

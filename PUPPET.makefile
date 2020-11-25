@@ -72,6 +72,7 @@ puppet-module:
 	echo '*'     >   $(DESTDIR)/patt/ssh-keys/.gitignore
 	echo '!*.sh' >>  $(DESTDIR)/patt/ssh-keys/.gitignore
 	install -m 755 puppet/modules/patt/ssh-keys/00-generator.sh $(DESTDIR)/patt/ssh-keys/
+	install -m 755 puppet/modules/patt/ssh-keys/hiera-helper-ssh-id.sh $(DESTDIR)/patt/ssh-keys/
 	install -m 644 puppet/modules/patt/manifests/sshkeys.pp $(DESTDIR)/patt/manifests/
 
 # SSL certs
@@ -80,6 +81,7 @@ puppet-module:
 	echo '!*.sh' >>  $(DESTDIR)/patt/ssl-cert/.gitignore
 	echo '!*.py' >>  $(DESTDIR)/patt/ssl-cert/.gitignore
 	install -m 755 puppet/modules/patt/ssl-cert/00-generator.sh $(DESTDIR)/patt/ssl-cert/
+	install -m 755 puppet/modules/patt/ssl-cert/hiera-helper-ssl-root.sh $(DESTDIR)/patt/ssl-cert/
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/patt/ssl-cert/
 	install -m 644 puppet/modules/patt/manifests/sslcerts.pp $(DESTDIR)/patt/manifests/
 
