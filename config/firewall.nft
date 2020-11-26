@@ -1,5 +1,8 @@
 #! /usr/sbin/nft -f
 
+# drop any existing nftables ruleset
+flush ruleset
+
 table ip postgres_patroni {
         chain incoming {
                 type filter hook input priority 0; policy drop;
