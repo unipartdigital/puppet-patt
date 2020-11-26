@@ -21,6 +21,15 @@ class patt::packages()
   source => 'https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm',
  }
 
+ Exec{'/etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo':
+  command  => '/usr/bin/curl https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo > /etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo',
+  unless => '/bin/test -f /etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo'
+  }
+
+ package {'etcd': ensure  => 'installed',
+                  require => Exec['/etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo'],
+                  install_only => true}
+
  exec { 'dnf_module_disable_postgresql':
     command => "/usr/bin/dnf -qy module disable postgresql",
     require => Package['pgdg-redhat-repo'],

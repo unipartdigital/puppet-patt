@@ -25,8 +25,8 @@ class patt (
  Optional[String]        $vol_size_pgsql = '2G',
  # size may be increased between run but not shrinked
 
- #Optional[String]        $installer_user_name   = 'patt',
- ## not emplemented
+ Optional[String]        $install_dir='/usr/local/libexec/patt',
+
  Optional[String]        $installer_ssh_id_pub  = '',
  Optional[String]        $installer_ssh_id_priv = '',
  # installer ssh pub/priv Identity, if not provided RSA Identity will be generated
@@ -41,6 +41,7 @@ class patt (
   contain patt::require
   contain patt::packages
   contain patt::install
+  contain patt::mount
   contain patt::config
   contain patt::service
 }

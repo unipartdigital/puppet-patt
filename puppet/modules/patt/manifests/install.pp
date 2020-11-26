@@ -1,26 +1,37 @@
 class patt::install (
- $install_dir='/usr/local/libexec/patt'
 )
 {
  file {
-  "$install_dir":
+  "$patt::install_dir":
    ensure => 'directory',
    source => 'puppet:///modules/patt/patt',
    recurse => 'remote',
-   path => $install_dir,
+   path => $patt::install_dir,
    owner => 'root',
    group => 'root',
    mode  => '0644',
  }
  file {
-  "${install_dir}/patt_cli.py":
+  "${patt::install_dir}/patt_cli.py":
    ensure => 'file',
    source => 'puppet:///modules/patt/patt/patt_cli.py',
    recurse => 'false',
-   path => "${install_dir}/patt_cli.py",
+   path => "${patt::install_dir}/patt_cli.py",
    owner => 'root',
    group => 'root',
    mode  => '0755',
+ }
+
+ file {
+  "${patt::install_dir}/dscripts/data_vol.py":
+   ensure => 'file',
+   source => 'puppet:///modules/patt/patt/dscripts/data_vol.py',
+   recurse => 'false',
+   path => "${patt::install_dir}/dscripts/data_vol.py",
+   owner => 'root',
+   group => 'root',
+   mode  => '0755',
+   require => [File["$patt::install_dir"]]
  }
 
  exec { 'make_dep':

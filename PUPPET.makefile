@@ -62,6 +62,7 @@ puppet-module:
 	install -m 644 puppet/modules/patt/manifests/init.pp $(DESTDIR)/patt/manifests/
 	install -m 644 puppet/modules/patt/manifests/require.pp $(DESTDIR)/patt/manifests/
 	install -m 644 puppet/modules/patt/manifests/install.pp $(DESTDIR)/patt/manifests/
+	install -m 644 puppet/modules/patt/manifests/mount.pp $(DESTDIR)/patt/manifests/
 	install -m 644 puppet/modules/patt/manifests/sshkeys.pp $(DESTDIR)/patt/manifests/
 	install -m 644 puppet/modules/patt/manifests/packages.pp $(DESTDIR)/patt/manifests/
 

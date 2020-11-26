@@ -12,7 +12,7 @@ class patt::service (
     require => [User[patt]],
  }
  exec { 'patt_installer':
-    command => "$patt::install::install_dir/patt_cli.py yaml -f /usr/local/etc/cluster_config.yaml",
+    command => "$patt::install_dir/patt_cli.py yaml -f /usr/local/etc/cluster_config.yaml",
     user => 'patt',
     environment => ['HOME=/home/patt'],
     require => File["/var/log/patt/"],
