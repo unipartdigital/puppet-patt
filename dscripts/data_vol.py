@@ -294,7 +294,7 @@ def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
 if __name__ == "__main__":
    parser = argparse.ArgumentParser()
    parser.add_argument('-m','--mount_point', help='mount point', required=True)
-   parser.add_argument('-s','--volume_size', help='volume size like 1G, 2G, 1T', required=False, default="2G")
+   parser.add_argument('-s','--volume_size', help='volume size like 1G, 2G, 1.4T', required=True)
    parser.add_argument('-f','--fs_type', help='file system to use ext4 or xfs', required=False, default="xfs")
 
    parser.add_argument('--lock_dir', help='lock directory', required=False, default="/var/run/lock")
@@ -327,8 +327,8 @@ if __name__ == "__main__":
          if s[i] not in ['1','2','3','4','5','6','7','8','9','0']:
             idx = i
             break
-   assert float (s[0:idx])
-   assert s[idx:].lower() in ['g', 'gb', 't', 'tb', 'p', 'pb']
+      assert float (s[0:idx])
+      assert s[idx:].lower() in ['g', 'gb', 't', 'tb', 'p', 'pb']
 
    if args.mount_point:
       assert args.mount_point[0] == '/', "mount point must be absolute"
