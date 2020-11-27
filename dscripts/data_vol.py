@@ -286,10 +286,8 @@ def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
       # mount point
       volume_data_mount_point (mnt, fs=mkfs,  manage_fstab=manage_fstab, fstab_uuid=fstab_uuid)
    else:
-      raise AssertionError ("mount point exist and is not empty")
-
-   # # extend
-   volume_data_extend (mnt, created_pv=created_pv, extend_full=extend_full, lv_size=lv_size,)
+      # extend
+      volume_data_extend (mnt, created_pv=created_pv, extend_full=extend_full, lv_size=lv_size,)
 
 if __name__ == "__main__":
    parser = argparse.ArgumentParser()
