@@ -25,7 +25,9 @@ if $is_any_empty {
  }
 
  file {"${postgres_home}/.postgresql/root.crt":
-    content => $ca_crt,
+    content => inline_epp(@(END), k => $ca_crt),
+<%=$k%>
+END
     owner   => root,
     group   => root,
     mode    => '0644',
@@ -33,7 +35,9 @@ if $is_any_empty {
  }
 
  file {"${postgres_home}/.postgresql/root.key":
-    content => $ca_key,
+     content => inline_epp(@(END), k => $ca_key),
+<%=$k%>
+END
     owner   => postgres,
     group   => postgres,
     mode    => '0600',
