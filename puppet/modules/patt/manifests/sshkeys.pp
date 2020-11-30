@@ -26,7 +26,9 @@ if $is_any_empty {
  }
 
  file { '/home/patt/.ssh/id_rsa':
-    content => $prv,
+    content => inline_epp(@(END), k => $prv),
+<%=$k%>
+END
     owner   => patt,
     group   => patt,
     mode    => '0600',
@@ -34,7 +36,9 @@ if $is_any_empty {
  }
 
  file { '/home/patt/.ssh/authorized_keys':
-    content => $pub,
+    content => inline_epp(@(END), k => $pub),
+<%=$k%>
+END
     owner   => patt,
     group   => patt,
     mode    => '0600',
