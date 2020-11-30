@@ -1,0 +1,9 @@
+*~
+.\#*
+\#*
+.gitignore
+tmp/
+__pycache__/
+*.pyc
+*.tar
+*.tar.xz
