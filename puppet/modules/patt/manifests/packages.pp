@@ -8,7 +8,7 @@ class patt::packages()
    gpgcheck => '1',
  }
 
- $base = ['epel-release', 'gcc', 'make', 'nftables', 'policycoreutils', 'util-linux', 'xfsprogs']
+ $base = ['epel-release', 'gcc', 'make', 'nftables', 'policycoreutils', 'util-linux', 'xfsprogs', 'lvm2', 'cryptsetup', 'psmisc']
 
  $pyth = ['python3', 'python3*-scapy', 'python3*-Cython', 'python3*-PyYAML', 'python3*-devel', 'python3*-pip', 'python3*-psycopg2']
 
