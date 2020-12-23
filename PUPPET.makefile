@@ -46,6 +46,7 @@ puppet-module:
 	install -m 644 patt_patroni.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_postgres.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_syst.py $(DESTDIR)/patt/files/patt/.
+	install -m 644 file_lock.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 requirements.txt $(DESTDIR)/patt/files/patt/.
 
 	install -m 644 ssh/interactive.py $(DESTDIR)/patt/files/patt/ssh
