@@ -8,8 +8,10 @@ puppet-module:
 	mkdir -m 755 $(DESTDIR)/patt/files/patt/ssh
 	mkdir -m 755 $(DESTDIR)/patt/files/patt/misc
 
+	git log --pretty=oneline > $(DESTDIR)/patt/ChangeLog.txt
+
 	install -m 644 Makefile $(DESTDIR)/patt/files/patt/.
-	install -m 644 README.md $(DESTDIR)/patt/files/patt/.
+	install -m 644 README.md $(DESTDIR)/patt/.
 
 	install -m 644 config/haproxy.cfg.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/firewall.nft $(DESTDIR)/patt/files/patt/config

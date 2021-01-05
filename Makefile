@@ -10,6 +10,9 @@ help:
 	@echo "to create a puppet module archive:"
 	@echo " make patt-puppet.tar.xz"
 	@echo
+	@echo "to create a puppet module branch:"
+	@echo " make patt-puppet"
+	@echo
 	@echo "other target:"
 	@echo " make depend"
 	@echo " make $(PY_MOD)"
@@ -21,6 +24,14 @@ $(PY_MOD):
 depend: $(PY_MOD) paramiko
 
 paramiko:
-	python3 -c "import paramiko;import sys; paramiko.__version__[:3] >= '2.7' or sys.exit(1)" || ${PIP} install -U --user paramiko
+	python3 -c "import paramiko;import sys; paramiko.__version__[:3] >= '2.7' or sys.exit(1)" || \
+${PIP} install -U --user paramiko
 
 include PUPPET.makefile
+
+patt-puppet: patt-puppet.tar.xz
+	git checkout puppet || git checkout -b puppet && \
+find ./* ! -ipath "./patt-puppet.tar.xz" -delete && \
+tar xvf patt-puppet.tar.xz --strip-components=2 && \
+rm -f patt-puppet.tar.xz && \
+git add . && git commit -m "`date +%s`" || true
