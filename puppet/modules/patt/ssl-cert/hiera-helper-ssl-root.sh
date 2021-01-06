@@ -25,8 +25,8 @@ tmp=`/usr/bin/mktemp -d`
         ;
 
 
-    ${eyaml} encrypt -l pg_root_crt -f ${tmp}/root_ca.pem
-    ${eyaml} encrypt -l pg_root_key -f ${tmp}/root_ca.key
+    ${eyaml} encrypt -l patt::pg_root_crt -f ${tmp}/root_ca.pem
+    ${eyaml} encrypt -l patt::pg_root_key -f ${tmp}/root_ca.key
 
     rm -f ${tmp}/root_ca.pem ${tmp}/root_ca.key
 }
