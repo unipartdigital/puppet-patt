@@ -171,11 +171,17 @@ enable() {
 
     case "${release_vendor}" in
         'redhat' | 'centos')
-            systemctl enable --now etcd
+            systemctl start etcd
             for i in 1 2 3 4 5 6 7 8 9 10; do
                 etcdctl cluster-health
-                if [ "$?" -eq 0 ]; then break; fi
-                if [ "$i" -gt 9 ]; then exit 1; fi
+                if [ "$?" -eq 0 ]; then
+                    systemctl enable --now etcd
+                    break;
+                fi
+                if [ "$i" -gt 9 ]; then
+                    systemctl stop etcd
+                    exit 1;
+                fi
                 sleep 3
             done
             ;;
