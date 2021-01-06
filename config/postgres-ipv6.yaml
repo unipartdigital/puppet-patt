@@ -42,6 +42,7 @@ bootstrap:
       #primary_slot_name: patroni
     postgresql:
       use_pg_rewind: true
+      remove_data_directory_on_rewind_failure: true
 #      use_slots: true
       parameters:
 #        wal_level: hot_standby
