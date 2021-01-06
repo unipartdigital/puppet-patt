@@ -127,6 +127,8 @@ def etcd_init(cluster_name, nodes):
         logger.info ("member ko {}".format (bad_members))
 
         if first_node[0].hostname not in good_members:
+            result = patt.exec_script (nodes=first_node, src="./dscripts/d10.etcd.sh",
+                                       args=['disable'] + [cluster_name] + id_hosts, sudo=True)
             raise EtcdError ('cluster init error', "error initialising new cluster {}".format(cluster_name))
 
     # process any remaining members one by one using one of the healthy nodes as a controller

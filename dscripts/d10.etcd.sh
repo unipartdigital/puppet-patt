@@ -176,6 +176,10 @@ enable() {
                 etcdctl cluster-health
                 if [ "$?" -eq 0 ]; then
                     systemctl enable --now etcd
+                    if [ -r ${ETCD_CONF} ]; then
+                        . ${ETCD_CONF}
+                        find "${ETCD_DATA_DIR}".back-* -delete
+                    fi
                     break;
                 fi
                 if [ "$i" -gt 9 ]; then
@@ -184,6 +188,34 @@ enable() {
                 fi
                 sleep 3
             done
+            ;;
+        *)
+            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            exit 1
+            ;;
+    esac
+
+}
+
+disable() {
+    cluster_name=$1
+    shift
+    cluster_nodes=$*
+
+    release_vendor=$(get_system_release "vendor")
+    release_major=$(get_system_release "major")
+    # release_arch=$(get_system_release "arch")
+
+    case "${release_vendor}" in
+        'redhat' | 'centos')
+            ETCD_CONF="/etc/etcd/etcd.conf"
+            systemctl stop etcd
+            if [ -r ${ETCD_CONF} ]; then
+                . ${ETCD_CONF}
+                if [ -d "${ETCD_DATA_DIR}" ]; then
+                    mv "${ETCD_DATA_DIR}" "${ETCD_DATA_DIR}".back-`date "+%s"`
+                fi
+            fi
             ;;
         *)
             echo "unsupported release vendor: ${release_vendor}" 1>&2
