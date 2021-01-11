@@ -59,6 +59,8 @@ puppet-module:
 
 	mkdir -m 0755 -p $(DESTDIR)/patt/manifests/
 	mkdir -m 0755 -p $(DESTDIR)/patt/templates/
+	mkdir -m 0755 -p $(DESTDIR)/patt/facts.d/
+	mkdir -m 0755 -p $(DESTDIR)/patt/lib/facter/
 
 	install -m 644 puppet/modules/patt/manifests/service.pp $(DESTDIR)/patt/manifests/
 	install -m 644 puppet/modules/patt/manifests/config.pp $(DESTDIR)/patt/manifests/
@@ -70,6 +72,8 @@ puppet-module:
 	install -m 644 puppet/modules/patt/manifests/packages.pp $(DESTDIR)/patt/manifests/
 
 	install -m 644 puppet/modules/patt/templates/patt.yaml.epp $(DESTDIR)/patt/templates/
+
+	install -m 644 puppet/modules/patt/lib/facter/*.rb $(DESTDIR)/patt/lib/facter/
 
 # SSH keys
 	mkdir -m 1777 -p $(DESTDIR)/patt/ssh-keys/
