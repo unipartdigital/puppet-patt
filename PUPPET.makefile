@@ -59,7 +59,6 @@ puppet-module:
 
 	mkdir -m 0755 -p $(DESTDIR)/patt/manifests/
 	mkdir -m 0755 -p $(DESTDIR)/patt/templates/
-	mkdir -m 0755 -p $(DESTDIR)/patt/facts.d/
 	mkdir -m 0755 -p $(DESTDIR)/patt/lib/facter/
 
 	install -m 644 puppet/modules/patt/manifests/service.pp $(DESTDIR)/patt/manifests/
