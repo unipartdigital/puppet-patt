@@ -16,6 +16,7 @@ import argparse
 import yaml
 import sys
 import os
+from pprint import pformat
 
 logger = logging.getLogger('patt_cli')
 
@@ -307,5 +308,5 @@ if __name__ == "__main__":
             logger.info ("Etcd Cluster {}".format(etcd_report))
             if cfg.patroni_template_file:
                 patroni_cluster_info = patt_patroni.get_cluster_info(postgres_peers)
-                print ("\nPostgres Cluster\n{}".format(patroni_cluster_info))
-                logger.info ("Postgres Cluster {}".format(patroni_cluster_info))
+                print ("\nPostgres Cluster\n{}".format(pformat(patroni_cluster_info)))
+                logger.info ("Postgres Cluster\n{}".format(pformat(patroni_cluster_info)))
