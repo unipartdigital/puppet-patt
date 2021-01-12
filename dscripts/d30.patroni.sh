@@ -164,7 +164,7 @@ init() {
     esac
     touch /tmp/patroni_pip_install
     cat <<EOF | su - postgres
-pip3 install -U --user patroni[etcd]==${patroni_version}
+pip3 install --user patroni[etcd]==${patroni_version}
 EOF
     cat <<EOF > ${srcdir}/patroni.te
 
