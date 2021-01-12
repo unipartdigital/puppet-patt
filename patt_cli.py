@@ -109,7 +109,7 @@ if __name__ == "__main__":
                         default=["https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo"])
     cli.add_argument('--yaml_dump', help="dump the cli options in yaml format", action='store_true', required=False)
     cli.add_argument('--pg_master_exec', help="script list to exec on master as postgres, could be local or remote)", action='append', required=False, default=[])
-    cli.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
+    cli.add_argument('--lock_dir', help='lock directory', required=False, default="/dev/shm")
 
     args = parser.parse_args()
     if args.interface == 'cli':
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     if cfg.lock_dir:
         lock_filename = cfg.lock_dir + '/' + os.path.basename (__file__).split('.')[0] + '.lock'
     else:
-        lock_filename = '/tmp/' + os.path.basename (__file__).split('.')[0] + '.lock'
+        lock_filename = '/dev/shm/' + os.path.basename (__file__).split('.')[0] + '.lock'
 
     lock = fl.file_lock(lock_filename)
     with lock:
