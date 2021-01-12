@@ -171,6 +171,7 @@ enable() {
 
     case "${release_vendor}" in
         'redhat' | 'centos')
+            ETCD_CONF="/etc/etcd/etcd.conf"
             systemctl start etcd
             for i in 1 2 3 4 5 6 7 8 9 10; do
                 etcdctl cluster-health
