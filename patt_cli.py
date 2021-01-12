@@ -171,9 +171,9 @@ if __name__ == "__main__":
                 assert (n.sudo == True)
                 patt.host_id(p)
                 patt.host_ip_aliases(p)
-                patt.check_dup_id ([p for p in etcd_peers])
-                patt.check_dup_id ([p for p in postgres_peers])
-                patt.check_dup_id ([p for p in haproxy_peers])
+        patt.check_dup_id ([p for p in etcd_peers])
+        patt.check_dup_id ([p for p in postgres_peers])
+        patt.check_dup_id ([p for p in haproxy_peers])
 
         logger.info ("cluster name   : {}".format(cfg.cluster_name))
         logger.info ("cluster nodes  : {}".format([(n.hostname, n.ip_aliases) for n in nodes]))
