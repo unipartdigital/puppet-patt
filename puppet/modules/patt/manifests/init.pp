@@ -51,7 +51,7 @@ $iplist = split(inline_epp('<%=$facts[all_ip]%>'), " ")
 |- END
 
  $is_postgres = inline_epp(@(END))
-<% [$patt::postgres_peer].flatten.each |$peer| { -%>
+<% [$patt::postgres_peers].flatten.each |$peer| { -%>
 <% $iplist.flatten.each |$i| { -%>
 <% if $i == $peer { -%>
 <%=$i == $peer-%>
