@@ -38,6 +38,50 @@ class patt (
 )
 {
 
+$iplist = split(inline_epp('<%=$facts[all_ip]%>'), " ")
+
+if is_array($patt::etcd_peers) {
+ $etcd_p = $patt::etcd_peers
+}else{
+ $etcd_p = $patt::nodes
+}
+
+ $is_etcd = inline_epp(@(END))
+<% [$etcd_p].flatten.each |$peer| { -%>
+<% $iplist.flatten.each |$i| { -%>
+<% if $i == $peer { -%>
+<%=$i == $peer-%>
+<% } -%>
+<% } -%>
+<% } -%>
+|- END
+
+if is_array($patt::postgres_peers) {
+ $postgres_p = $patt::postgres_peers
+}else{
+ $postgres_p = $patt::nodes
+}
+
+ $is_postgres = inline_epp(@(END))
+<% [$postgres_p].flatten.each |$peer| { -%>
+<% $iplist.flatten.each |$i| { -%>
+<% if $i == $peer { -%>
+<%=$i == $peer-%>
+<% } -%>
+<% } -%>
+<% } -%>
+|- END
+
+# notify {"$iplist":
+#  withpath => true,
+#  }
+notify {"is etcd peer: ${is_etcd}":
+ withpath => true,
+ }
+notify {"is postgres peer: ${is_postgres}":
+ withpath => true,
+ }
+
   contain patt::require
   contain patt::packages
   contain patt::install

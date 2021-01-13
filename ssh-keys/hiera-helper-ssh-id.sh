@@ -11,8 +11,8 @@ tmp=`/usr/bin/mktemp -d`
     ssh_file=$(/usr/bin/basename `/usr/bin/mktemp -d`)
     /usr/bin/ssh-keygen -t rsa -b 4096 -f ${tmp}/${ssh_file}_rsa -N "" -C "patt::installer::$(date '+%s')"
 
-    ${eyaml} encrypt -l installer_ssh_id_priv -f ${tmp}/${ssh_file}_rsa
-    ${eyaml} encrypt -l installer_ssh_id_pub -f ${tmp}/${ssh_file}_rsa.pub
+    ${eyaml} encrypt -l patt::installer_ssh_id_priv -f ${tmp}/${ssh_file}_rsa
+    ${eyaml} encrypt -l patt::installer_ssh_id_pub -f ${tmp}/${ssh_file}_rsa.pub
 
     rm -f ${tmp}/${ssh_file}_rsa ${tmp}/${ssh_file}_rsa.pub
 }
