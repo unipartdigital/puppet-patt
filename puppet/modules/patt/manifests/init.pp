@@ -40,8 +40,14 @@ class patt (
 
 $iplist = split(inline_epp('<%=$facts[all_ip]%>'), " ")
 
+if is_array($patt::etcd_peers) {
+ $etcd_p = $patt::etcd_peers
+}else{
+ $etcd_p = $patt::nodes
+}
+
  $is_etcd = inline_epp(@(END))
-<% [$patt::etcd_peers].flatten.each |$peer| { -%>
+<% [$etcd_p].flatten.each |$peer| { -%>
 <% $iplist.flatten.each |$i| { -%>
 <% if $i == $peer { -%>
 <%=$i == $peer-%>
@@ -49,9 +55,15 @@ $iplist = split(inline_epp('<%=$facts[all_ip]%>'), " ")
 <% } -%>
 <% } -%>
 |- END
+
+if is_array($patt::postgres_peers) {
+ $postgres_p = $patt::postgres_peers
+}else{
+ $postgres_p = $patt::nodes
+}
 
  $is_postgres = inline_epp(@(END))
-<% [$patt::postgres_peers].flatten.each |$peer| { -%>
+<% [$postgres_p].flatten.each |$peer| { -%>
 <% $iplist.flatten.each |$i| { -%>
 <% if $i == $peer { -%>
 <%=$i == $peer-%>
@@ -59,8 +71,6 @@ $iplist = split(inline_epp('<%=$facts[all_ip]%>'), " ")
 <% } -%>
 <% } -%>
 |- END
-
-
 
 # notify {"$iplist":
 #  withpath => true,
