@@ -1,3 +1,4 @@
+bc38ed1309a048d90442b6675a7d3f4a6c6786e9 fix missing
 e58284b07845ea19ee3fbbf365c830d458197724  clean up
 339f383901aa5ee779fa3efba1b8c44519ec81b3 fix
 8d7cf900169580cbfa2bb0e0b4323d430b45a5ba pprint patroni_cluster_info
