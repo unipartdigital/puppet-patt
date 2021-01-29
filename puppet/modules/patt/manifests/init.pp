@@ -90,6 +90,7 @@ notify {"is postgres peer: ${is_postgres}":
 
   contain patt::require
   contain patt::packages
+  contain patt::swap
   contain patt::install
   contain patt::mount
   contain patt::config
