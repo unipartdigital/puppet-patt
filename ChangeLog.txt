@@ -1,3 +1,4 @@
+d32032a7052b93e93f0ac4016004cb5958b157dd gc_cron settings via puppet
 81df23013d645992422f52dbc693ddae495c00f5 postgresql cron garbage collector script (vaccumdb)
 65c81efdf80285428e8d7cc709f2c61adec36452 simple template processor
 3c700cef9178150d2845d71272eef9c546e2c2b5 better deal with curl failed attempts
