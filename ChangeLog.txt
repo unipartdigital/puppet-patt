@@ -1,3 +1,6 @@
+81df23013d645992422f52dbc693ddae495c00f5 postgresql cron garbage collector script (vaccumdb)
+65c81efdf80285428e8d7cc709f2c61adec36452 simple template processor
+3c700cef9178150d2845d71272eef9c546e2c2b5 better deal with curl failed attempts
 bc38ed1309a048d90442b6675a7d3f4a6c6786e9 fix missing
 e58284b07845ea19ee3fbbf365c830d458197724  clean up
 339f383901aa5ee779fa3efba1b8c44519ec81b3 fix

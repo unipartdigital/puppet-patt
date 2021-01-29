@@ -44,6 +44,8 @@ class Config(object):
         self.pg_master_exec = None
         self.create_role = None
         self.create_database = None
+        self.gc_cron_df_pc = 50
+        self.gc_cron_target = "/etc/cron.hourly/postgres-gc.sh"
 
     def from_argparse_cli(self, args):
         for a in args._get_kwargs():
@@ -303,6 +305,10 @@ if __name__ == "__main__":
                 if cfg.pg_master_exec:
                     for s in cfg.pg_master_exec:
                         patt_postgres.postgres_exec(postgres_leader, s)
+
+            patt_postgres.postgres_gc_cron(nodes=postgres_peers,
+                                           vaccum_full_df_percent=cfg.gc_cron_df_pc,
+                                           target=cfg.gc_cron_target)
 
             print ("\nEtcd Cluster\n{}".format(etcd_report))
             logger.info ("Etcd Cluster {}".format(etcd_report))
