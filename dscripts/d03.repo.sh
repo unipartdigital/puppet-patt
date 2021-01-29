@@ -58,9 +58,9 @@ add_repo () {
                 br=$(echo $(basename ${r}))
                 if [ "$(echo ${br} | rev | cut -d '.' -f 1 | rev)" == "repo" ]; then
                     (cd /etc/yum.repos.d/
-                     curl -k ${r} > /dev/null || continue
-                     echo "curl -k ${r} > ${br}" 2>&1
-                     curl -k ${r} > ${br}
+                     curl -f -k ${r} > /dev/null || continue
+                     echo "curl -f -k ${r} > ${br}" 2>&1
+                     curl -f -k ${r} > ${br}
                      if  [ -f ${br} ]; then
                          if grep -q "skip_if_unavailable" ${br} ; then
                              if ! grep -iq "skip_if_unavailable=true" ${br} ; then
@@ -72,8 +72,8 @@ add_repo () {
                      fi
                     )
                 else
-                    echo "curl -k ${r}" 1>&2
-                    curl -k ${r} > /dev/null || continue
+                    echo "curl -f -k ${r}" 1>&2
+                    curl -f -k ${r} > /dev/null || continue
                     repo_name=$(echo "$r" | sed -e "s|https*://||" -e "s|[\.:/]|_|g" -e "s|\[|_|" -e "s|\]|_|" -e "s|_\+|_|g")
                     cat <<EOF > /etc/yum.repos.d/${repo_name}.repo
 [${repo_name}]
