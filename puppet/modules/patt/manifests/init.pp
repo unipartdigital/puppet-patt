@@ -35,6 +35,12 @@ class patt (
  Optional[String]        $pg_root_key = '',
  # PostgreSQL root certificat,  if not provided CA will be generated
 
+ Optional[String]        $gc_cron_df_pc = '50',
+ Optional[String]        $gc_cron_target = "/etc/cron.hourly/postgres-gc.sh",
+ # install autovacuum cron script into patt::gc_cron_target
+ # if used PGDATA disk space (in percent) > patt::gc_cron_target then
+ #  run vacuum full (+analyze) otherwise run simple vacuumdb (+analyze)
+ # see also 'config/postgres-gc.sh.tmpl'
 )
 {
 
