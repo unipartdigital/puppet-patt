@@ -215,3 +215,20 @@ def postgres_create_role(postgres_peers, role_name, role_options=[]):
 def postgres_create_database(postgres_peers, database_name, owner):
     postgres_db_role(postgres_peers=postgres_peers, database_name=database_name, role_name=owner,
                      template_file="./config/pg_create_database.tmpl")
+
+"""
+install postgres GC cron script
+"""
+def postgres_gc_cron(nodes, vaccum_full_df_percent, target):
+    logger.info ("processing {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    patt.check_dup_id (nodes)
+    tmpl="./config/postgres-gc.sh.tmpl"
+    result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
+                               payload=tmpl,
+                               args=['-t'] + [os.path.basename (tmpl)] +
+                               ['-o'] + [target] +
+                               ['--chmod'] + ['755'] +
+                               ['--dictionary_key_val'] + ["pc={}".format(vaccum_full_df_percent)],
+                               sudo=True)
+    log_results (result)
