@@ -126,6 +126,9 @@ notify {"is postgres peer: ${is_postgres}":
 # patt::ssh_login: ''
 # patt::vol_size_etcd: '2G'
 # patt::vol_size_pgsql: '8G'
+# patt::gc_cron_df_pc: '80'
+# patt::gc_cron_target: '/etc/cron.hourly/postgres-gc.sh'
+#
 # patt::pg_create_role:
 #   - {name: example_user, options: ["LOGIN", "PASSWORD ''md5fff64d4f930006fe343c924f6c32157e''"]}
 # patt::pg_create_database:
