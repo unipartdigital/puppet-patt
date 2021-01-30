@@ -219,16 +219,20 @@ def postgres_create_database(postgres_peers, database_name, owner):
 """
 install postgres GC cron script
 """
-def postgres_gc_cron(nodes, vaccum_full_df_percent, target):
+def postgres_gc_cron(nodes, vaccum_full_df_percent, target, postgres_version):
     logger.info ("processing {}".format ([n.hostname for n in nodes]))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
     tmpl="./config/postgres-gc.sh.tmpl"
+    vacuumdb_option=""
+    if postgres_version >= 12:
+        vacuumdb_option="--skip-locked"
     result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
                                payload=tmpl,
                                args=['-t'] + [os.path.basename (tmpl)] +
                                ['-o'] + [target] +
                                ['--chmod'] + ['755'] +
-                               ['--dictionary_key_val'] + ["pc={}".format(vaccum_full_df_percent)],
+                               ['--dictionary_key_val'] + ["pc={}".format(vaccum_full_df_percent)] +
+                               ['--dictionary_key_val'] + ["vacuumdb_option={}".format(vacuumdb_option)],
                                sudo=True)
     log_results (result)

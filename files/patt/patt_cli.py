@@ -308,7 +308,8 @@ if __name__ == "__main__":
 
             patt_postgres.postgres_gc_cron(nodes=postgres_peers,
                                            vaccum_full_df_percent=cfg.gc_cron_df_pc,
-                                           target=cfg.gc_cron_target)
+                                           target=cfg.gc_cron_target,
+                                           postgres_version=cfg.postgres_release)
 
             print ("\nEtcd Cluster\n{}".format(etcd_report))
             logger.info ("Etcd Cluster {}".format(etcd_report))
