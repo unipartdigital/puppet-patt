@@ -122,8 +122,15 @@ if __name__ == "__main__":
     elif args.interface == 'yaml':
         cfg.from_yaml_file (args.yaml_config_file)
     else:
+        print ("""
+        Patt (deploy replicated PostgreSQL cluster managed by Patroni)
+        Copyright (C) 2020,2021 Unipart Digital
+        This program comes with ABSOLUTELY NO WARRANTY.
+        This is free software, and you are welcome to redistribute it
+        under certain conditions; type `info gpl' for details.
+        """)
         parser.print_help()
-        raise ValueError
+        sys.exit(11)
 
     if cfg.log_file:
         log_file = cfg.log_file

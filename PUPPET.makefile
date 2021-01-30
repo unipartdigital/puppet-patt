@@ -12,6 +12,7 @@ puppet-module:
 
 	install -m 644 Makefile $(DESTDIR)/patt/files/patt/.
 	install -m 644 README.md $(DESTDIR)/patt/.
+	install -m 644 COPYING $(DESTDIR)/patt/.
 
 	install -m 644 config/haproxy.cfg.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/firewall.nft $(DESTDIR)/patt/files/patt/config
