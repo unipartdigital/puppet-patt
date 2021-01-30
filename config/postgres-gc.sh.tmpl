@@ -1,18 +1,13 @@
 #!/bin/bash
 
 [ "$${FLOCKER}" != "$$0" ] && exec env FLOCKER="$$0" flock -en "$$0" "$$0" "$$@" || :
-log_file="/var/tmp/vaccuumdb-$$(date +%A).log"
-if /bin/test -f $${log_file} && /bin/test $$(($$(date +%s) - $$(stat --format %Y $${log_file}))) -gt 86400
-then
-    rm -f $${log_file}
-fi
 cat <<'EOF' | su - postgres
 if /bin/test $$(/bin/df $$PGDATA | /bin/tail -n1 | /bin/awk '{print $$5}' | /bin/cut -d '%' -f 1) -gt $pc ;
  then
    # vaccum full
    test "x$$(psql -qtAX -c 'select pg_is_in_recovery() = false as is_master;')" == "xt" && \
-   /bin/vacuumdb --skip-locked --all --verbose --analyze --full 2>&1 | tee -a $${log_file}
+   vacuumdb --all --verbose --analyze --full $vacuumdb_option
   else
-   /bin/vacuumdb --all --verbose --analyze 2>&1 | tee -a $${log_file}
+   vacuumdb --all --verbose --analyze
 fi
 EOF
