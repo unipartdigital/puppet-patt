@@ -5,6 +5,7 @@
 ## Usage with Puppet
 
 * make the module and move it into your puppet server
+* or clone the puppet git branch
 
 ```
 make patt-puppet.tar.xz
@@ -53,16 +54,16 @@ make patt-puppet.tar.xz
 
  # echo -n "md5" | echo -n "SeCrEtPasSwOrDexample_user" | md5sum
 
- installer_ssh_id_pub: >
+ patt::installer_ssh_id_pub: >
      ENC[PKCS7,MIIEbQYJKoZIhvcNAQcDoIIEXjCCBFoCAQAxggEhMIIBHQIBADAFMAACAQEw...]
 
- installer_ssh_id_priv: ENC[PKCS7,MIIOvQYJKo...]
+ patt::installer_ssh_id_priv: ENC[PKCS7,MIIOvQYJKo...]
 
 # puppet/modules/patt/ssh-keys/hiera-helper-ssh-id.sh
 
- pg_root_crt: ENC[PKCS7,MIIJjQYS7,MDFosJKLjn...]
+ patt::pg_root_crt: ENC[PKCS7,MIIJjQYS7,MDFosJKLjn...]
 
- pg_root_key: ENC[PKCS7,MIIOHQYJKoZIhvcNAQcD...]
+ patt::pg_root_key: ENC[PKCS7,MIIOHQYJKoZIhvcNAQcD...]
 
 # puppet/modules/patt/ssl-cert/hiera-helper-ssl-root.sh
 
@@ -91,13 +92,13 @@ make paramiko
 * some options are only available via the yaml cli interface
 
 ### yaml
-* cli options can saved in a yaml config file using `--yaml_dump`
-* it can be reused as `patt_cli.py yaml -f config_file.yaml`
+* the cli options can be saved in yaml format using: `--yaml_dump`
+* to use a yaml configuration file: `patt_cli.py yaml -f config_file.yaml`
 
 #### yaml config example
 ```
 #!!python/object:__main__.Config
-cluster_name: patt_5181
+cluster_name: patt_5281
 floating_ip:
 - 2001:db8:3c4d:15:2b3b:8a9a:1754:32eb
 nodes:
@@ -134,7 +135,13 @@ gc_cron_target: /etc/cron.hourly/postgres-gc.sh
 
 ```
 
-## Note
-* with the puppet module if ssh id and ssl root cert are not set. It will be generated in `/dev/shm/` on the puppet server.
-* we are soon in 2021 and puppet-patt works in ipv6 only.
-* RHEL centric, tested on centos8
+## Notes
+
+### Puppet Module
+* if ssh id and ssl root cert are not set then they will be generated in `/dev/shm/` on the puppet server.
+
+### Network
+* ipv6 only.
+
+### OS
+* for now RHEL centric, tested on centos8
