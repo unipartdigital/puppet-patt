@@ -1,3 +1,4 @@
+e5d9e7d181edffee90b35505a948b12e196e8ce0 hack to deal with puppet agent  --environment
 b022e9cb3307c491185ee7bcfb1da281d68aa2fa handle already defined packages resources
 4bcddb83354082d8050db551e4dfa14a08076741 doc fix
 b0ac457949100518cfcafdf89f247a64f5c0cc63 doc update
