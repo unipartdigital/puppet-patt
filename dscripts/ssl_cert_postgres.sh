@@ -11,35 +11,18 @@ trap '{echo "$0 FAILED on line $LINENO!; }" | tee ${srcdir}/$(basename $0).log' 
 # Catch unitialized variables:
 set -u
 
-# arch | vendor | major
-get_system_release () {
-    query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
-    if [ -f /etc/redhat-release ]; then
-        release=$(rpm -q --whatprovides /etc/redhat-release)
-        case $query in
-            'major')
-                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
-                ;;
-            'vendor')
-                echo $release | rev |  cut -d '-' -f 4 | rev
-                ;;
-            *)
-                echo "query not implemented: $query" 1>&2
-                exit 1
-        esac
-    fi
-}
+. /etc/os-release
+os_id="${ID}"
+os_version_id="${VERSION_ID}"
+os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
+os_arch="$(uname -m)"
 
 copy_ca() {
     src="$1"
     dst="$2"
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    release_arch=$(get_system_release "arch")
 
     cd $srcdir
-    case "${release_vendor}" in
+    case "${os_id}" in
         'redhat' | 'centos')
             postgres_home=$(getent passwd postgres | cut -d: -f6)
             if [  ! -d "${postgres_home}/.postgresql/" ]; then
@@ -62,7 +45,7 @@ copy_ca() {
             fi
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac

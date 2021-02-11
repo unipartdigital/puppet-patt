@@ -13,25 +13,11 @@ self=$(basename $0 .sh)
 # Catch unitialized variables:
 set -u
 
-# arch | vendor | major
-get_system_release () {
-    query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
-    if [ -f /etc/redhat-release ]; then
-        release=$(rpm -q --whatprovides /etc/redhat-release)
-        case $query in
-            'major')
-                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
-                ;;
-            'vendor')
-                echo $release | rev |  cut -d '-' -f 4 | rev
-                ;;
-            *)
-                echo "query not implemented: $query" 1>&2
-                exit 1
-        esac
-    fi
-}
+. /etc/os-release
+os_id="${ID}"
+os_version_id="${VERSION_ID}"
+os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
+os_arch="$(uname -m)"
 
 logger () {
     message=${1:-"undef"}
@@ -40,14 +26,11 @@ logger () {
 
 add_repo () {
     repo_url="$*"
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    release_arch=$(get_system_release "arch")
 
-    case "${release_vendor}" in
+    case "${os_id}" in
         'redhat' | 'centos')
             # some images may not provide the config-manager plugin
-            if [ "${release_major}" -ge 8 ]; then
+            if [ "${os_major_version_id}" -ge 8 ]; then
                 dnf config-manager || dnf install 'dnf-command(config-manager)' -y
             fi
 

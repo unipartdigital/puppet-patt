@@ -11,34 +11,16 @@ trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
 # Catch unitialized variables:
 set -u
 
-
-# arch | vendor | major
-get_system_release () {
-    query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
-    if [ -f /etc/redhat-release ]; then
-        release=$(rpm -q --whatprovides /etc/redhat-release)
-        case $query in
-            'major')
-                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
-                ;;
-            'vendor')
-                echo $release | rev |  cut -d '-' -f 4 | rev
-                ;;
-            *)
-                echo "query not implemented: $query" 1>&2
-                exit 1
-        esac
-    fi
-}
+. /etc/os-release
+os_id="${ID}"
+os_version_id="${VERSION_ID}"
+os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
+os_arch="$(uname -m)"
 
 init() {
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    release_arch=$(get_system_release "arch")
-    case "${release_vendor}" in
+    case "${os_id}" in
         'redhat' | 'centos')
-            if [ "${release_major}" -lt 8 ]; then
+            if [ "${os_major_version_id}" -lt 8 ]; then
                 yum install -y etcd
             else
                 # centos8 don't provide etcd yet
@@ -46,7 +28,7 @@ init() {
             fi
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
@@ -92,17 +74,13 @@ config () {
         ping6 -c 1 "${self_ip}"
     fi
 
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
-
-    case "${release_vendor}" in
+    case "${os_id}" in
         'redhat' | 'centos')
             ETCD_CONF="/etc/etcd/etcd.conf"
             ETCD_DATA_DIR=/var/lib/etcd/${self_id}
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
@@ -165,11 +143,7 @@ enable() {
     shift
     cluster_nodes=$*
 
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
-
-    case "${release_vendor}" in
+    case "${os_id}" in
         'redhat' | 'centos')
             ETCD_CONF="/etc/etcd/etcd.conf"
             systemctl start etcd
@@ -191,7 +165,7 @@ enable() {
             done
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
@@ -203,11 +177,7 @@ disable() {
     shift
     cluster_nodes=$*
 
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
-
-    case "${release_vendor}" in
+    case "${os_id}" in
         'redhat' | 'centos')
             ETCD_CONF="/etc/etcd/etcd.conf"
             systemctl stop etcd
@@ -219,7 +189,7 @@ disable() {
             fi
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac

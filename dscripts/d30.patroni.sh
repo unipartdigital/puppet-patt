@@ -11,25 +11,11 @@ trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
 # Catch unitialized variables:
 set -u
 
-# arch | vendor | major
-get_system_release () {
-    query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
-    if [ -f /etc/redhat-release ]; then
-        release=$(rpm -q --whatprovides /etc/redhat-release)
-        case $query in
-            'major')
-                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
-                ;;
-            'vendor')
-                echo $release | rev |  cut -d '-' -f 4 | rev
-                ;;
-            *)
-                echo "query not implemented: $query" 1>&2
-                exit 1
-        esac
-    fi
-}
+. /etc/os-release
+os_id="${ID}"
+os_version_id="${VERSION_ID}"
+os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
+os_arch="$(uname -m)"
 
 bashrc_setup () {
 cat <<EOF | su - postgres
@@ -80,11 +66,10 @@ EOF
 systemd_setup () {
     postgres_version=${1:-"11"}
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
-    release_vendor=$(get_system_release "vendor")
 
     default_postgres_path=$(su - postgres -c "echo $PATH")
 
-    case "${release_vendor}" in
+    case "${os_id}" in
         'redhat' | 'centos')
             if [ -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service ]; then return 0; fi
             systemd_service=/lib/systemd/system/postgresql-${postgres_version}.service
@@ -97,7 +82,7 @@ systemd_setup () {
             systemctl daemon-reload
             ;;
         *)
-            echo "${release_vendor} not implemented" 1>&2
+            echo "${os_id} not implemented" 1>&2
             exit 1
             ;;
     esac
@@ -139,15 +124,12 @@ EOF
 init() {
     postgres_version=${1:-"11"}
     patroni_version=${2:-"1.6.0"}
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
 
-    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
+    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
-    case "${release_vendor}" in
+    case "${os_id}" in
         'redhat' | 'centos')
-            if [ "${release_major}" -lt 8 ]; then
+            if [ "${os_major_version_id}" -lt 8 ]; then
                 rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel haproxy python36-PyYAML"
                 # psycopg2 is shipped by epel on centos 7
                 yum install -y ${rel_epel} ${rpm_pkg}
@@ -158,7 +140,7 @@ init() {
             softdog_setup || softdog_setup || { echo "warning: watchdog setup error" 1>&2; }
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
@@ -217,14 +199,11 @@ EOF
 }
 
 enable() {
-    postgres_version=${1:-"11"}
-    patroni_version=${2:-"1.6.0"}
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
+    postgres_version=${1:-"13"}
+    patroni_version=${2:-"2.1"}
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
-    case "${release_vendor}" in
+    case "${os_id}" in
         'redhat' | 'centos')
             if [ "x$(ps --no-header -C patroni -o pid)" == "x" ]; then
                 systemctl start postgresql-${postgres_version}_patroni && {
@@ -237,7 +216,7 @@ enable() {
             fi
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
