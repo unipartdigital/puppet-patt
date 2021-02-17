@@ -24,7 +24,6 @@ case "${os_id}" in
 esac
 
 init() {
-
     case "${os_id}" in
         'redhat' | 'centos')
             rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
@@ -36,6 +35,8 @@ init() {
             fi
             ;;
         'debian' | 'ubuntu')
+            haproxy -v || (cd /etc/systemd/system && ln -sf /dev/null haproxy.service)
+            # don't let dpkg start the service during install
             apt-get update
             apt-get install -y haproxy policycoreutils
 
@@ -48,9 +49,10 @@ init() {
 }
 
 enable () {
-
     case "${os_id}" in
         'redhat' | 'centos' | 'debian' | 'ubuntu')
+            test "$(readlink /etc/systemd/system/haproxy.service)" == "/dev/null" && \
+                rm -f /etc/systemd/system/haproxy.service && systemctl daemon-reload
             if haproxy -f /etc/haproxy/haproxy.cfg -c; then
                 /usr/sbin/setsebool -P haproxy_connect_any 1
                 # let haproxy bind to any port even if SELinux is enforcing

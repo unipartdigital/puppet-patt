@@ -38,6 +38,8 @@ init() {
             fi
             ;;
         'debian' | 'ubuntu')
+            etcd --version || (cd /etc/systemd/system && ln -sf /dev/null etcd.service)
+            # don't let dpkg start the service during install
             apt-get update
             apt-get install -y etcd
             ;;
@@ -167,6 +169,8 @@ enable() {
 
     case "${os_id}" in
         'redhat' | 'centos' | 'debian' | 'ubuntu')
+            test "$(readlink /etc/systemd/system/etcd.service)" == "/dev/null" && \
+                rm -f /etc/systemd/system/etcd.service && systemctl daemon-reload
             systemctl start etcd
             for i in 1 2 3 4 5 6 7 8 9 10; do
                 etcdctl cluster-health
