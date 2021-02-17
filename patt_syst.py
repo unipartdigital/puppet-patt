@@ -21,6 +21,20 @@ def log_results(result):
     return error_count
 
 """
+install util system packages and dep on each nodes
+"""
+def util_init(nodes):
+    nodes = list ({n.hostname: n for n in nodes}.values())
+    logger.debug ("util_init {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    patt.check_dup_id (nodes)
+
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d02.util.sh",
+                                args=['init'], sudo=True)
+    log_results (result)
+
+
+"""
 install nft system packages and dep on each nodes
 """
 def nft_init(nodes):
@@ -72,14 +86,18 @@ def nftables_configure(cluster_name, template_src, config_file_target,
 """
 setup the free disks on each nodes
 """
-def disk_init(nodes, mnt, vol_size):
+def disk_init(nodes, vol_size, mnt=None, user=None):
     nodes = list ({n.hostname: n for n in nodes}.values())
     logger.debug ("disk init {}".format (nodes))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
-
-    result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
-                                args=['-m'] + [mnt] + ['-s'] + [vol_size], sudo=True)
+    util_init(nodes)
+    if mnt:
+        result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
+                                   args=['-m'] + [mnt] + ['-s'] + [vol_size], sudo=True)
+    elif user:
+        result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
+                                   args=['-u'] + [user] + ['-s'] + [vol_size], sudo=True)
     log_results (result)
 
 
