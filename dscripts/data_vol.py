@@ -18,8 +18,25 @@ import pathlib
 import tempfile
 import os
 import sys
+import pwd
 import argparse
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
+
+def os_release ():
+   os_release_dict = {}
+   with open("/etc/os-release") as osr:
+      lines=osr.readlines()
+      for i in lines:
+         if '=' in i:
+            k,v=i.split('=',1)
+            if k.upper() in ['ID', 'VERSION_ID']:
+               v=v.strip()
+               if v.startswith('"') and v.endswith('"'):
+                  v=v[1:-1].strip()
+               os_release_dict[k.upper()]=v
+            if 'VERSION_ID' in os_release_dict:
+               os_release_dict['MAJOR_VERSION_ID'] = os_release_dict['VERSION_ID'].split('.')[0]
+   return os_release_dict
 
 def get_bdev(only_no_child=False):
    result = {}
@@ -291,7 +308,8 @@ def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
 
 if __name__ == "__main__":
    parser = argparse.ArgumentParser()
-   parser.add_argument('-m','--mount_point', help='mount point', required=True)
+   parser.add_argument('-m','--mount_point', help='mount point', required=False)
+   parser.add_argument('-u','--user_name', help='use <user_name> home dir as mount point', required=False)
    parser.add_argument('-s','--volume_size', help='volume size like 1G, 2G, 1.4T', required=True)
    parser.add_argument('-f','--fs_type', help='file system to use ext4 or xfs', required=False, default="xfs")
 
@@ -328,9 +346,26 @@ if __name__ == "__main__":
       assert float (s[0:idx])
       assert s[idx:].lower() in ['g', 'gb', 't', 'tb', 'p', 'pb']
 
-   if args.mount_point:
-      assert args.mount_point[0] == '/', "mount point must be absolute"
-      assert args.mount_point[-1] != '/', "mount point must have no trailing '/'"
+   mount_point = None
+   if args.user_name:
+      try:
+         mount_point = pwd.getpwnam(args.user_name).pw_dir
+      except KeyError:
+         # use well know vendor moutpoint
+         osr = os_release()
+         if args.user_name == "postgres":
+            if osr['ID'] in ['redhat', 'centos']:
+               mount_point = "/var/lib/pgsql"
+            elif osr['ID'] in ['debian', 'ubuntu']:
+               mount_point = "/var/lib/postgresql"
+            else:
+               raise KeyError
+   elif args.mount_point:
+      mount_point = args.mount_point
+
+   if mount_point:
+      assert mount_point[0] == '/', "mount point must be absolute"
+      assert mount_point[-1] != '/', "mount point must have no trailing '/'"
 
       try:
          lock_filename = args.lock_dir + '/' + os.path.basename (__file__).split('.')[0] + '.lock'
@@ -341,7 +376,7 @@ if __name__ == "__main__":
          lock_fd = lockf.fileno()
          flock(lock_fd, LOCK_EX | LOCK_NB)
 
-         init_mount_point (args.mount_point, lv_size=args.volume_size, extend_full=args.extend_full,
+         init_mount_point (mount_point, lv_size=args.volume_size, extend_full=args.extend_full,
                            mkfs=args.fs_type, manage_fstab=args.fstab, fstab_uuid=args.fstab_uuid)
       except:
          raise

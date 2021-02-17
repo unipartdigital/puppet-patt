@@ -6,11 +6,12 @@ import os
 import yaml
 import argparse
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
+import pwd
 
 """
 if patroni_config is readable return a yaml object otherwise None
 """
-def _get_patroni_config (patroni_config='/var/lib/pgsql/patroni.yaml'):
+def _get_patroni_config (patroni_config="{}/patroni.yaml".format (pwd.getpwnam('postgres').pw_dir)):
     result=None
     if os.path.isfile(patroni_config):
             with open(patroni_config, 'r') as p:
@@ -24,7 +25,7 @@ def _get_patroni_config (patroni_config='/var/lib/pgsql/patroni.yaml'):
                     raise
     return result
 
-def get_sys_user (patroni_config='/var/lib/pgsql/patroni.yaml'):
+def get_sys_user (patroni_config="{}/patroni.yaml".format (pwd.getpwnam('postgres').pw_dir)):
     pc = _get_patroni_config (patroni_config=patroni_config)
     result = {}
     for u in ['replication', 'superuser', 'rewind']:

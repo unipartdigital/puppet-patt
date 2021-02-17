@@ -14,6 +14,25 @@ import io
 import pwd
 
 """
+query /etc/os-release and build an os vendor dictionary with 'ID', 'VERSION_ID', 'MAJOR_VERSION_ID'
+"""
+def os_release ():
+   os_release_dict = {}
+   with open("/etc/os-release") as osr:
+      lines=osr.readlines()
+      for i in lines:
+         if '=' in i:
+            k,v=i.split('=',1)
+            if k.upper() in ['ID', 'VERSION_ID']:
+                v=v.strip()
+                if v.startswith('"') and v.endswith('"'):
+                    v=v[1:-1].strip()
+                os_release_dict[k.upper()]=v
+            if 'VERSION_ID' in os_release_dict:
+               os_release_dict['MAJOR_VERSION_ID'] = os_release_dict['VERSION_ID'].split('.')[0]
+   return os_release_dict
+
+"""
 use ip addr show to return a list of setup ip address
 """
 def ip_show(scope='global'):
@@ -53,7 +72,7 @@ def _get_hostid():
 """
 if patroni_config is readable return a yaml object otherwise None
 """
-def _get_patroni_config (patroni_config='/var/lib/pgsql/patroni.yaml'):
+def _get_patroni_config (patroni_config="{}/patroni.yaml".format (pwd.getpwnam('postgres').pw_dir)):
     result=None
     if os.path.isfile(patroni_config):
             with open(patroni_config, 'r') as p:
@@ -78,6 +97,8 @@ class PatroniConfig(object):
         self.pass_rew = ''
         self.pass_sup = ''
         self.prev=_get_patroni_config(self.file_name)
+
+        osr = os_release()
 
         with open(template_file, 'r') as t:
             try:
@@ -122,8 +143,18 @@ class PatroniConfig(object):
         self.tmpl['scope'] = cluster_name
         self.tmpl['postgresql']['connect_address'] = my_ip + ':5432'
 
-        self.tmpl['postgresql']['data_dir'] = "/var/lib/pgsql/{}/data".format (postgres_version.strip())
-        self.tmpl['postgresql']['bin_dir'] = "/usr/pgsql-{}/bin".format (postgres_version.strip())
+        if osr['ID'] in ['redhat', 'centos']:
+            self.tmpl['postgresql']['data_dir'] = "/var/lib/pgsql/{}/data".format (postgres_version.strip())
+            self.tmpl['postgresql']['bin_dir'] = "/usr/pgsql-{}/bin".format (postgres_version.strip())
+            self.tmpl['postgresql']['pgpass'] = "/var/lib/pgsql/pgpass"
+        elif osr['ID'] in ['debian', 'ubuntu']:
+            self.tmpl['postgresql']['data_dir'] = "/var/lib/postgresql/{}/data".format (
+                postgres_version.strip())
+            self.tmpl['postgresql']['bin_dir'] = "/usr/lib/postgresql/{}/bin".format (
+                postgres_version.strip())
+            self.tmpl['postgresql']['pgpass'] = "/var/lib/postgresql/pgpass"
+        else:
+            raise ValueError ("not implemented {}".format(osr))
 
         # restapi should be globaly accessible for haproxy
         self.tmpl['restapi']['listen'] = ':::8008'
@@ -202,6 +233,7 @@ if __name__ == "__main__":
     parser.add_argument('-c','--cluster_name', help='cluster name', required=True)
     parser.add_argument('-t','--template_file', help='patroni yaml template file', required=True)
     parser.add_argument('-d','--destination_file', help='patroni yaml destination file', required=True)
+    parser.add_argument('-u','--user', help='destination_file relative to <user> home dit', required=False)
     parser.add_argument('-v','--postgres_version', help='postgres version', required=True)
     parser.add_argument('-p','--postgres_peers', help='postgres peers', required=True, nargs='+')
     # peers argument should be called like: '-p p1 p2 p3'
@@ -220,13 +252,19 @@ if __name__ == "__main__":
     lock_fd = lockf.fileno()
     flock(lock_fd, LOCK_EX | LOCK_NB)
 
+    destination_file=None
+    if args.user and args.user is not None:
+        destination_file = "{}/{}".format (pwd.getpwnam(args.user).pw_dir, args.destination_file)
+    else:
+        destination_file = args.destination_file
+
     pc = PatroniConfig (cluster_name=args.cluster_name,
                         template_file=args.template_file,
                         postgres_version=args.postgres_version,
                         nodes=args.postgres_peers,
                         etcd_peers=args.etcd_peers,
                         sys_user_pass=args.sys_user_pass,
-                        dst_file=args.destination_file)
+                        dst_file=destination_file)
     pc.write ()
 
     flock(lock_fd, LOCK_UN)

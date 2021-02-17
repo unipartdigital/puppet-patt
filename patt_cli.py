@@ -211,7 +211,7 @@ if __name__ == "__main__":
             patt_syst.disk_init (etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd)
 
         if cfg.vol_size_pgsql:
-            patt_syst.disk_init (postgres_peers, mnt="/var/lib/pgsql", vol_size=cfg.vol_size_pgsql)
+            patt_syst.disk_init (postgres_peers, user='postgres', vol_size=cfg.vol_size_pgsql)
 
         progress_bar (4, 14)
 
@@ -275,7 +275,8 @@ if __name__ == "__main__":
                                            template_src=cfg.patroni_template_file,
                                            nodes=postgres_peers,
                                            etcd_peers=etcd_peers,
-                                           config_file_target='/var/lib/pgsql/patroni.yaml',
+                                           config_file_target='patroni.yaml',
+                                           user='postgres',
                                            sysuser_pass=pass_dict,
                                            postgres_parameters=cfg.postgres_parameters,
                                            pg_hba_list=patt_patroni.cert_pg_hba_list(
