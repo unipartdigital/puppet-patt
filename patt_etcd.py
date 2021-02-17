@@ -120,6 +120,7 @@ def etcd_init(cluster_name, nodes):
                                     args=['enable'] + [cluster_name] + id_hosts, sudo=True)
         log_results (result)
 
+        running_node = running_node if running_node else nodes[0]
         good_members = get_members([running_node], cluster_name, 'ok')
         bad_members = get_members([running_node], cluster_name, 'bad')
 
@@ -132,6 +133,7 @@ def etcd_init(cluster_name, nodes):
             raise EtcdError ('cluster init error', "error initialising new cluster {}".format(cluster_name))
 
     # process any remaining members one by one using one of the healthy nodes as a controller
+    running_node = running_node if running_node else nodes[0]
     good_members = get_members([running_node], cluster_name, 'ok')
     bad_members = get_members([running_node], cluster_name, 'bad')
 
