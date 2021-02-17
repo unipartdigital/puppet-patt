@@ -17,6 +17,12 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
+
 init() {
 
     case "${os_id}" in
@@ -29,6 +35,11 @@ init() {
                 dnf install -y epel-release ${rpm_pkg}
             fi
             ;;
+        'debian' | 'ubuntu')
+            apt-get update
+            apt-get install -y haproxy policycoreutils
+
+            ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
@@ -39,7 +50,7 @@ init() {
 enable () {
 
     case "${os_id}" in
-        'redhat' | 'centos')
+        'redhat' | 'centos' | 'debian' | 'ubuntu')
             if haproxy -f /etc/haproxy/haproxy.cfg -c; then
                 /usr/sbin/setsebool -P haproxy_connect_any 1
                 # let haproxy bind to any port even if SELinux is enforcing

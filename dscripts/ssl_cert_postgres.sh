@@ -23,7 +23,7 @@ copy_ca() {
 
     cd $srcdir
     case "${os_id}" in
-        'redhat' | 'centos')
+        'redhat' | 'centos' | 'debian' | 'ubuntu')
             postgres_home=$(getent passwd postgres | cut -d: -f6)
             if [  ! -d "${postgres_home}/.postgresql/" ]; then
                 mkdir -m 700 "${postgres_home}/.postgresql/"

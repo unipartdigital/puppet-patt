@@ -19,6 +19,12 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
+
 logger () {
     message=${1:-"undef"}
     echo "${message}" 1>&2
@@ -31,7 +37,7 @@ add_repo () {
         'redhat' | 'centos')
             # some images may not provide the config-manager plugin
             if [ "${os_major_version_id}" -ge 8 ]; then
-                dnf config-manager || dnf install 'dnf-command(config-manager)' -y
+                dnf config-manager --help > /dev/null 2>&1 || dnf install 'dnf-command(config-manager)' -y
             fi
 
             for r in ${repo_url[*]}; do
@@ -66,6 +72,23 @@ enabled=1
 skip_if_unavailable=True
 gpgcheck=0
 EOF
+                fi
+            done
+            ;;
+        'debian' | 'ubuntu')
+            for r in ${repo_url[*]}; do
+                if [ "x$r" == "x" ]; then
+                    continue
+                fi
+                type=$(echo $r | cut -d'|' -f 1)
+                link=$(echo $r | cut -d'|' -f 2)
+                rele=$(echo $r | cut -d'|' -f 3- | sed -e "s/|/ /g")
+                rele=${rele:-"main"}
+                case ${type} in "deb" | "deb-src" ) : ;; *) continue;; esac
+                curl -f -k ${link} > /dev/null || continue
+                fname="$(echo ${r} | sha1sum).list"
+                if [ ! -f "/etc/apt/sources.list.d/${fname}" ]; then
+                    echo "${type} ${link} ${rele}" > /etc/apt/sources.list.d/${fname}
                 fi
             done
             ;;

@@ -17,6 +17,16 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ETCD_CONF="/etc/default/etcd"
+        ;;
+    'redhat' | 'centos')
+        ETCD_CONF="/etc/etcd/etcd.conf"
+        ;;
+    esac
+
 init() {
     case "${os_id}" in
         'redhat' | 'centos')
@@ -27,6 +37,10 @@ init() {
                 dnf install --nogpgcheck -y etcd
             fi
             ;;
+        'debian' | 'ubuntu')
+            apt-get update
+            apt-get install -y etcd
+            ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
@@ -35,16 +49,35 @@ init() {
 }
 
 check_healthy () {
-    ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is healthy" | cut -d ' ' -f 1
+    # ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is healthy" | cut -d ' ' -f 1
+    ep=""
+    for e in $(ETCDCTL_API=3 etcdctl member list -w fields | grep "ClientURL" | cut -d: -f2-); do
+        ep=$ep,$e;
+    done
+    ep="${ep/,/}"
+    ETCDCTL_API=3 etcdctl --endpoints=$ep endpoint health  2>&1 | grep "is healthy" | cut -d' ' -f1
 }
 
 check_unhealthy () {
-    ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is unhealthy" | cut -d ' ' -f 1
+    # ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is unhealthy" | cut -d ' ' -f 1
+    ep=""
+    for e in $(ETCDCTL_API=3 etcdctl member list -w fields | grep "ClientURL" | cut -d: -f2-); do
+        ep=$ep,$e;
+    done
+    ep="${ep/,/}"
+    ETCDCTL_API=3 etcdctl --endpoints=$ep endpoint health  2>&1 | grep "is unhealthy" | cut -d' ' -f1
 }
 
 check () {
     ETCDCTL_API=3 etcdctl member list -w table
-    ETCDCTL_API=3 etcdctl endpoint --cluster health -w table  2>&1
+    # ETCDCTL_API=3 etcdctl endpoint --cluster health -w table  2>&1
+    ep=""
+    for e in $(ETCDCTL_API=3 etcdctl member list -w fields | grep "ClientURL" | cut -d: -f2-); do
+        ep=$ep,$e;
+    done
+    ep="${ep/,/}"
+    ETCDCTL_API=3 etcdctl --endpoints=$ep endpoint health -w table
+
 }
 
 config () {
@@ -73,17 +106,6 @@ config () {
     else
         ping6 -c 1 "${self_ip}"
     fi
-
-    case "${os_id}" in
-        'redhat' | 'centos')
-            ETCD_CONF="/etc/etcd/etcd.conf"
-            ETCD_DATA_DIR=/var/lib/etcd/${self_id}
-            ;;
-        *)
-            echo "unsupported release vendor: ${os_id}" 1>&2
-            exit 1
-            ;;
-    esac
 
     ETCD_DATA_DIR=/var/lib/etcd/${self_id}
     mkdir -p -m 700 "${ETCD_DATA_DIR}"
@@ -144,8 +166,7 @@ enable() {
     cluster_nodes=$*
 
     case "${os_id}" in
-        'redhat' | 'centos')
-            ETCD_CONF="/etc/etcd/etcd.conf"
+        'redhat' | 'centos' | 'debian' | 'ubuntu')
             systemctl start etcd
             for i in 1 2 3 4 5 6 7 8 9 10; do
                 etcdctl cluster-health
@@ -153,7 +174,7 @@ enable() {
                     systemctl enable --now etcd
                     if [ -r ${ETCD_CONF} ]; then
                         . ${ETCD_CONF}
-                        find "${ETCD_DATA_DIR}".back-* -delete
+                        find "$(dirname ${ETCD_DATA_DIR})" -name "$(basename ${ETCD_DATA_DIR}).back-*" -delete
                     fi
                     break;
                 fi
@@ -178,8 +199,7 @@ disable() {
     cluster_nodes=$*
 
     case "${os_id}" in
-        'redhat' | 'centos')
-            ETCD_CONF="/etc/etcd/etcd.conf"
+        'redhat' | 'centos' | 'debian' | 'ubuntu')
             systemctl stop etcd
             if [ -r ${ETCD_CONF} ]; then
                 . ${ETCD_CONF}

@@ -17,6 +17,12 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
+
 init() {
     postgresql_version=${1:-"13"}
 
@@ -42,24 +48,47 @@ init() {
                     postgresql${postgresql_version}-contrib
                 #postgresql${postgresql_version}-devel
             fi
-
-            pg_home=$(getent passwd postgres | cut -d':' -f 6)
-            if [ -n "${pg_home}" ]; then
-                chown postgres.postgres ${pg_home}
-                chmod 711 ${pg_home}
+            pg_hba_conf_sample="/usr/pgsql-${postgresql_version}/share/pg_hba.conf.sample"
+            ;;
+        'debian' | 'ubuntu')
+            apt-get install -y gnupg wget
+            if ! /usr/bin/test -s /etc/apt/sources.list.d/pgdg.list; then
+                echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
             fi
-            # ensure sane permission
-
-            sed -i -e "/#[[:space:]]*TYPE[[:space:]]\+DATABASE[[:space:]]\+USER[[:space:]]\+ADDRESS[[:space:]]\+METHOD.*/q" /usr/pgsql-${postgresql_version}/share/pg_hba.conf.sample
-            cat <<EOF >> /usr/pgsql-${postgresql_version}/share/pg_hba.conf.sample
- local  all             all                                     ident
+            if ! apt-key list 2>&1 | grep -q "PostgreSQL.*Repository" ; then
+                wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+            fi
+            apt-get update
+            test -d /etc/postgresql-common/ || mkdir -p   /etc/postgresql-common/
+            test -f /etc/postgresql-common/createcluster.conf || \
+                cat <<EOF > /etc/postgresql-common/createcluster.conf
+create_main_cluster = false
+start_conf = 'disabled'
+data_directory = /dev/null
+ssl = off
 EOF
+            test -x /usr/lib/postgresql/${postgresql_version}/bin/postgres || \
+                apt-get install -y postgresql-${postgresql_version}
+            #postgresql-server-dev-${postgresql_version}
+            pg_hba_conf_sample="/usr/share/postgresql/${postgresql_version}/pg_hba.conf.sample"
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
+
+    sed -i -e "/#[[:space:]]*TYPE[[:space:]]\+DATABASE[[:space:]]\+USER[[:space:]]\+ADDRESS[[:space:]]\+METHOD.*/q" ${pg_hba_conf_sample}
+            cat <<EOF >> ${pg_hba_conf_sample}
+ local  all             all                                     ident
+EOF
+
+    pg_home=$(getent passwd postgres | cut -d':' -f 6)
+    if [ -n "${pg_home}" ]; then
+        test "$(stat -c '%U.%G' ${pg_home})" == "postgres.postgres" || chown postgres.postgres ${pg_home}
+        test "$(stat -c '%a' ${pg_home})" == "711" || chmod 711 ${pg_home}
+    fi
+    # ensure sane permission
 }
 
 {

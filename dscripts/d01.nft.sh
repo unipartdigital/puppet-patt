@@ -17,44 +17,57 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
+
 init() {
+
+    pkg="python3 nftables"
+    rule_file='"/etc/nftables/postgres_patroni"'
+
     case "${os_id}" in
         'redhat' | 'centos')
-
-            pkg="python3 nftables"
-
             if [ "${os_major_version_id}" -lt 8 ]; then
                 yum install -y $pkg
             else
                 dnf install -y $pkg
             fi
-            if [ ! -f /etc/nftables/postgres_patroni ]; then
-                touch /etc/nftables/postgres_patroni || exit 1
-            fi
-
-            rule_file='"/etc/nftables/postgres_patroni"'
-            if grep  -q $rule_file /etc/sysconfig/nftables.conf ; then
-                sed -i -e "s|.*\("include[[:space:]]*$rule_file"\)|\1|" /etc/sysconfig/nftables.conf
-            else
-                cat <<EOF >> /etc/sysconfig/nftables.conf
-#
-# Postgresql Patroni nftables rules
-include "/etc/nftables/postgres_patroni"
-EOF
-
-            fi
-
+            nftables_conf="/etc/sysconfig/nftables.conf"
+            ;;
+        "debian" | "ubuntu")
+            apt-get install -y $pkg
+            test -d /etc/nftables/ || mkdir -p /etc/nftables/
+            nftables_conf="/etc/nftables.conf"
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
+    if [ ! -f /etc/nftables/postgres_patroni ]; then
+        touch /etc/nftables/postgres_patroni || exit 1
+    fi
+    if grep  -q "include[[:space:]]*$rule_file" ${nftables_conf} ; then
+        if ! grep  -q "^[[:space:]]*${rule_file}" ${nftables_conf} ; then
+            sed -i -e "s|.*\("include[[:space:]]*$rule_file"\)|\1|" ${nftables_conf}
+        fi
+    else
+        cat <<EOF >> ${nftables_conf}
+#
+# Postgresql Patroni nftables rules
+include "/etc/nftables/postgres_patroni"
+EOF
+
+    fi
+
 }
 
 nftables_enable() {
     case "${os_id}" in
-        'redhat' | 'centos')
+        'redhat' | 'centos' | 'debian' | 'ubuntu')
             if ! systemctl is-enabled nftables; then
                 systemctl enable --now nftables
             fi

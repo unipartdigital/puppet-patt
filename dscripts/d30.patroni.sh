@@ -17,6 +17,12 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
+
 bashrc_setup () {
 cat <<EOF | su - postgres
 if [ -f /etc/bashrc -a ! -f ~/.bashrc ]; then
@@ -63,29 +69,68 @@ fi
 EOF
 }
 
+systemd_patroni_tmpl () {
+    postgres_version=${1}
+    postgres_bin=${2}
+    postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
+
+cat <<EOF
+[Unit]
+Description=Patroni PostgreSQL ${postgres_version} database server
+Documentation=https://www.postgresql.org/docs/${postgres_version}/static/
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=postgres
+Group=postgres
+Environment=PGDATA=${postgres_home}/${postgres_version}/data/
+Environment=PATH=${postgres_bin}:/sbin:/bin:/usr/sbin:/usr/bin
+OOMScoreAdjust=-1000
+Environment=PG_OOM_ADJUST_FILE=/proc/self/oom_score_adj
+Environment=PG_OOM_ADJUST_VALUE=0
+ExecStart=${postgres_home}/.local/bin/patroni ${postgres_home}/patroni.yaml
+ExecReload=/bin/kill -HUP \$MAINPID
+KillMode=process
+KillSignal=SIGIN
+TimeoutSec=0
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
 systemd_setup () {
-    postgres_version=${1:-"11"}
+
+    if [ -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service ]; then return 0; fi
+
+    postgres_version=${1:-"13"}
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
     default_postgres_path=$(su - postgres -c "echo $PATH")
 
     case "${os_id}" in
         'redhat' | 'centos')
-            if [ -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service ]; then return 0; fi
-            systemd_service=/lib/systemd/system/postgresql-${postgres_version}.service
-            sed -e "/ExecStartPre=.*check-db-dir.*/d" \
-                -e "s|\(Type=\).*|\1simple|" -e "s|\(KillMode=\).*|\1process|" \
-                -e "/TimeoutSec=/a\\\nRestart=no" \
-                -e "/Environment=PGDATA/aEnvironment=PATH=/usr/pgsql-11/bin/:${default_postgres_path}" \
-                -e "s|\(ExecStart=\).*|\1${postgres_home}/.local/bin/patroni ${postgres_home}/patroni.yaml|" \
-                ${systemd_service} > /etc/systemd/system/postgresql-${postgres_version}_patroni.service
-            systemctl daemon-reload
+            systemd_service="postgresql-${postgres_version}.service"
+            postgres_bin="/usr/pgsql-${postgres_version}/bin/"
+            ;;
+        'debian' | 'ubuntu')
+            systemd_service="postgresql.service"
+            postgres_bin="/usr/lib/postgresql/${postgres_version}/bin/"
             ;;
         *)
             echo "${os_id} not implemented" 1>&2
             exit 1
             ;;
     esac
+    if systemctl is-enabled --quiet ${systemd_service} ; then systemctl disable  ${systemd_service}; fi
+    if systemctl is-active --quiet ${systemd_service} ; then systemctl stop  ${systemd_service}; fi
+    systemd_patroni_tmpl "${postgres_version}" "${postgres_bin}" > \
+                         /etc/systemd/system/postgresql-${postgres_version}_patroni.service
+    systemctl daemon-reload
 }
 
 softdog_setup () {
@@ -122,8 +167,8 @@ EOF
 }
 
 init() {
-    postgres_version=${1:-"11"}
-    patroni_version=${2:-"1.6.0"}
+    postgres_version=${1:-"13"}
+    patroni_version=${2:-"2.1"}
 
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
@@ -138,6 +183,10 @@ init() {
                 dnf install -y epel-release ${rpm_pkg}
             fi
             softdog_setup || softdog_setup || { echo "warning: watchdog setup error" 1>&2; }
+            ;;
+        'debian' | 'ubuntu')
+            apt-get update
+            apt-get install -y python3-psycopg2 python3-pip python3-dev python3-yaml gcc haproxy policycoreutils checkpolicy semodule-utils selinux-policy-default
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
@@ -204,7 +253,7 @@ enable() {
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
     case "${os_id}" in
-        'redhat' | 'centos')
+        'redhat' | 'centos' | 'debian' | 'ubuntu')
             if [ "x$(ps --no-header -C patroni -o pid)" == "x" ]; then
                 systemctl start postgresql-${postgres_version}_patroni && {
                     systemctl enable postgresql-${postgres_version}_patroni; }

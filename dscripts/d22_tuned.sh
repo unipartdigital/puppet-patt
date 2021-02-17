@@ -17,39 +17,50 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
+
 tune () {
     case "${os_id}" in
         'redhat' | 'centos')
             dnf install -y tuned
-            mkdir -p /etc/tuned/postgresql
-            cat <<EOF > /etc/tuned/postgresql/tuned.conf.$$
-[main]
-$(if cat /proc/cpuinfo | grep -q hypervisor ; then echo "include=virtual-guest" ; else echo "include=throughput-performance" ; fi)
-[vm]
-transparent_hugepages=never
-EOF
-                if [ -f /etc/tuned/postgresql/tuned.conf ] ; then
-                    ta_md5=$(md5sum /etc/tuned/postgresql/tuned.conf | cut -d' ' -f1)
-                    tb_md5=$(md5sum /etc/tuned/postgresql/tuned.conf.$$ | cut -d' ' -f1)
-                    if [ "x${ta_md5}" == "x${tb_md5}" ]; then
-                        rm -f /etc/tuned/postgresql/tuned.conf.$$
-                    else
-                        mv /etc/tuned/postgresql/tuned.conf.$$ /etc/tuned/postgresql/tuned.conf
-                        # reload
-                        tuned-adm off
-                        tuned-adm profile postgresql
-                    fi
-                else
-                    mv /etc/tuned/postgresql/tuned.conf.$$ /etc/tuned/postgresql/tuned.conf
-                    tuned-adm profile postgresql
-                    systemctl enable --now tuned
-                fi
+            ;;
+        'debian' | 'ubuntu')
+            apt-get install -y tuned
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
+
+    mkdir -p /etc/tuned/postgresql
+    cat <<EOF > /etc/tuned/postgresql/tuned.conf.$$
+[main]
+$(if cat /proc/cpuinfo | grep -q hypervisor ; then echo "include=virtual-guest" ; else echo "include=throughput-performance" ; fi)
+[vm]
+transparent_hugepages=never
+EOF
+
+    if [ -f /etc/tuned/postgresql/tuned.conf ] ; then
+        ta_md5=$(md5sum /etc/tuned/postgresql/tuned.conf | cut -d' ' -f1)
+        tb_md5=$(md5sum /etc/tuned/postgresql/tuned.conf.$$ | cut -d' ' -f1)
+        if [ "x${ta_md5}" == "x${tb_md5}" ]; then
+            rm -f /etc/tuned/postgresql/tuned.conf.$$
+        else
+            mv /etc/tuned/postgresql/tuned.conf.$$ /etc/tuned/postgresql/tuned.conf
+            # reload
+            tuned-adm off
+            tuned-adm profile postgresql
+        fi
+    else
+        mv /etc/tuned/postgresql/tuned.conf.$$ /etc/tuned/postgresql/tuned.conf
+        tuned-adm profile postgresql
+        systemctl enable --now tuned
+    fi
 }
 
 {

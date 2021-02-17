@@ -18,6 +18,12 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
+
 init() {
 
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
@@ -33,12 +39,14 @@ init() {
                 # psycopg2 is shipped by epel on centos 7
                 dnf install -y epel-release
                 # ensure that config-manager is installed
-                dnf config-manager || dnf install 'dnf-command(config-manager)' -y
+                dnf config-manager --help > /dev/null 2>&1 || dnf install 'dnf-command(config-manager)' -y
                 # EPEL packages assume that the 'PowerTools' repository is enabled
                 dnf config-manager --set-enabled PowerTools
                 dnf install -y ${rpm_pkg}
-
             fi
+            ;;
+        'debian' | 'ubuntu')
+            apt-get install -y python3-pip gcc libpython3-all-dev cython3 python3-scapy make
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
@@ -67,7 +75,7 @@ ip_takeover.c: ip_takeover.py
 	$(CYTHON3) -3 --embed ip_takeover.py
 
 ip_takeover: ip_takeover.c
-	gcc `python3-config --cflags --ldflags` -o ip_takeover ip_takeover.c
+	gcc -fPIC -o ip_takeover ip_takeover.c `{ python3-config --embed > /dev/null && python3-config --cflags --ldflags --embed ; } || python3-config --cflags --ldflags`
 	strip --strip-unneeded ip_takeover
 
 install: ip_takeover
