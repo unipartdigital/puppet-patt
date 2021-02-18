@@ -22,6 +22,7 @@ puppet-module:
 	install -m 644 config/postgres-gc.sh.tmpl $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/d02.util.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/data_vol.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d03.repo.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d10.etcd.sh $(DESTDIR)/patt/files/patt/dscripts/
@@ -39,6 +40,7 @@ puppet-module:
 	install -m 644 dscripts/postgres_exec.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d22_tuned.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/tmpl2file.py $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/pg_wait_ready.sh $(DESTDIR)/patt/files/patt/dscripts/
 
 
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/patt/files/patt/misc/
