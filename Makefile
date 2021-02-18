@@ -24,7 +24,7 @@ $(PY_MOD):
 depend: $(PY_MOD) paramiko
 
 paramiko:
-	python3 -c "import paramiko;import sys; paramiko.__version__[:3] >= '2.7' or sys.exit(1)" || \
+	python3 -c "import paramiko;import sys; paramiko.__version__[:3] >= str('2.7') or sys.exit(1)" || \
 ${PIP} install -U --user paramiko
 
 include PUPPET.makefile

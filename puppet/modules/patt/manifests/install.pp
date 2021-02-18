@@ -35,7 +35,7 @@ class patt::install (
  }
 
  exec { 'make_dep':
-    command => "/usr/bin/python3 -c 'import paramiko;import sys; paramiko.__version__[:3] >= '2.7' or sys.exit(1)' || /usr/bin/pip3 install -U --user paramiko",
+    command => "/usr/bin/python3 -c \"import paramiko;import sys; paramiko.__version__[:3] >= str('2.7') or sys.exit(1)\" || /usr/bin/pip3 install -U --user paramiko",
     user => 'patt',
     environment => ['HOME=/home/patt'],
     require =>  [User[patt]],
