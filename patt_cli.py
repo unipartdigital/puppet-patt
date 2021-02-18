@@ -300,6 +300,10 @@ if __name__ == "__main__":
             progress_bar (14, 14)
 
             if postgres_peers:
+                patt_postgres.postgres_wait_ready (postgres_peers=postgres_peers,
+                                                   postgres_version=cfg.postgres_release,
+                                                   timeout=60)
+
                 postgres_leader = patt_patroni.get_leader (postgres_peers)
                 if cfg.create_role:
                     for i in cfg.create_role:
