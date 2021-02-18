@@ -57,7 +57,7 @@ copy_ca() {
     case "${1}" in
         'copy_ca')
             shift 1
-                copy_ca "$@"
+            copy_ca "$@"
             ;;
         *)
             echo "usage: $0 copy source_cert destination_base_name"
