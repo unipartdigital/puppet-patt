@@ -21,7 +21,7 @@ wait_pg_isready () {
     postgresql_version=${1:-"13"}
     timeout=${2:-360}
     case "${os_id}" in
-        'redhat' | 'centos')
+        'rhel' | 'centos' | 'fedora')
             PATH=$PATH:/usr/pgsql-${postgresql_version}/bin
         ;;
         'debian' | 'ubuntu')

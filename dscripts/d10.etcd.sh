@@ -22,14 +22,14 @@ case "${os_id}" in
         export DEBIAN_FRONTEND=noninteractive
         ETCD_CONF="/etc/default/etcd"
         ;;
-    'redhat' | 'centos')
+    'rhel' | 'centos' | 'fedora')
         ETCD_CONF="/etc/etcd/etcd.conf"
         ;;
     esac
 
 init() {
     case "${os_id}" in
-        'redhat' | 'centos')
+        'rhel' | 'centos' | 'fedora')
             if [ "${os_major_version_id}" -lt 8 ]; then
                 yum install -y etcd
             else
@@ -168,7 +168,7 @@ enable() {
     cluster_nodes=$*
 
     case "${os_id}" in
-        'redhat' | 'centos' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
             test "$(readlink /etc/systemd/system/etcd.service)" == "/dev/null" && \
                 rm -f /etc/systemd/system/etcd.service && systemctl daemon-reload
             systemctl start etcd
@@ -203,7 +203,7 @@ disable() {
     cluster_nodes=$*
 
     case "${os_id}" in
-        'redhat' | 'centos' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
             systemctl stop etcd
             if [ -r ${ETCD_CONF} ]; then
                 . ${ETCD_CONF}

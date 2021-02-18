@@ -113,7 +113,7 @@ systemd_setup () {
     default_postgres_path=$(su - postgres -c "echo $PATH")
 
     case "${os_id}" in
-        'redhat' | 'centos')
+        'rhel' | 'centos' | 'fedora')
             systemd_service="postgresql-${postgres_version}.service"
             postgres_bin="/usr/pgsql-${postgres_version}/bin/"
             ;;
@@ -173,7 +173,7 @@ init() {
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
     case "${os_id}" in
-        'redhat' | 'centos')
+        'rhel' | 'centos' | 'fedora')
             if [ "${os_major_version_id}" -lt 8 ]; then
                 rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel haproxy python36-PyYAML"
                 # psycopg2 is shipped by epel on centos 7
@@ -253,7 +253,7 @@ enable() {
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
     case "${os_id}" in
-        'redhat' | 'centos' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
             if [ "x$(ps --no-header -C patroni -o pid)" == "x" ]; then
                 systemctl start postgresql-${postgres_version}_patroni && {
                     systemctl enable postgresql-${postgres_version}_patroni; }

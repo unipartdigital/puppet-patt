@@ -25,7 +25,7 @@ esac
 
 tune () {
     case "${os_id}" in
-        'redhat' | 'centos')
+        'rhel' | 'centos' | 'fedora')
             dnf install -y tuned
             ;;
         'debian' | 'ubuntu')

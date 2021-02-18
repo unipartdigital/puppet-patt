@@ -27,7 +27,7 @@ init() {
     postgresql_version=${1:-"13"}
 
     case "${os_id}" in
-        'redhat' | 'centos')
+        'rhel' | 'centos' | 'fedora')
             rel_repo="https://download.postgresql.org/pub/repos/yum/reporpms/EL-${os_major_version_id}-${os_arch}/pgdg-redhat-repo-latest.noarch.rpm"
             rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 

@@ -29,7 +29,7 @@ init() {
     rule_file='"/etc/nftables/postgres_patroni"'
 
     case "${os_id}" in
-        'redhat' | 'centos')
+        'rhel' | 'centos' | 'fedora')
             if [ "${os_major_version_id}" -lt 8 ]; then
                 yum install -y $pkg
             else
@@ -67,7 +67,7 @@ EOF
 
 nftables_enable() {
     case "${os_id}" in
-        'redhat' | 'centos' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
             if ! systemctl is-enabled nftables; then
                 systemctl enable --now nftables
             fi

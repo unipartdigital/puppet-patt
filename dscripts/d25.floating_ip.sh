@@ -29,7 +29,7 @@ init() {
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
     case "${os_id}" in
-        'redhat' | 'centos')
+        'rhel' | 'centos' | 'fedora')
             if [ "${os_major_version_id}" -lt 8 ]; then
                 rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel python36-Cython python3*-scapy make"
                 # psycopg2 is shipped by epel on centos 7

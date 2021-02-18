@@ -25,7 +25,7 @@ esac
 
 init() {
     case "${os_id}" in
-        'redhat' | 'centos')
+        'rhel' | 'centos' | 'fedora')
             pkg="util-linux xfsprogs lvm2 cryptsetup psmisc"
             if [ "${os_major_version_id}" -lt 8 ]; then
                 yum install -y $pkg
