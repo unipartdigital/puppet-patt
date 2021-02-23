@@ -12,53 +12,47 @@ trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
 # Catch unitialized variables:
 set -u
 
-# arch | vendor | major
-get_system_release () {
-    query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
-    if [ -f /etc/redhat-release ]; then
-        release=$(rpm -q --whatprovides /etc/redhat-release)
-        case $query in
-            'major')
-                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
-                ;;
-            'vendor')
-                echo $release | rev |  cut -d '-' -f 4 | rev
-                ;;
-            *)
-                echo "query not implemented: $query" 1>&2
-                exit 1
-        esac
-    fi
-}
+. /etc/os-release
+os_id="${ID}"
+os_version_id="${VERSION_ID}"
+os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
+os_arch="$(uname -m)"
+
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
 
 init() {
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
 
-    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
+    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
-    case "${release_vendor}" in
-        'redhat' | 'centos')
-            if [ "${release_major}" -lt 8 ]; then
-                rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel python36-Cython python3*-scapy make"
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
+            test "${py_ver}" -ge 38 || exit 1
+            # python36 use python3-pip 9.0.3 which start to be quiet old.
+            if [ "${os_major_version_id}" -lt 8 ]; then
+                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
                 # psycopg2 is shipped by epel on centos 7
                 yum install -y ${rel_epel} ${rpm_pkg}
             else
-                rpm_pkg="python3-psycopg2 python3-pip gcc python3-devel python3-Cython python3-scapy make"
+                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
                 # psycopg2 is shipped by epel on centos 7
                 dnf install -y epel-release
                 # ensure that config-manager is installed
-                dnf config-manager || dnf install 'dnf-command(config-manager)' -y
+                dnf config-manager --help > /dev/null 2>&1 || dnf install 'dnf-command(config-manager)' -y
                 # EPEL packages assume that the 'PowerTools' repository is enabled
                 dnf config-manager --set-enabled PowerTools
                 dnf install -y ${rpm_pkg}
-
             fi
             ;;
+        'debian' | 'ubuntu')
+            apt-get install -y python3-pip gcc libpython3-all-dev cython3 python3-scapy make
+            ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
@@ -84,7 +78,7 @@ ip_takeover.c: ip_takeover.py
 	$(CYTHON3) -3 --embed ip_takeover.py
 
 ip_takeover: ip_takeover.c
-	gcc `python3-config --cflags --ldflags` -o ip_takeover ip_takeover.c
+	gcc -fPIC -o ip_takeover ip_takeover.c `{ python3-config --embed > /dev/null && python3-config --cflags --ldflags --embed ; } || python3-config --cflags --ldflags`
 	strip --strip-unneeded ip_takeover
 
 install: ip_takeover

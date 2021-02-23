@@ -37,6 +37,15 @@ def postgres_init(postgres_version, nodes):
                                 args=['init'] + [postgres_version], sudo=True)
     log_results (result)
 
+def postgres_ssl_cert_init(nodes):
+    logger.info ("processing {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    patt.check_dup_id (nodes)
+
+    result = patt.exec_script (nodes=nodes, src="dscripts/ssl_cert_postgres.sh",
+                                args=['init'], sudo=True)
+    log_results (result)
+
 
 def postgres_get_cert  (q, postgres_user='postgres', nodes=[]):
     if q == 'root.crt':
@@ -235,4 +244,16 @@ def postgres_gc_cron(nodes, vaccum_full_df_percent, target, postgres_version):
                                ['--dictionary_key_val'] + ["pc={}".format(vaccum_full_df_percent)] +
                                ['--dictionary_key_val'] + ["vacuumdb_option={}".format(vacuumdb_option)],
                                sudo=True)
+    log_results (result)
+
+"""
+return when a connection check to a PostgreSQL database can be done or when timeout is reached
+"""
+def postgres_wait_ready (postgres_peers, postgres_version, timeout=120):
+    logger.info ("processing {}".format ([n.hostname for n in postgres_peers]))
+    patt.host_id(postgres_peers)
+    patt.check_dup_id (postgres_peers)
+
+    result = patt.exec_script (nodes=postgres_peers, src="./dscripts/pg_wait_ready.sh",
+                               args=['wait_pg_isready'] + [postgres_version] + [timeout], sudo=True)
     log_results (result)

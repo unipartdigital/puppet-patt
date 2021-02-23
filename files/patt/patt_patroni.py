@@ -77,7 +77,8 @@ def patroni_enable(postgres_version, patroni_version, nodes):
         logger.warn ("error: {}".format (r.error))
 
 def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_peers,
-                      config_file_target, sysuser_pass, postgres_parameters, pg_hba_list=cert_pg_hba_list()):
+                      config_file_target, sysuser_pass, postgres_parameters,
+                      pg_hba_list=cert_pg_hba_list(), user=None):
     tmpl=""
     with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as tmpl_file:
         if os.path.isfile(template_src):
@@ -102,6 +103,7 @@ def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_
                                     args=['-c'] + [cluster_name] + ['-t'] +
                                     [os.path.basename (tmpl_file.name)] +
                                     ['-d'] + [config_file_target] +
+                                    ['-u'] + [user] +
                                     ['-v'] + [postgres_version] +
                                     ['-p'] + [n.hostname for n in nodes] +
                                     ['-e'] + [n.hostname for n in etcd_peers] +

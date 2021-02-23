@@ -13,25 +13,17 @@ self=$(basename $0 .sh)
 # Catch unitialized variables:
 set -u
 
-# arch | vendor | major
-get_system_release () {
-    query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
-    if [ -f /etc/redhat-release ]; then
-        release=$(rpm -q --whatprovides /etc/redhat-release)
-        case $query in
-            'major')
-                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
-                ;;
-            'vendor')
-                echo $release | rev |  cut -d '-' -f 4 | rev
-                ;;
-            *)
-                echo "query not implemented: $query" 1>&2
-                exit 1
-        esac
-    fi
-}
+. /etc/os-release
+os_id="${ID}"
+os_version_id="${VERSION_ID}"
+os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
+os_arch="$(uname -m)"
+
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
 
 logger () {
     message=${1:-"undef"}
@@ -40,15 +32,12 @@ logger () {
 
 add_repo () {
     repo_url="$*"
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    release_arch=$(get_system_release "arch")
 
-    case "${release_vendor}" in
-        'redhat' | 'centos')
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
             # some images may not provide the config-manager plugin
-            if [ "${release_major}" -ge 8 ]; then
-                dnf config-manager || dnf install 'dnf-command(config-manager)' -y
+            if [ "${os_major_version_id}" -ge 8 ]; then
+                dnf config-manager --help > /dev/null 2>&1 || dnf install 'dnf-command(config-manager)' -y
             fi
 
             for r in ${repo_url[*]}; do
@@ -83,6 +72,23 @@ enabled=1
 skip_if_unavailable=True
 gpgcheck=0
 EOF
+                fi
+            done
+            ;;
+        'debian' | 'ubuntu')
+            for r in ${repo_url[*]}; do
+                if [ "x$r" == "x" ]; then
+                    continue
+                fi
+                type=$(echo $r | cut -d'|' -f 1)
+                link=$(echo $r | cut -d'|' -f 2)
+                rele=$(echo $r | cut -d'|' -f 3- | sed -e "s/|/ /g")
+                rele=${rele:-"main"}
+                case ${type} in "deb" | "deb-src" ) : ;; *) continue;; esac
+                curl -f -k ${link} > /dev/null || continue
+                fname="$(echo ${r} | sha1sum).list"
+                if [ ! -f "/etc/apt/sources.list.d/${fname}" ]; then
+                    echo "${type} ${link} ${rele}" > /etc/apt/sources.list.d/${fname}
                 fi
             done
             ;;

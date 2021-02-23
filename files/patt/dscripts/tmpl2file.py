@@ -4,7 +4,8 @@
  tmpl2file a simple template processor
 
  apply a dictionary to a template file and write into --output or stdout
- template is processed used String.Template
+ template is done via String.Template
+ https://python.readthedocs.io/en/latest/library/string.html#template-strings
  a key key1 will be applied if there is a matching tag $key1
  if your template contain '$' (ie a shell script) use $$ to escape the symbole.
  all tags in the template file should have a match in the dictionary.

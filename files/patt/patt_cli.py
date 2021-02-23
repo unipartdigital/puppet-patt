@@ -211,7 +211,7 @@ if __name__ == "__main__":
             patt_syst.disk_init (etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd)
 
         if cfg.vol_size_pgsql:
-            patt_syst.disk_init (postgres_peers, mnt="/var/lib/pgsql", vol_size=cfg.vol_size_pgsql)
+            patt_syst.disk_init (postgres_peers, user='postgres', vol_size=cfg.vol_size_pgsql)
 
         progress_bar (4, 14)
 
@@ -224,6 +224,10 @@ if __name__ == "__main__":
         progress_bar (5, 14)
 
         patt_postgres.postgres_init(cfg.postgres_release, postgres_peers)
+
+        progress_bar (5, 14)
+
+        patt_postgres.postgres_ssl_cert_init(nodes=postgres_peers)
 
         progress_bar (5, 14)
 
@@ -275,7 +279,8 @@ if __name__ == "__main__":
                                            template_src=cfg.patroni_template_file,
                                            nodes=postgres_peers,
                                            etcd_peers=etcd_peers,
-                                           config_file_target='/var/lib/pgsql/patroni.yaml',
+                                           config_file_target='patroni.yaml',
+                                           user='postgres',
                                            sysuser_pass=pass_dict,
                                            postgres_parameters=cfg.postgres_parameters,
                                            pg_hba_list=patt_patroni.cert_pg_hba_list(
@@ -299,6 +304,10 @@ if __name__ == "__main__":
             progress_bar (14, 14)
 
             if postgres_peers:
+                patt_postgres.postgres_wait_ready (postgres_peers=postgres_peers,
+                                                   postgres_version=cfg.postgres_release,
+                                                   timeout=60)
+
                 postgres_leader = patt_patroni.get_leader (postgres_peers)
                 if cfg.create_role:
                     for i in cfg.create_role:

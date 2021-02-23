@@ -1,3 +1,21 @@
+22808057be2bc002eb058a0deec9afe93332354f puppet redhat and debian familly support
+2ff03d17006327ff3a7ae88585b1e8d899f976c6 allow to run the paramiko target only
+b28e528babb6928322776e7f6169577544722dd3 centos pyton module based on python version
+189af14a8fc35c8aa4349b5ad9fecad28fc9ebea add init to ensure python cryptography is installed
+797ac9f391674ddca4087fb6a58230eb045569ab test ETCD_DATA_DIR
+8dcfdbb740dc09a0ee3e5b609019c91d50c9573a fix 'rhel' ID
+269f2804f10f83a63e65b68e6998f2c5e1b48cb9 fix paramiko version check
+ba362993d352aa0d6e8806812ef2c9656eb482af postgresql connection check
+504864fd85bd8aad3ae903b53bacea252c577bd9 new file:   dscripts/pg_wait_ready.sh
+c0884f8ccecb56b268ceb5d91c059616a9777f9c formatting
+bb3a04981b4bbeac88fbf85a7636484981427c4b don't let dpkg start services at first install
+9cdaa6be9d4d6aa220b5e3ee59db85a976894579 fix (run only on primary) + 'clusterdb -av' after 'vacuumdb --full'
+032a80a44b6cea52be300fe8adbd5243614c3d4a add debian and ubuntu support into dscripts
+2a3394b5c07431f8575a7684d09dec96c5634c6a destination target relative to <username>
+6572c67bbce2a25517bab935546dddd255298055 doc fix
+eccd7cc9636ebc3af0aa149588d87b326d84cd11 add dependencies packages before data_vol.py
+4014e76d014715a4930f2cc17ec9f73706afcf9b fix deploy outside nodes peers
+ea815ed6044d28f2d41961bc2a3400f8a9f71704 dscripts: use /etc/os-release
 e5d9e7d181edffee90b35505a948b12e196e8ce0 hack to deal with puppet agent  --environment
 b022e9cb3307c491185ee7bcfb1da281d68aa2fa handle already defined packages resources
 4bcddb83354082d8050db551e4dfa14a08076741 doc fix

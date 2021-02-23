@@ -11,36 +11,43 @@ trap '{echo "$0 FAILED on line $LINENO!; }" | tee ${srcdir}/$(basename $0).log' 
 # Catch unitialized variables:
 set -u
 
-# arch | vendor | major
-get_system_release () {
-    query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
-    if [ -f /etc/redhat-release ]; then
-        release=$(rpm -q --whatprovides /etc/redhat-release)
-        case $query in
-            'major')
-                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
-                ;;
-            'vendor')
-                echo $release | rev |  cut -d '-' -f 4 | rev
-                ;;
-            *)
-                echo "query not implemented: $query" 1>&2
-                exit 1
-        esac
-    fi
+. /etc/os-release
+os_id="${ID}"
+os_version_id="${VERSION_ID}"
+os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
+os_arch="$(uname -m)"
+
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
+
+init() {
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
+            dnf --version > /dev/null && {
+                dnf install -y python${py_ver}-cryptography
+                } || yum install -y python${py_ver}-cryptography
+            ;;
+        'debian' | 'ubuntu')
+            apt-get install -y python3-cryptography
+            ;;
+        *)
+            echo "unsupported release vendor: ${os_id}" 1>&2
+            exit 1
+            ;;
+    esac
 }
 
 copy_ca() {
     src="$1"
     dst="$2"
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    release_arch=$(get_system_release "arch")
 
     cd $srcdir
-    case "${release_vendor}" in
-        'redhat' | 'centos')
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
             postgres_home=$(getent passwd postgres | cut -d: -f6)
             if [  ! -d "${postgres_home}/.postgresql/" ]; then
                 mkdir -m 700 "${postgres_home}/.postgresql/"
@@ -62,7 +69,7 @@ copy_ca() {
             fi
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
@@ -72,9 +79,13 @@ copy_ca() {
     flock -n 9 || exit 1
 
     case "${1}" in
+        'init')
+            shift 1
+            init "$@"
+            ;;
         'copy_ca')
             shift 1
-                copy_ca "$@"
+            copy_ca "$@"
             ;;
         *)
             echo "usage: $0 copy source_cert destination_base_name"

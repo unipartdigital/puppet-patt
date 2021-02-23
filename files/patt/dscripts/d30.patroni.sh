@@ -11,25 +11,17 @@ trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
 # Catch unitialized variables:
 set -u
 
-# arch | vendor | major
-get_system_release () {
-    query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
-    if [ -f /etc/redhat-release ]; then
-        release=$(rpm -q --whatprovides /etc/redhat-release)
-        case $query in
-            'major')
-                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
-                ;;
-            'vendor')
-                echo $release | rev |  cut -d '-' -f 4 | rev
-                ;;
-            *)
-                echo "query not implemented: $query" 1>&2
-                exit 1
-        esac
-    fi
-}
+. /etc/os-release
+os_id="${ID}"
+os_version_id="${VERSION_ID}"
+os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
+os_arch="$(uname -m)"
+
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
 
 bashrc_setup () {
 cat <<EOF | su - postgres
@@ -77,30 +69,68 @@ fi
 EOF
 }
 
-systemd_setup () {
-    postgres_version=${1:-"11"}
+systemd_patroni_tmpl () {
+    postgres_version=${1}
+    postgres_bin=${2}
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
-    release_vendor=$(get_system_release "vendor")
+
+cat <<EOF
+[Unit]
+Description=Patroni PostgreSQL ${postgres_version} database server
+Documentation=https://www.postgresql.org/docs/${postgres_version}/static/
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=postgres
+Group=postgres
+Environment=PGDATA=${postgres_home}/${postgres_version}/data/
+Environment=PATH=${postgres_bin}:/sbin:/bin:/usr/sbin:/usr/bin
+OOMScoreAdjust=-1000
+Environment=PG_OOM_ADJUST_FILE=/proc/self/oom_score_adj
+Environment=PG_OOM_ADJUST_VALUE=0
+ExecStart=${postgres_home}/.local/bin/patroni ${postgres_home}/patroni.yaml
+ExecReload=/bin/kill -HUP \$MAINPID
+KillMode=process
+KillSignal=SIGIN
+TimeoutSec=0
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
+systemd_setup () {
+
+    if [ -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service ]; then return 0; fi
+
+    postgres_version=${1:-"13"}
+    postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
     default_postgres_path=$(su - postgres -c "echo $PATH")
 
-    case "${release_vendor}" in
-        'redhat' | 'centos')
-            if [ -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service ]; then return 0; fi
-            systemd_service=/lib/systemd/system/postgresql-${postgres_version}.service
-            sed -e "/ExecStartPre=.*check-db-dir.*/d" \
-                -e "s|\(Type=\).*|\1simple|" -e "s|\(KillMode=\).*|\1process|" \
-                -e "/TimeoutSec=/a\\\nRestart=no" \
-                -e "/Environment=PGDATA/aEnvironment=PATH=/usr/pgsql-11/bin/:${default_postgres_path}" \
-                -e "s|\(ExecStart=\).*|\1${postgres_home}/.local/bin/patroni ${postgres_home}/patroni.yaml|" \
-                ${systemd_service} > /etc/systemd/system/postgresql-${postgres_version}_patroni.service
-            systemctl daemon-reload
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            systemd_service="postgresql-${postgres_version}.service"
+            postgres_bin="/usr/pgsql-${postgres_version}/bin/"
+            ;;
+        'debian' | 'ubuntu')
+            systemd_service="postgresql.service"
+            postgres_bin="/usr/lib/postgresql/${postgres_version}/bin/"
             ;;
         *)
-            echo "${release_vendor} not implemented" 1>&2
+            echo "${os_id} not implemented" 1>&2
             exit 1
             ;;
     esac
+    if systemctl is-enabled --quiet ${systemd_service} ; then systemctl disable  ${systemd_service}; fi
+    if systemctl is-active --quiet ${systemd_service} ; then systemctl stop  ${systemd_service}; fi
+    systemd_patroni_tmpl "${postgres_version}" "${postgres_bin}" > \
+                         /etc/systemd/system/postgresql-${postgres_version}_patroni.service
+    systemctl daemon-reload
 }
 
 softdog_setup () {
@@ -137,28 +167,32 @@ EOF
 }
 
 init() {
-    postgres_version=${1:-"11"}
-    patroni_version=${2:-"1.6.0"}
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
+    postgres_version=${1:-"13"}
+    patroni_version=${2:-"2.1"}
 
-    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${release_major}.noarch.rpm"
+    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
-    case "${release_vendor}" in
-        'redhat' | 'centos')
-            if [ "${release_major}" -lt 8 ]; then
-                rpm_pkg="python36-psycopg2 python36-pip gcc python36-devel haproxy python36-PyYAML"
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
+            test "${py_ver}" -ge 38 || exit 1
+            # python36 use python3-pip 9.0.3 which start to be quiet old.
+            if [ "${os_major_version_id}" -lt 8 ]; then
+                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel haproxy python${py_ver}-PyYAML"
                 # psycopg2 is shipped by epel on centos 7
                 yum install -y ${rel_epel} ${rpm_pkg}
             else
-                rpm_pkg="python3-psycopg2 python3-pip gcc python36-devel haproxy python3-PyYAML"
+                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel haproxy python${py_ver}-PyYAML"
                 dnf install -y epel-release ${rpm_pkg}
             fi
             softdog_setup || softdog_setup || { echo "warning: watchdog setup error" 1>&2; }
             ;;
+        'debian' | 'ubuntu')
+            apt-get update
+            apt-get install -y python3-psycopg2 python3-pip python3-dev python3-yaml gcc haproxy policycoreutils checkpolicy semodule-utils selinux-policy-default
+            ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
@@ -217,15 +251,12 @@ EOF
 }
 
 enable() {
-    postgres_version=${1:-"11"}
-    patroni_version=${2:-"1.6.0"}
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
+    postgres_version=${1:-"13"}
+    patroni_version=${2:-"2.1"}
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
-    case "${release_vendor}" in
-        'redhat' | 'centos')
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
             if [ "x$(ps --no-header -C patroni -o pid)" == "x" ]; then
                 systemctl start postgresql-${postgres_version}_patroni && {
                     systemctl enable postgresql-${postgres_version}_patroni; }
@@ -237,7 +268,7 @@ enable() {
             fi
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac

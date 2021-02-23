@@ -11,58 +11,75 @@ trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
 # Catch unitialized variables:
 set -u
 
+. /etc/os-release
+os_id="${ID}"
+os_version_id="${VERSION_ID}"
+os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
+os_arch="$(uname -m)"
 
-# arch | vendor | major
-get_system_release () {
-    query=$1
-    if [ "x$query" == "xarch" ]; then uname -m; return $?; fi
-    if [ -f /etc/redhat-release ]; then
-        release=$(rpm -q --whatprovides /etc/redhat-release)
-        case $query in
-            'major')
-                echo $release | rev | cut -d '-' -f 2 | rev | cut -d '.' -f1
-                ;;
-            'vendor')
-                echo $release | rev |  cut -d '-' -f 4 | rev
-                ;;
-            *)
-                echo "query not implemented: $query" 1>&2
-                exit 1
-        esac
-    fi
-}
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ETCD_CONF="/etc/default/etcd"
+        ;;
+    'rhel' | 'centos' | 'fedora')
+        ETCD_CONF="/etc/etcd/etcd.conf"
+        ;;
+    esac
 
 init() {
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    release_arch=$(get_system_release "arch")
-    case "${release_vendor}" in
-        'redhat' | 'centos')
-            if [ "${release_major}" -lt 8 ]; then
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            if [ "${os_major_version_id}" -lt 8 ]; then
                 yum install -y etcd
             else
                 # centos8 don't provide etcd yet
                 dnf install --nogpgcheck -y etcd
             fi
             ;;
+        'debian' | 'ubuntu')
+            etcd --version || (cd /etc/systemd/system && ln -sf /dev/null etcd.service)
+            # don't let dpkg start the service during install
+            apt-get update
+            apt-get install -y etcd
+            ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
 }
 
 check_healthy () {
-    ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is healthy" | cut -d ' ' -f 1
+    # ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is healthy" | cut -d ' ' -f 1
+    ep=""
+    for e in $(ETCDCTL_API=3 etcdctl member list -w fields | grep "ClientURL" | cut -d: -f2-); do
+        ep=$ep,$e;
+    done
+    ep="${ep/,/}"
+    ETCDCTL_API=3 etcdctl --endpoints=$ep endpoint health  2>&1 | grep "is healthy" | cut -d' ' -f1
 }
 
 check_unhealthy () {
-    ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is unhealthy" | cut -d ' ' -f 1
+    # ETCDCTL_API=3 etcdctl endpoint --cluster health 2>&1 | grep "is unhealthy" | cut -d ' ' -f 1
+    ep=""
+    for e in $(ETCDCTL_API=3 etcdctl member list -w fields | grep "ClientURL" | cut -d: -f2-); do
+        ep=$ep,$e;
+    done
+    ep="${ep/,/}"
+    ETCDCTL_API=3 etcdctl --endpoints=$ep endpoint health  2>&1 | grep "is unhealthy" | cut -d' ' -f1
 }
 
 check () {
     ETCDCTL_API=3 etcdctl member list -w table
-    ETCDCTL_API=3 etcdctl endpoint --cluster health -w table  2>&1
+    # ETCDCTL_API=3 etcdctl endpoint --cluster health -w table  2>&1
+    ep=""
+    for e in $(ETCDCTL_API=3 etcdctl member list -w fields | grep "ClientURL" | cut -d: -f2-); do
+        ep=$ep,$e;
+    done
+    ep="${ep/,/}"
+    ETCDCTL_API=3 etcdctl --endpoints=$ep endpoint health -w table
+
 }
 
 config () {
@@ -92,24 +109,11 @@ config () {
         ping6 -c 1 "${self_ip}"
     fi
 
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
-
-    case "${release_vendor}" in
-        'redhat' | 'centos')
-            ETCD_CONF="/etc/etcd/etcd.conf"
-            ETCD_DATA_DIR=/var/lib/etcd/${self_id}
-            ;;
-        *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
-            exit 1
-            ;;
-    esac
-
     ETCD_DATA_DIR=/var/lib/etcd/${self_id}
-    mkdir -p -m 700 "${ETCD_DATA_DIR}"
-    chown etcd.etcd "${ETCD_DATA_DIR}"
+    test -d ${ETCD_DATA_DIR} || mkdir -p -m 700 ${ETCD_DATA_DIR}
+    test "$(stat -c '%a' /var/lib/etcd/)" == '755' || chmod 755 "/var/lib/etcd/"
+    test "$(stat -c '%a' ${ETCD_DATA_DIR})" == '700' || chmod 700 ${ETCD_DATA_DIR}
+    test "$(stat -c "%U.%G" ${ETCD_DATA_DIR})" == "etcd.etcd" || chown etcd.etcd "${ETCD_DATA_DIR}"
 
     etcd_initial_cluster=""
     for n in ${cluster_nodes}; do
@@ -165,13 +169,10 @@ enable() {
     shift
     cluster_nodes=$*
 
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
-
-    case "${release_vendor}" in
-        'redhat' | 'centos')
-            ETCD_CONF="/etc/etcd/etcd.conf"
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
+            test "$(readlink /etc/systemd/system/etcd.service)" == "/dev/null" && \
+                rm -f /etc/systemd/system/etcd.service && systemctl daemon-reload
             systemctl start etcd
             for i in 1 2 3 4 5 6 7 8 9 10; do
                 etcdctl cluster-health
@@ -179,7 +180,7 @@ enable() {
                     systemctl enable --now etcd
                     if [ -r ${ETCD_CONF} ]; then
                         . ${ETCD_CONF}
-                        find "${ETCD_DATA_DIR}".back-* -delete
+                        find "$(dirname ${ETCD_DATA_DIR})" -name "$(basename ${ETCD_DATA_DIR}).back-*" -delete
                     fi
                     break;
                 fi
@@ -191,7 +192,7 @@ enable() {
             done
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
@@ -203,13 +204,8 @@ disable() {
     shift
     cluster_nodes=$*
 
-    release_vendor=$(get_system_release "vendor")
-    release_major=$(get_system_release "major")
-    # release_arch=$(get_system_release "arch")
-
-    case "${release_vendor}" in
-        'redhat' | 'centos')
-            ETCD_CONF="/etc/etcd/etcd.conf"
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
             systemctl stop etcd
             if [ -r ${ETCD_CONF} ]; then
                 . ${ETCD_CONF}
@@ -219,7 +215,7 @@ disable() {
             fi
             ;;
         *)
-            echo "unsupported release vendor: ${release_vendor}" 1>&2
+            echo "unsupported release vendor: ${os_id}" 1>&2
             exit 1
             ;;
     esac
