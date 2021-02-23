@@ -37,6 +37,15 @@ def postgres_init(postgres_version, nodes):
                                 args=['init'] + [postgres_version], sudo=True)
     log_results (result)
 
+def postgres_ssl_cert_init(nodes):
+    logger.info ("processing {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    patt.check_dup_id (nodes)
+
+    result = patt.exec_script (nodes=nodes, src="dscripts/ssl_cert_postgres.sh",
+                                args=['init'], sudo=True)
+    log_results (result)
+
 
 def postgres_get_cert  (q, postgres_user='postgres', nodes=[]):
     if q == 'root.crt':

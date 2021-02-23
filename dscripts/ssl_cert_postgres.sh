@@ -17,6 +17,30 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+case "${os_id}" in
+    'debian' | 'ubuntu')
+        export DEBIAN_FRONTEND=noninteractive
+        ;;
+esac
+
+init() {
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
+            dnf --version > /dev/null && {
+                dnf install -y python${py_ver}-cryptography
+                } || yum install -y python${py_ver}-cryptography
+            ;;
+        'debian' | 'ubuntu')
+            apt-get install -y python3-cryptography
+            ;;
+        *)
+            echo "unsupported release vendor: ${os_id}" 1>&2
+            exit 1
+            ;;
+    esac
+}
+
 copy_ca() {
     src="$1"
     dst="$2"
@@ -55,6 +79,10 @@ copy_ca() {
     flock -n 9 || exit 1
 
     case "${1}" in
+        'init')
+            shift 1
+            init "$@"
+            ;;
         'copy_ca')
             shift 1
             copy_ca "$@"
