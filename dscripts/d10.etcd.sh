@@ -110,8 +110,10 @@ config () {
     fi
 
     ETCD_DATA_DIR=/var/lib/etcd/${self_id}
-    mkdir -p -m 700 "${ETCD_DATA_DIR}"
-    chown etcd.etcd "${ETCD_DATA_DIR}"
+    test -d ${ETCD_DATA_DIR} || mkdir -p -m 700 ${ETCD_DATA_DIR}
+    test "$(stat -c '%a' /var/lib/etcd/)" == '755' || chmod 755 "/var/lib/etcd/"
+    test "$(stat -c '%a' ${ETCD_DATA_DIR})" == '700' || chmod 700 ${ETCD_DATA_DIR}
+    test "$(stat -c "%U.%G" ${ETCD_DATA_DIR})" == "etcd.etcd" || chown etcd.etcd "${ETCD_DATA_DIR}"
 
     etcd_initial_cluster=""
     for n in ${cluster_nodes}; do
