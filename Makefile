@@ -27,7 +27,7 @@ paramiko:
 	python3 -c "import paramiko;import sys; paramiko.__version__[:3] >= str('2.7') or sys.exit(1)" || \
 ${PIP} install -U --user paramiko
 
-include PUPPET.makefile
+-include PUPPET.makefile
 
 patt-puppet: patt-puppet.tar.xz
 	git checkout puppet || git checkout -b puppet && \
