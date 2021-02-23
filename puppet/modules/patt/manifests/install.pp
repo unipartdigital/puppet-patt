@@ -1,6 +1,17 @@
 class patt::install (
 )
 {
+
+ $base_install_dir = dirname ("$patt::install_dir")
+
+ file {
+  "$base_install_dir":
+   ensure => 'directory',
+   owner => 'root',
+   group => 'root',
+   mode  => '0775',
+ }
+
  file {
   "$patt::install_dir":
    ensure => 'directory',
@@ -10,7 +21,9 @@ class patt::install (
    owner => 'root',
    group => 'root',
    mode  => '0644',
+  require => [File["$base_install_dir"]]
  }
+
  file {
   "${patt::install_dir}/patt_cli.py":
    ensure => 'file',
@@ -35,9 +48,8 @@ class patt::install (
  }
 
  exec { 'make_dep':
-    command => "/usr/bin/python3 -c \"import paramiko;import sys; paramiko.__version__[:3] >= str('2.7') or sys.exit(1)\" || /usr/bin/pip3 install -U --user paramiko",
-    user => 'patt',
-    environment => ['HOME=/home/patt'],
+    command => "/bin/echo 'make -C ${patt::install_dir} paramiko' | su - patt",
+    user => 'root',
     require =>  [User[patt]],
  }
 

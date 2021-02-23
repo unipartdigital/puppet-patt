@@ -1,6 +1,10 @@
 class patt::sslcerts(
  $ssl_cert_dir = "/etc/puppetlabs/code/environments/production/modules/patt/ssl-cert",
- $postgres_home = "/var/lib/pgsql",
+ $postgres_home = $::osfamily ? {
+   'Debian'  => '/var/lib/postgresql',
+   'RedHat'  => '/var/lib/pgsql',
+   default => '/var/lib/postgresql',
+ },
 )
 {
 
