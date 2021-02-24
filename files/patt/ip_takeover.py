@@ -10,11 +10,13 @@ import logging
 import sys, os
 import ipaddress
 import subprocess
-import scapy.all as sca
 import psycopg2
 import time
 
-#from patroni.utils import Retry, RetryFailedError
+sys.path.append("/usr/local/lib/python{}/site-packages".format(sys.version[0:3]))
+sys.path.append("/usr/local/lib/python{}/dist-packages".format(sys.version[0:3]))
+
+import scapy.all as sca
 
 logger = logging.getLogger(__name__)
 
