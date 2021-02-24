@@ -66,6 +66,9 @@ if [ -f ~/patroni.yaml ]; then
 fi
 eof
 fi
+[ -f ~/.bash_profile ] || cat <<\eof >  ~/.bash_profile
+[ -f ~/.pgsql_profile ] && source ~/.pgsql_profile
+eof
 EOF
 }
 

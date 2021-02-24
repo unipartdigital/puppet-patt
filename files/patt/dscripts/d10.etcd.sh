@@ -248,6 +248,10 @@ member_remove() {
     done
 }
 
+version() {
+    etcd --version | sed -nr -e "0,/etcd/s|.*:[[:space:]]*||p"
+}
+
 {
     flock -n 9 || exit 1
 
@@ -283,6 +287,10 @@ member_remove() {
         'member_remove')
             shift 1
             member_remove "$@"
+            ;;
+        'version')
+            shift 1
+            version "$@"
             ;;
     esac
 } 9> ${lock_file}
