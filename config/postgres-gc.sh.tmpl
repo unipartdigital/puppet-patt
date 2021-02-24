@@ -2,13 +2,14 @@
 
 [ "$${FLOCKER}" != "$$0" ] && exec env FLOCKER="$$0" flock -en "$$0" "$$0" "$$@" || :
 cat <<'EOF' | su - postgres
+PGDATA=$${PGDATA:-"$$HOME/$postgres_version/data"}
 if /bin/test $$(/bin/df $$PGDATA | /bin/tail -n1 | /bin/awk '{print $$5}' | /bin/cut -d '%' -f 1) -gt $pc ;
 then
     # vaccum full
     test "x$$(psql -qtAX -c 'select pg_is_in_recovery() = false as is_master;')" == "xt" && \
-        vacuumdb --all --verbose --analyze --full $vacuumdb_option && clusterdb --all --verbose
+        timeout --signal=TERM --verbose 5400 vacuumdb --all --verbose --analyze --full $vacuumdb_option && clusterdb --all --verbose
 else
     test "x$$(psql -qtAX -c 'select pg_is_in_recovery() = false as is_master;')" == "xt" && \
-        vacuumdb --all --verbose --analyze
+        timeout --signal=TERM --verbose 5400 vacuumdb --all --verbose --analyze
 fi
 EOF

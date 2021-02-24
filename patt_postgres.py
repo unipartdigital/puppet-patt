@@ -242,7 +242,8 @@ def postgres_gc_cron(nodes, vaccum_full_df_percent, target, postgres_version):
                                ['-o'] + [target] +
                                ['--chmod'] + ['755'] +
                                ['--dictionary_key_val'] + ["pc={}".format(vaccum_full_df_percent)] +
-                               ['--dictionary_key_val'] + ["vacuumdb_option={}".format(vacuumdb_option)],
+                               ['--dictionary_key_val'] + ["vacuumdb_option={}".format(vacuumdb_option)] +
+                               ['--dictionary_key_val'] + ["postgres_version={}".format(postgres_version)],
                                sudo=True)
     log_results (result)
 
