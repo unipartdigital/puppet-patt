@@ -82,7 +82,7 @@ ip_takeover: ip_takeover.c
 	strip --strip-unneeded ip_takeover
 
 install: ip_takeover
-        -$(shell sudo $(PYTHON) -c "import scapy" || sudo pip3 install --pre scapy[basic])
+	-$(shell sudo $(PYTHON) -c "import scapy" || sudo pip3 install --pre scapy[basic])
 	sudo install -o root -g postgres -m 4750 ip_takeover /usr/local/sbin/
 
 uninstall:
