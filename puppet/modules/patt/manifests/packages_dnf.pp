@@ -2,17 +2,17 @@ class patt::packages_dnf()
 {
 
  # pre
- # needed by epel-release
- unless defined(Yumrepo["PowerTools"]) {
-  yumrepo { 'PowerTools':
-    enabled  => 1,
-    gpgcheck => '1',
-  }
- }
+ # CentOS-Linux-PowerTools needed by epel-release
+ # unless defined(Yumrepo["CentOS-Linux-PowerTools"]) {
+ #  yumrepo { 'CentOS-Linux-PowerTools':
+ #    enabled  => 1,
+ #    gpgcheck => '1',
+ #  }
+ # }
 
  $base = ['epel-release', 'gcc', 'make', 'nftables', 'policycoreutils', 'util-linux', 'xfsprogs', 'lvm2', 'cryptsetup', 'psmisc']
 
- $pyth = ['python3-scapy', 'python38-Cython', 'python38-PyYAML', 'python38-devel', 'python38-pip', 'python38-psycopg2', 'python38-cryptography']
+ $pyth = ['python3-scapy', 'python38-Cython', 'python38-PyYAML', 'python38-devel', 'python38-pip', 'python38-psycopg2', 'python38-cryptography', 'python38-requests']
 
  $base.each|$b| {
   unless defined(Package["$b"]) {

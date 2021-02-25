@@ -178,14 +178,14 @@ init() {
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
             py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
-            test "${py_ver}" -ge 38 || exit 1
+            test "${py_ver}" -le 36 || exit 1
             # python36 use python3-pip 9.0.3 which start to be quiet old.
             if [ "${os_major_version_id}" -lt 8 ]; then
-                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel haproxy python${py_ver}-PyYAML"
+                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel haproxy python${py_ver}-PyYAML python${py_ver}-requests"
                 # psycopg2 is shipped by epel on centos 7
                 yum install -y ${rel_epel} ${rpm_pkg}
             else
-                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel haproxy python${py_ver}-PyYAML"
+                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel haproxy python${py_ver}-PyYAML python${py_ver}-requests"
                 dnf install -y epel-release ${rpm_pkg}
             fi
             softdog_setup || softdog_setup || { echo "warning: watchdog setup error" 1>&2; }
