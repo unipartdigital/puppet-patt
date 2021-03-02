@@ -157,6 +157,7 @@ class Node:
                 sudo=''
             result = clt.exec (sudo + rscript + ' ' + args)
             r.hostname = self.hostname
+            if self.id: r.id = self.id
             try:
                 if rscript:
                     tmp_clean = clt.exec (sudo + '/usr/bin/rm -f' + ' ' + rscript)
