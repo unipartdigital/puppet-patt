@@ -249,7 +249,7 @@ member_remove() {
 }
 
 version() {
-    etcd --version | sed -nr -e "0,/etcd/s|.*:[[:space:]]*||p"
+    etcd --version | sed -nr -e "0,/etcd/s|^.*:[[:space:]]*||p"
 }
 
 {
