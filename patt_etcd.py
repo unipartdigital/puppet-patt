@@ -73,6 +73,19 @@ def wca (rtt_matrix, cnt=4):
         result.append (i[0][4])
     return int(sum(result)/len(result)) + cnt
 
+def etcd_sort_by_version (nodes):
+    resp = patt.exec_script (nodes=nodes, src="./dscripts/d10.etcd.sh", args=['version'], sudo=True)
+    log_results (resp)
+    for r in resp:
+        tmp = (r.hostname, r.out.strip())
+        for idx, item in enumerate(nodes):
+            if tmp[0] == item.hostname:
+                nodes[idx].etcd_version = tmp[1]
+    result = sorted(nodes, key=lambda etcd_peer: etcd_peer.etcd_version)
+    logger.debug ("etcd_sort_by_version: {}".format(
+        [str(n.hostname) + ' ' + str(n.id) + ' ' +  str(n.etcd_version) for n in result]))
+    return result
+
 def etcd_init(cluster_name, nodes):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
@@ -92,6 +105,9 @@ def etcd_init(cluster_name, nodes):
 
     source = patt.Source()
     running_node = source.whoami(nodes)
+    sorted_node = etcd_sort_by_version (nodes)
+    for i in sorted_node:
+        logger.debug ("{} {}".format(i.hostname, i.etcd_version))
 
     if not initialized:
 
