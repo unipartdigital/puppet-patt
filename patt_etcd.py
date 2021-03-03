@@ -102,8 +102,7 @@ def pick_init_node(nodes):
     if running_node:
         for i in lowest_etcd:
             if running_node.id == i.id: return i
-    else:
-        return random.choice(lowest_etcd)
+    return random.choice(lowest_etcd)
 
 def etcd_init(cluster_name, nodes):
     patt.host_id(nodes)
