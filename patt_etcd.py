@@ -3,6 +3,7 @@
 import patt
 import logging
 import random
+import time
 
 logger = logging.getLogger('patt_etcd')
 
@@ -33,6 +34,15 @@ def log_results(result):
             error_count += 1
             logger.error ("stderr syst: {}".format (r.error))
     return error_count
+
+def cluster_health(nodes):
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d10.etcd.sh",
+                               args=['cluster_health'], sudo=True)
+    for r in result:
+        logger.debug ("cluster_health: _{}_".format(r.out.strip()))
+        if r.out.strip() == "cluster is healthy":
+            return True
+    return False
 
 def get_members(nodes, cluster_name, state='ok'):
     members = []
@@ -74,8 +84,11 @@ def wca (rtt_matrix, cnt=4):
     return int(sum(result)/len(result)) + cnt
 
 def etcd_sort_by_version (nodes):
-    resp = patt.exec_script (nodes=nodes, src="./dscripts/d10.etcd.sh", args=['version'], sudo=True)
-    log_results (resp)
+    for i in range(10):
+        resp = patt.exec_script (nodes=nodes, src="./dscripts/d10.etcd.sh", args=['version'], sudo=True)
+        log_results (resp)
+        if all(x == False for x in [bool(n.error) for n in resp]): break
+        time.sleep(3.0)
     for r in resp:
         tmp = (r.hostname, r.out.strip())
         for idx, item in enumerate(nodes):
@@ -87,7 +100,7 @@ def etcd_sort_by_version (nodes):
     return result
 
 def pick_init_node(nodes):
-    # precedence: lowest etcd version number + running node then lowest etcd version number
+    # precedence: lowest etcd version number and then lowest etcd version + hostname sort order
     source = patt.Source()
     running_node = source.whoami(nodes)
     sorted_node = etcd_sort_by_version (nodes)
@@ -99,10 +112,9 @@ def pick_init_node(nodes):
             lowest_etcd.append (i)
         else:
             break
-    if running_node:
-        for i in lowest_etcd:
-            if running_node.id == i.id: return i
-    return random.choice(lowest_etcd)
+    picked_up = sorted(lowest_etcd, key=lambda n: n.hostname)[0]
+    logger.debug ("pick up etcd node: {}".format(picked_up.hostname))
+    return picked_up
 
 def etcd_init(cluster_name, nodes):
     patt.host_id(nodes)
@@ -145,15 +157,18 @@ def etcd_init(cluster_name, nodes):
                                     args=['enable'] + [cluster_name] + [id_hosts], sudo=True)
         log_results (result)
 
-        good_members = get_members([init_node], cluster_name, 'ok')
         bad_members = get_members([init_node], cluster_name, 'bad')
+        for i in range(3):
+            good_members = get_members([init_node], cluster_name, 'ok')
+            if good_members: break
+            time.sleep(11) #  > than dscripts/d10.etcd.sh file locks wait
 
         logger.info ("member ok {}".format (good_members))
         logger.info ("member ko {}".format (bad_members))
 
         if init_node.hostname not in good_members:
-            result = patt.exec_script (nodes=first_node, src="./dscripts/d10.etcd.sh",
-                                       args=['disable'] + [cluster_name] + id_hosts, sudo=True)
+            result = patt.exec_script (nodes=[init_node], src="./dscripts/d10.etcd.sh",
+                                       args=['disable'] + [cluster_name] + [id_hosts], sudo=True)
             raise EtcdError ('cluster init error', "error initialising new cluster {}".format(cluster_name))
 
     # process any remaining members one by one using one of the healthy nodes as a controller
@@ -176,39 +191,39 @@ def etcd_init(cluster_name, nodes):
     nodes_to_process = [n for n in nodes if n.hostname not in good_members and n.hostname not in bad_members]
     logger.info ("to process: {}".format ([n.hostname for n in nodes_to_process]))
     for m in nodes_to_process:
-        if not m in members:
+        logger.info ("process etcd member {}".format (m.hostname))
+        if not m.hostname in [n.hostname for n in members]:
             members.append (m)
         id_hosts = [n.id + '_' +  n.hostname for n in members]
 
-        assert not bad_members, "add member require no unhealthy nodes in the cluster"
+        # assert cluster_health([init_node]), "add member require no unhealthy nodes in the cluster"
+
         assert ctrl, "no usable controller node"
         # only the first control node is used to add member
 
-        result = patt.exec_script (nodes=[ctrl[0]], src="./dscripts/d10.etcd.sh",
-                                    args=['member_add'] + [cluster_name] + id_hosts, sudo=True)
-        log_results (result)
+        for i in range(10):
+            result = patt.exec_script (nodes=[ctrl[0]], src="./dscripts/d10.etcd.sh",
+                                       args=['member_add'] + [cluster_name] + id_hosts, sudo=True)
+            log_results (result)
+            if all(x == False for x in [bool(n.error) for n in result]): break
+            time.sleep(3.0)
 
         result = patt.exec_script (nodes=members, src="./dscripts/d10.etcd.sh",
                                     args=['config'] + ['existing'] + [cluster_name] +
                                     id_hosts, sudo=True)
- #                                   [heartbeat_interval] + [election_timeout] + id_hosts, sudo=True)
+        # [heartbeat_interval] + [election_timeout] + id_hosts, sudo=True)
         log_results (result)
 
         result = patt.exec_script (nodes=members, src="./dscripts/d10.etcd.sh",
                                     args=['enable'] + [cluster_name] + id_hosts, sudo=True)
         log_results (result)
 
-        good_members = get_members([init_node], cluster_name, 'ok')
-        bad_members = get_members([init_node], cluster_name, 'bad')
-
-        if m.hostname not in good_members:
-            raise EtcdError ('cluster init error', "error initialising member {}".format(m.hostname))
-
     good_members = get_members([init_node], cluster_name, 'ok')
     bad_members = get_members([init_node], cluster_name, 'bad')
-    assert not bad_members
     logger.warn ("member ok {}".format (good_members))
     logger.warn ("member ko {}".format (bad_members))
+    assert good_members
+    assert not bad_members
 
     random_node = [n for n in nodes if n.hostname in good_members and n.hostname not in bad_members]
     random_node = [random.choice(random_node)]

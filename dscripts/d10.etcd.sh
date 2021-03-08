@@ -28,6 +28,11 @@ case "${os_id}" in
     esac
 
 init() {
+
+    {
+        etcd --version > /dev/null 2>&1
+    } && exit 0
+
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
             if [ "${os_major_version_id}" -lt 8 ]; then
@@ -82,6 +87,10 @@ check () {
 
 }
 
+cluster_health () {
+    etcdctl cluster-health | sed -n -e "/^cluster is/p"
+}
+
 config () {
     config_type=$1
     shift 1
@@ -113,8 +122,12 @@ config () {
     test -d ${ETCD_DATA_DIR} || mkdir -p -m 700 ${ETCD_DATA_DIR}
     test "$(stat -c '%a' /var/lib/etcd/)" == '755' || chmod 755 "/var/lib/etcd/"
     test "$(stat -c '%a' ${ETCD_DATA_DIR})" == '700' || chmod 700 ${ETCD_DATA_DIR}
-    test "$(stat -c "%U.%G" ${ETCD_DATA_DIR})" == "etcd.etcd" || chown etcd.etcd "${ETCD_DATA_DIR}"
-
+    test "$(stat -c "%U.%G" ${ETCD_DATA_DIR})" == "etcd.etcd" || \
+        {
+            cat <<EOF | su -
+chown etcd.etcd "${ETCD_DATA_DIR}"
+EOF
+}
     etcd_initial_cluster=""
     for n in ${cluster_nodes}; do
         ID=$(echo ${n} | cut -d '_' -f 1)
@@ -173,7 +186,7 @@ enable() {
         'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
             test "$(readlink /etc/systemd/system/etcd.service)" == "/dev/null" && \
                 rm -f /etc/systemd/system/etcd.service && systemctl daemon-reload
-            systemctl start etcd
+            systemctl reload-or-restart etcd
             for i in 1 2 3 4 5 6 7 8 9 10; do
                 etcdctl cluster-health
                 if [ "$?" -eq 0 ]; then
@@ -229,9 +242,12 @@ member_add() {
     for n in ${cluster_nodes}; do
         ID=$(echo ${n} | cut -d '_' -f 1)
         IP=$(echo ${n} | cut -d '_' -f 2)
-        ETCDCTL_API=3 etcdctl member add ${ID} --peer-urls="https://[${IP}]:2380" || true
+        if ETCDCTL_API=3 etcdctl member list | grep -q "${ID}"; then
+            echo "member ${ID} already exist"
+        else
+            ETCDCTL_API=3 etcdctl member add ${ID} --peer-urls="https://[${IP}]:2380"
+        fi
     done
-
 }
 
 member_remove() {
@@ -252,45 +268,56 @@ version() {
     etcd --version | sed -nr -e "0,/etcd/s|^.*:[[:space:]]*||p"
 }
 
-{
-    flock -n 9 || exit 1
 
-    case "$1" in
-        'init')
-            shift 1
-            init "$@"
-            ;;
-        'check_healthy')
-            shift 1
-            check_healthy "$@"
-            ;;
-        'check_unhealthy')
-            shift 1
-            check_unhealthy "$@"
-            ;;
-        'check')
-            shift 1
-            check "$@"
-            ;;
-        'config')
-            shift 1
-            config "$@"
-            ;;
-        'enable')
-            shift 1
-            enable "$@"
-            ;;
-        'member_add')
-            shift 1
-            member_add "$@"
-            ;;
-        'member_remove')
-            shift 1
-            member_remove "$@"
-            ;;
-        'version')
-            shift 1
-            version "$@"
-            ;;
-    esac
-} 9> ${lock_file}
+case "$1" in
+    'init')
+        shift 1
+        { flock -w 10 9 || exit 1
+          init "$@"
+        } 9> ${lock_file}
+        ;;
+    'check_healthy')
+        shift 1
+        check_healthy "$@"
+        ;;
+    'check_unhealthy')
+        shift 1
+        check_unhealthy "$@"
+        ;;
+    'check')
+        shift 1
+        check "$@"
+        ;;
+    'cluster_health')
+        shift 1
+        cluster_health "$@"
+        ;;
+    'config')
+        shift 1
+        { flock -w 10 9 || exit 1
+          config "$@"
+        } 9> ${lock_file}
+        ;;
+    'enable')
+        shift 1
+        { flock -w 10 9 || exit 1
+          enable "$@"
+        } 9> ${lock_file}
+        ;;
+    'member_add')
+        shift 1
+        { flock -w 10 9 || exit 1
+          member_add "$@"
+        } 9> ${lock_file}
+        ;;
+    'member_remove')
+        shift 1
+        { flock -w 10 9 || exit 1
+          member_remove "$@"
+        } 9> ${lock_file}
+        ;;
+    'version')
+        shift 1
+        version "$@"
+        ;;
+esac
