@@ -14,6 +14,7 @@ import secrets
 import string
 import argparse
 import yaml
+import time
 import sys
 import os
 from pprint import pformat
@@ -304,11 +305,23 @@ if __name__ == "__main__":
             progress_bar (14, 14)
 
             if postgres_peers:
-                patt_postgres.postgres_wait_ready (postgres_peers=postgres_peers,
-                                                   postgres_version=cfg.postgres_release,
-                                                   timeout=60)
+                pg_is_ready = patt_postgres.postgres_wait_ready (postgres_peers=postgres_peers,
+                                                                 postgres_version=cfg.postgres_release,
+                                                                 timeout=200)
+                assert pg_is_ready, "no postgres node available"
 
-                postgres_leader = patt_patroni.get_leader (postgres_peers)
+                postgres_leader=None
+                for i in range(30):
+                    try:
+                        postgres_leader = patt_patroni.get_leader (postgres_peers)
+                        assert isinstance(postgres_leader[0], patt.Node)
+                    except:
+                        time.sleep(11)
+                        continue
+                    else:
+                        break
+                assert isinstance(postgres_leader[0], patt.Node), "no postgres leader available"
+
                 if cfg.create_role:
                     for i in cfg.create_role:
                         role_options = i['options'] if 'options' in i else []
@@ -322,10 +335,10 @@ if __name__ == "__main__":
                     for s in cfg.pg_master_exec:
                         patt_postgres.postgres_exec(postgres_leader, s)
 
-            patt_postgres.postgres_gc_cron(nodes=postgres_peers,
-                                           vaccum_full_df_percent=cfg.gc_cron_df_pc,
-                                           target=cfg.gc_cron_target,
-                                           postgres_version=cfg.postgres_release)
+                patt_postgres.postgres_gc_cron(nodes=postgres_peers,
+                                               vaccum_full_df_percent=cfg.gc_cron_df_pc,
+                                               target=cfg.gc_cron_target,
+                                               postgres_version=cfg.postgres_release)
 
             print ("\nEtcd Cluster\n{}".format(etcd_report))
             logger.info ("Etcd Cluster {}".format(etcd_report))
