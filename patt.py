@@ -178,17 +178,17 @@ class Node:
                                           os.path.dirname (rscript))
             except:
                 pass
-            if result.status == 0:
-                r.out = result.stdout.read().decode().strip()
-                return r
             else:
-                r.error = result.stderr.read().decode()
-                return r
+                if result.status == 0:
+                    r.out = result.stdout.read().decode().strip()
+                    return r
+                else:
+                    r.error = result.stderr.read().decode()
+                    return r
         except Exception as e:
             logger.error ("hostname: {}".format(r.hostname))
             logger.error ("stdout: {}".format (r.out))
             logger.error ("stderr: {}".format (r.error))
-            logger.error ("_exec:{} status:{} error:{}".format(result.hostname, result.status, r.error))
             logger.error (str(e))
             raise
         finally:
@@ -274,7 +274,7 @@ def exec_script (nodes, src, sudo=True, payload=None, args=[], log_call=True, ti
         try:
             for n in nodes:
                 n.user_object = [src, sudo, payload, args, log_call]
-            results =pool.map_async (Node._exec_script, (n for n in nodes))
+            results = pool.map_async (Node._exec_script, (n for n in nodes))
             return results.get(timeout=timeout)
         except Exception as e:
             logger.error (str(e))

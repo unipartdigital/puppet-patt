@@ -127,7 +127,7 @@ def floating_ip_build(nodes, ip_takeover_version="0.9"):
 
     result = patt.exec_script (nodes=nodes, src="./dscripts/d25.floating_ip.sh",
                                payload=["./ip_takeover.py", "./ip_takeover.make"],
-                                args=['build'] + [ip_takeover_version], sudo=False)
+                               args=['build'] + [ip_takeover_version], sudo=False)
     log_results (result)
 
 def floating_ip_enable(nodes, floating_ips):
