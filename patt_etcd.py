@@ -223,10 +223,12 @@ def etcd_init(cluster_name, nodes):
     logger.warn ("member ok {}".format (good_members))
     logger.warn ("member ko {}".format (bad_members))
     assert good_members
-    assert not bad_members
+    ok_nodes = [n for n in nodes if n.hostname in good_members and n.hostname not in bad_members]
+    if bad_members:
+        bad_members = get_members(ok_nodes, cluster_name, 'bad')
+        assert not bad_members
 
-    random_node = [n for n in nodes if n.hostname in good_members and n.hostname not in bad_members]
-    random_node = [random.choice(random_node)]
+    random_node = [random.choice(ok_nodes)]
     result = patt.exec_script (nodes=random_node, src="./dscripts/d10.etcd.sh",
                                 args=['check'], sudo=True)
     for r in result:
