@@ -87,17 +87,19 @@ EOF
             ;;
     esac
 
-    sed -i -e "/#[[:space:]]*TYPE[[:space:]]\+DATABASE[[:space:]]\+USER[[:space:]]\+ADDRESS[[:space:]]\+METHOD.*/q" ${pg_hba_conf_sample}
-    cat <<EOF >> ${pg_hba_conf_sample}
+    test -f ${pg_hba_conf_sample} && {
+        sed -i -e "/#[[:space:]]*TYPE[[:space:]]\+DATABASE[[:space:]]\+USER[[:space:]]\+ADDRESS[[:space:]]\+METHOD.*/q" ${pg_hba_conf_sample}
+        cat <<EOF >> ${pg_hba_conf_sample}
  local  all             all                                     ident
 EOF
+    }
 
     pg_home=$(getent passwd postgres | cut -d':' -f 6)
-    if [ -n "${pg_home}" ]; then
-        test "$(stat -c '%U.%G' ${pg_home})" == "postgres.postgres" || chown postgres.postgres ${pg_home}
-        test "$(stat -c '%a' ${pg_home})" == "711" || chmod 711 ${pg_home}
-    fi
-    # ensure sane permission
+    test "x${pg_home}" != "x" && test -d ${pg_home} && {
+            test "$(stat -c '%U.%G' ${pg_home})" == "postgres.postgres" || chown postgres.postgres ${pg_home}
+            test "$(stat -c '%a' ${pg_home})" == "711" || chmod 711 ${pg_home}
+            # ensure sane permission
+        }
 }
 
 {

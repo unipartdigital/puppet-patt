@@ -25,34 +25,32 @@ case "${os_id}" in
     'rhel' | 'centos' | 'fedora')
         ETCD_CONF="/etc/etcd/etcd.conf"
         ;;
-    esac
+esac
 
 init() {
 
-    {
-        etcd --version > /dev/null 2>&1
-    } && exit 0
-
-    case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
-            if [ "${os_major_version_id}" -lt 8 ]; then
-                yum install -y etcd
-            else
-                # centos8 don't provide etcd yet
-                dnf install --nogpgcheck -y etcd
-            fi
-            ;;
-        'debian' | 'ubuntu')
-            etcd --version || (cd /etc/systemd/system && ln -sf /dev/null etcd.service)
-            # don't let dpkg start the service during install
-            apt-get update
-            apt-get install -y etcd
-            ;;
-        *)
-            echo "unsupported release vendor: ${os_id}" 1>&2
-            exit 1
-            ;;
-    esac
+    etcd --version > /dev/null 2>&1 || {
+        case "${os_id}" in
+            'rhel' | 'centos' | 'fedora')
+                if [ "${os_major_version_id}" -lt 8 ]; then
+                    yum install -y etcd
+                else
+                    # centos8 don't provide etcd yet
+                    dnf install --nogpgcheck -y etcd
+                fi
+                ;;
+            'debian' | 'ubuntu')
+                etcd --version || (cd /etc/systemd/system && ln -sf /dev/null etcd.service)
+                # don't let dpkg start the service during install
+                apt-get update
+                apt-get install -y etcd
+                ;;
+            *)
+                echo "unsupported release vendor: ${os_id}" 1>&2
+                exit 1
+                ;;
+        esac
+    }
 }
 
 check_healthy () {
@@ -127,7 +125,7 @@ config () {
             cat <<EOF | su -
 chown etcd.etcd "${ETCD_DATA_DIR}"
 EOF
-}
+        }
     etcd_initial_cluster=""
     for n in ${cluster_nodes}; do
         ID=$(echo ${n} | cut -d '_' -f 1)
