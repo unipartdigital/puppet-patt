@@ -32,7 +32,7 @@ def log_results(result):
             pass
         else:
             error_count += 1
-            logger.error ("stderr syst: {}".format (r.error))
+            logger.error ("stderr: {}".format (r.error))
     return error_count
 
 def cluster_health(nodes):
