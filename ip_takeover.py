@@ -20,6 +20,8 @@ import scapy.all as sca
 
 logger = logging.getLogger(__name__)
 
+ip_takeover_version = "0.9"
+
 def blackhole_add (ipv6=[], table="postgres_patroni"):
     try:
         ipv6_str = ", ".join (ipv6)
@@ -305,8 +307,11 @@ def main():
         iptakeover = IPTakeOver(cluster_name=sys.argv[3])
         if iptakeover.is_setup:
             getattr(iptakeover, sys.argv[1])(sys.argv[2])
+    elif len(sys.argv) == 2 and sys.argv[1] in ('version', '--version', '-V'):
+        print ("{}".format(ip_takeover_version))
+        sys.exit(0)
     else:
-        sys.exit("Usage: {0} action role name".format(sys.argv[0]))
+        sys.exit("Usage: {0} [ action role name | --version ]".format(sys.argv[0]))
 
 if __name__ == "__main__":
     main()

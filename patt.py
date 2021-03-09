@@ -146,9 +146,14 @@ class Node:
 
             if rscript and payload:
                 remote_d = os.path.dirname (rscript)
-                local_p = os.path.abspath (payload)
                 sftp = clt.new_sftp()
-                sftp.put (local_p, remote_d + '/' + os.path.basename (local_p))
+                if isinstance(payload, list):
+                    for p in payload:
+                        local_p = os.path.abspath (p)
+                        sftp.put (local_p, remote_d + '/' + os.path.basename (local_p))
+                else:
+                    local_p = os.path.abspath (payload)
+                    sftp.put (local_p, remote_d + '/' + os.path.basename (local_p))
 
             args = ' '.join (str(e) for e in args)
             if sudo:
@@ -161,7 +166,11 @@ class Node:
             try:
                 if rscript:
                     tmp_clean = clt.exec (sudo + '/usr/bin/rm -f' + ' ' + rscript)
-                if payload:
+                if isinstance(payload, list):
+                    for p in payload:
+                        tmp_clean = clt.exec (sudo + '/usr/bin/rm -f' + ' ' +
+                                              os.path.dirname (rscript) + '/' + os.path.basename (p))
+                elif payload:
                     tmp_clean = clt.exec (sudo + '/usr/bin/rm -f' + ' ' +
                                           os.path.dirname (rscript) + '/' + os.path.basename (payload))
                 if rscript:

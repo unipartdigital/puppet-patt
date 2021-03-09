@@ -5,9 +5,9 @@ touch ${lock_file} 2> /dev/null; chmod o+r+w ${lock_file}
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
-trap '{echo "$0 FAILED on line $LINENO!; rm -f $0 ; exit 1; }" | tee ${srcdir}/$(basename $0).log' ERR
+trap '{ echo "$0 FAILED on line $LINENO!; rm -f $0 ; exit 1 ; }" | tee ${srcdir}/$(basename $0).log' ERR
 # clean up on exit
-trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
+trap "{ rm -f ${lock_file} ; rm -f $0 ; }" EXIT
 
 # Catch unitialized variables:
 set -u
@@ -25,79 +25,49 @@ case "${os_id}" in
 esac
 
 init() {
+    ip_takeover_version=${1:-"0.9"}
+    test "$(sudo /usr/local/sbin/ip_takeover --version)" == "${ip_takeover_version}" || {
 
-    rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
+        rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
-    case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
-            py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
-            test "${py_ver}" -ge 38 || exit 1
-            # python36 use python3-pip 9.0.3 which start to be quiet old.
-            if [ "${os_major_version_id}" -lt 8 ]; then
-                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
-                # psycopg2 is shipped by epel on centos 7
-                yum install -y ${rel_epel} ${rpm_pkg}
-            else
-                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
-                # psycopg2 is shipped by epel on centos 7
-                dnf install -y epel-release
-                # ensure that config-manager is installed
-                dnf config-manager --help > /dev/null 2>&1 || dnf install 'dnf-command(config-manager)' -y
-                # EPEL packages assume that the 'PowerTools' repository is enabled
-                dnf config-manager --set-enabled PowerTools
-                dnf install -y ${rpm_pkg}
-            fi
-            ;;
-        'debian' | 'ubuntu')
-            apt-get install -y python3-pip gcc libpython3-all-dev cython3 python3-scapy make
-            ;;
-        *)
-            echo "unsupported release vendor: ${os_id}" 1>&2
-            exit 1
-            ;;
-    esac
+        case "${os_id}" in
+            'rhel' | 'centos' | 'fedora')
+                py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
+                test "${py_ver}" -ge 38 || exit 1
+                # python36 use python3-pip 9.0.3 which start to be quiet old.
+                if [ "${os_major_version_id}" -lt 8 ]; then
+                    rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
+                    # psycopg2 is shipped by epel on centos 7
+                    yum install -y ${rel_epel} ${rpm_pkg}
+                else
+                    rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
+                    # psycopg2 is shipped by epel on centos 7
+                    dnf install -y epel-release
+                    # ensure that config-manager is installed
+                    dnf config-manager --help > /dev/null 2>&1 || dnf install 'dnf-command(config-manager)' -y
+                    # EPEL packages assume that the 'PowerTools' repository is enabled
+                    dnf config-manager --set-enabled PowerTools
+                    dnf install -y ${rpm_pkg}
+                fi
+                ;;
+            'debian' | 'ubuntu')
+                apt-get install -y python3-pip gcc libpython3-all-dev cython3 python3-scapy make
+                ;;
+            *)
+                echo "unsupported release vendor: ${os_id}" 1>&2
+                exit 1
+                ;;
+        esac
+    }
 
 }
 
 build () {
-
-    cat <<'EOF' > ./Makefile
-
-CYTHON3 := $(shell which cython3 2> /dev/null || which cython 2> /dev/null || which cython3.8 2> /dev/null || which cython3.6 2> /dev/null)
-PYTHON := python3
-
-main: ip_takeover
-
-scapy:
-# install from pip if no system module
-	-$(shell $(PYTHON) -c "import scapy" || pip3 install --user scapy[basic])
-
-ip_takeover.py: scapy
-
-ip_takeover.c: ip_takeover.py
-	$(CYTHON3) -3 --embed ip_takeover.py
-
-ip_takeover: ip_takeover.c
-	gcc -fPIC -o ip_takeover ip_takeover.c `{ python3-config --embed > /dev/null && python3-config --cflags --ldflags --embed ; } || python3-config --cflags --ldflags`
-	strip --strip-unneeded ip_takeover
-
-install: ip_takeover
-	-$(shell sudo $(PYTHON) -c "import scapy" || sudo pip3 install --pre scapy[basic])
-	sudo install -o root -g postgres -m 4750 ip_takeover /usr/local/sbin/
-
-uninstall:
-	sudo $(RM) /usr/local/sbin/ip_takeover
-
-clean:
-	$(RM) ip_takeover.c
-
-distclean: clean
-	$(RM) ip_takeover
-
-EOF
-
-    make install || exit 1
-    rm -f ./Makefile ./ip_takeover ./ip_takeover.c
+    ip_takeover_version=${1:-"0.9"}
+    test "$(sudo /usr/local/sbin/ip_takeover --version)" == "${ip_takeover_version}" || {
+        make -f ip_takeover.make install || exit 1
+        make -f ip_takeover.make distclean
+    }
 }
 
 enable () {

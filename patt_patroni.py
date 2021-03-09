@@ -43,7 +43,7 @@ def log_results(result):
             pass
         else:
             error_count += 1
-            logger.error ("stderr syst: {}".format (r.error))
+            logger.error ("stderr: {}".format (r.error))
     return error_count
 
 """
@@ -113,20 +113,21 @@ def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_
         log_results (result)
 
 
-def floating_ip_init(nodes):
+def floating_ip_init(nodes, ip_takeover_version="0.9"):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
 
     result = patt.exec_script (nodes=nodes, src="./dscripts/d25.floating_ip.sh",
-                                args=['init'], sudo=True, timeout=1440)
+                                args=['init'] + [ip_takeover_version], sudo=True, timeout=1440)
     log_results (result)
 
-def floating_ip_build(nodes):
+def floating_ip_build(nodes, ip_takeover_version="0.9"):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
 
-    result = patt.exec_script (nodes=nodes, src="./dscripts/d25.floating_ip.sh", payload="./ip_takeover.py",
-                                args=['build'], sudo=False)
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d25.floating_ip.sh",
+                               payload=["./ip_takeover.py", "./ip_takeover.make"],
+                                args=['build'] + [ip_takeover_version], sudo=False)
     log_results (result)
 
 def floating_ip_enable(nodes, floating_ips):
