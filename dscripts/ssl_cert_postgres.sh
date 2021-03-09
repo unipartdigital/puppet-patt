@@ -4,9 +4,9 @@ lock_file=/tmp/$(basename $0 .sh).lock
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
-trap '{echo "$0 FAILED on line $LINENO!; }" | tee ${srcdir}/$(basename $0).log' ERR
+trap '{ echo "$0 FAILED on line $LINENO! ; }" | tee ${srcdir}/$(basename $0).log' ERR
 # clean up on exit
-#trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
+#trap "{ rm -f ${lock_file} ; rm -f $0 ; }" EXIT
 
 # Catch unitialized variables:
 set -u
@@ -24,21 +24,23 @@ case "${os_id}" in
 esac
 
 init() {
-    case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
-            py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
-            dnf --version > /dev/null && {
-                dnf install -y python${py_ver}-cryptography
+    python3 -c "import cryptography.hazmat,cryptography.x509" || {
+        case "${os_id}" in
+            'rhel' | 'centos' | 'fedora')
+                py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
+                dnf --version > /dev/null && {
+                    dnf install -y python${py_ver}-cryptography
                 } || yum install -y python${py_ver}-cryptography
-            ;;
-        'debian' | 'ubuntu')
-            apt-get install -y python3-cryptography
-            ;;
-        *)
-            echo "unsupported release vendor: ${os_id}" 1>&2
-            exit 1
-            ;;
-    esac
+                ;;
+            'debian' | 'ubuntu')
+                apt-get install -y python3-cryptography
+                ;;
+            *)
+                echo "unsupported release vendor: ${os_id}" 1>&2
+                exit 1
+                ;;
+        esac
+    }
 }
 
 copy_ca() {
@@ -76,7 +78,7 @@ copy_ca() {
 }
 
 {
-    flock -n 9 || exit 1
+    flock -n 6 || exit 1
 
     case "${1}" in
         'init')
@@ -92,4 +94,4 @@ copy_ca() {
             exit 1
             ;;
     esac
-} 9> ${lock_file}
+} 6> ${lock_file}

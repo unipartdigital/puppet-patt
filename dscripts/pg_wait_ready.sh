@@ -1,12 +1,11 @@
 #!/bin/bash
 
-lock_file=/tmp/$(basename $0 .sh).lock
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
-trap '{echo "$0 FAILED on line $LINENO!; }" | tee ${srcdir}/$(basename $0).log' ERR
+trap '{ echo "$0 FAILED on line $LINENO! ; }" | tee ${srcdir}/$(basename $0).log' ERR
 # clean up on exit
-#trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
+#trap "{ rm -f ${lock_file} ; rm -f $0 ; }" EXIT
 
 # Catch unitialized variables:
 set -u
@@ -36,17 +35,13 @@ wait_pg_isready () {
     done
 }
 
-{
-    flock -n 9 || exit 1
-
-    case "${1}" in
-        'wait_pg_isready')
-            shift 1
-            wait_pg_isready "$@"
-            ;;
-        *)
-            echo "usage: $0 <postgres version: 11 | 12 | 13 ...> timeout (default 360s)"
-            exit 1
-            ;;
-    esac
-} 9> ${lock_file}
+case "${1}" in
+    'wait_pg_isready')
+        shift 1
+        wait_pg_isready "$@"
+        ;;
+    *)
+        echo "usage: $0 <postgres version: 11 | 12 | 13 ...> timeout (default 360s)"
+        exit 1
+        ;;
+esac

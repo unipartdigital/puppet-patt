@@ -4,9 +4,9 @@ lock_file=/tmp/$(basename $0 .sh).lock
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
-trap '{ echo "$0 FAILED on line $LINENO!; rm -f $0 ;}" | tee ${srcdir}/$(basename $0).log' ERR
+trap '{ echo "$0 FAILED on line $LINENO!; rm -f $0 ; }" | tee ${srcdir}/$(basename $0).log' ERR
 # clean up on exit
-trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
+trap "{ rm -f ${lock_file} ; rm -f $0 ; }" EXIT
 
 # Catch unitialized variables:
 set -u

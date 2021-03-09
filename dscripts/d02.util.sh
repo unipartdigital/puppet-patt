@@ -4,9 +4,9 @@ lock_file=/tmp/$(basename $0 .sh).lock
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
-trap '{ echo "$0 FAILED on line $LINENO!; rm -f $0 ;}" | tee ${srcdir}/$(basename $0).log' ERR
+trap '{ echo "$0 FAILED on line $LINENO!; rm -f $0 ; }" | tee ${srcdir}/$(basename $0).log' ERR
 # clean up on exit
-trap "{ rm -f ${lock_file} ; rm -f $0; }" EXIT
+trap "{ rm -f ${lock_file} ; rm -f $0 ; }" EXIT
 
 # Catch unitialized variables:
 set -u
@@ -24,24 +24,32 @@ case "${os_id}" in
 esac
 
 init() {
-    case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
-            pkg="util-linux xfsprogs lvm2 cryptsetup psmisc"
-            if [ "${os_major_version_id}" -lt 8 ]; then
-                yum install -y $pkg
-            else
-                dnf install -y $pkg
-            fi
-            ;;
-        "debian" | "ubuntu")
-            pkg="util-linux xfsprogs lvm2 cryptsetup-bin psmisc"
-            apt-get install -y $pkg
-            ;;
-        *)
-            echo "unsupported release vendor: ${os_id}" 1>&2
-            exit 1
-            ;;
-    esac
+
+    {
+        xfs_growfs -V > /dev/null 2>&1
+        cryptsetup -V > /dev/null 2>&1
+        lvextend --version > /dev/null 2>&1
+    } || {
+
+        case "${os_id}" in
+            'rhel' | 'centos' | 'fedora')
+                pkg="util-linux xfsprogs lvm2 cryptsetup psmisc"
+                if [ "${os_major_version_id}" -lt 8 ]; then
+                    yum install -y $pkg
+                else
+                    dnf install -y $pkg
+                fi
+                ;;
+            "debian" | "ubuntu")
+                pkg="util-linux xfsprogs lvm2 cryptsetup-bin psmisc"
+                apt-get install -y $pkg
+                ;;
+            *)
+                echo "unsupported release vendor: ${os_id}" 1>&2
+                exit 1
+                ;;
+        esac
+    }
 }
 
 
