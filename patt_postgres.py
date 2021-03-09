@@ -22,7 +22,7 @@ def log_results(result, hide_stdout=False):
             pass
         else:
             error_count += 1
-            logger.error ("stderr syst: {}".format (r.error))
+            logger.error ("stderr: {}".format (r.error))
     return error_count
 
 """
@@ -82,7 +82,7 @@ def postgres_ssl_cert(cluster_name,
     running_node = source.whoami(nodes)
     ca_provider=nodes
     if running_node:
-        ca_provider=[running_node]
+        #ca_provider=[running_node]
         self_ca_dir=None # installing from peer
     else:
         # not installing from peer
@@ -92,26 +92,29 @@ def postgres_ssl_cert(cluster_name,
             Path(self_ca_dir).mkdir(parents=True, exist_ok=True, mode=0o700)
 
     for i in ['root.key', 'root.crt']:
-        tmp = postgres_get_cert (q=i, postgres_user=postgres_user, nodes=ca_provider)
-        if not tmp:
-            # generate CA on first node and retry
-            result = patt.exec_script (nodes=[nodes[0]],
-                                        src="dscripts/ssl_cert_postgres.py",
-                                        payload=ssl_script,
-                                        args=['-c'] + [cluster_name] +
-                                        ['-s'] + [os.path.basename (ssl_script)] +
-                                        ['-u'] + [postgres_user] +
-                                        ['--ca_country_name', "'UK'"] +
-                                        ['--ca_state_or_province_name', "'United Kingdom'"] +
-                                        ['--ca_locality_name', "'Cambridge'"] +
-                                        ['--ca_organization_name', "'Patroni Postgres Cluster'"] +
-                                        ['--ca_common_name', "'CA {}'".format (cluster_name)] +
-                                        ['--ca_not_valid_after', "'3650'"] +
-                                        ['-p'] + [p.hostname for p in nodes] +
-                                        list ([" ".join(p.ip_aliases) for p in nodes]),
-                                        sudo=True)
-            log_results (result)
-            tmp = postgres_get_cert (q=i, postgres_user=postgres_user, nodes=[nodes[0]])
+        for k in range (5):
+            tmp = postgres_get_cert (q=i, postgres_user=postgres_user, nodes=ca_provider)
+            if not tmp:
+                # generate CA on first node and retry
+                result = patt.exec_script (nodes=[nodes[0]],
+                                           src="dscripts/ssl_cert_postgres.py",
+                                           payload=ssl_script,
+                                           args=['-c'] + [cluster_name] +
+                                           ['-s'] + [os.path.basename (ssl_script)] +
+                                           ['-u'] + [postgres_user] +
+                                           ['--ca_country_name', "'UK'"] +
+                                           ['--ca_state_or_province_name', "'United Kingdom'"] +
+                                           ['--ca_locality_name', "'Cambridge'"] +
+                                           ['--ca_organization_name', "'Patroni Postgres Cluster'"] +
+                                           ['--ca_common_name', "'CA {}'".format (cluster_name)] +
+                                           ['--ca_not_valid_after', "'3650'"] +
+                                           ['-p'] + [p.hostname for p in nodes] +
+                                           list ([" ".join(p.ip_aliases) for p in nodes]),
+                                           sudo=True)
+                log_results (result)
+                tmp = postgres_get_cert (q=i, postgres_user=postgres_user,
+                                         nodes=[sorted(nodes, key=lambda n: n.hostname)[0]])
+            if tmp: break
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             with open (tmp_dir + '/' + i, "w") as cf:
@@ -258,3 +261,4 @@ def postgres_wait_ready (postgres_peers, postgres_version, timeout=120):
     result = patt.exec_script (nodes=postgres_peers, src="./dscripts/pg_wait_ready.sh",
                                args=['wait_pg_isready'] + [postgres_version] + [timeout], sudo=True)
     log_results (result)
+    return not all(x == False for x in [bool(n.out) for n in result])
