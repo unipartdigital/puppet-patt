@@ -46,6 +46,7 @@ puppet-module:
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/patt/files/patt/misc/
 	install -m 644 misc/__init__.py $(DESTDIR)/patt/files/patt/misc/
 	install -m 644 ip_takeover.py $(DESTDIR)/patt/files/patt/.
+	install -m 644 ip_takeover.make $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt.py $(DESTDIR)/patt/files/patt/.
 	install -m 755 patt_cli.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_etcd.py $(DESTDIR)/patt/files/patt/.
