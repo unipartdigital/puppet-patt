@@ -5,7 +5,7 @@ srcdir=$(cd $(dirname $0); pwd)
 set -e
 trap '{ echo "$0 FAILED on line $LINENO! ; }" | tee ${srcdir}/$(basename $0).log' ERR
 # clean up on exit
-#trap "{ rm -f ${lock_file} ; rm -f $0 ; }" EXIT
+trap "{ rm -f ${lock_file} ; rm -f $0 ; }" EXIT
 
 # Catch unitialized variables:
 set -u
@@ -29,7 +29,7 @@ wait_pg_isready () {
     esac
     start=$(date +"%s")
     while [ 0 ]; do
-        test pg_isready && break
+        test pg_isready && { echo "pg is ready" ; break ; }
         test $(($start + $timeout)) -lt $(date +"%s") || { echo "timeout" >&2 ; exit 1; }
         sleep 3
     done
