@@ -37,8 +37,8 @@ class patt::packages_apt()
  }
 
  Exec {'systemd_mask_haproxy':
-  command => "/bin/cd /etc/systemd/system && ln -sf /dev/null haproxy.service",
-  unless  => "/usr/sbin/haproxy -v",
+  command => '/bin/bash -c "cd /etc/systemd/system && ln -sf /dev/null haproxy.service"',
+  unless  => '/bin/test "$(haproxy -v)"',
  # don't let dpkg start the service at first install
  }
  Package{'haproxy': ensure => installed, require => [Exec['systemd_mask_haproxy']]}
@@ -47,8 +47,8 @@ class patt::packages_apt()
   notify {"etcd peer install":}
 
   Exec {'systemd_mask_etcd':
-   command => "cd /etc/systemd/system && ln -sf /dev/null etcd.service",
-   unless  => "/usr/bin/etcd --version",
+   command => '/bin/bash -c "cd /etc/systemd/system && ln -sf /dev/null etcd.service"',
+   unless  => '/bin/test -n "$(etcd --version)"',
   # don't let dpkg start the service at first install
   }
   Package{'etcd': ensure => installed, require => [Exec['systemd_mask_etcd']]}
