@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 import shutil
 from string import Template
+import time
 
 logger = logging.getLogger('patt_postgres')
 
@@ -92,11 +93,14 @@ def postgres_ssl_cert(cluster_name,
             Path(self_ca_dir).mkdir(parents=True, exist_ok=True, mode=0o700)
 
     for i in ['root.key', 'root.crt']:
+        tmp = None
         for k in range (5):
-            tmp = postgres_get_cert (q=i, postgres_user=postgres_user, nodes=ca_provider)
-            if not tmp:
+            try:
+                tmp = postgres_get_cert (q=i, postgres_user=postgres_user, nodes=ca_provider)
+                assert isinstance(tmp, (str, bytes))
+            except:
                 # generate CA on first node and retry
-                result = patt.exec_script (nodes=[nodes[0]],
+                result = patt.exec_script (nodes=[sorted(nodes, key=lambda n: n.hostname)[0]],
                                            src="dscripts/ssl_cert_postgres.py",
                                            payload=ssl_script,
                                            args=['-c'] + [cluster_name] +
@@ -114,7 +118,15 @@ def postgres_ssl_cert(cluster_name,
                 log_results (result)
                 tmp = postgres_get_cert (q=i, postgres_user=postgres_user,
                                          nodes=[sorted(nodes, key=lambda n: n.hostname)[0]])
-            if tmp: break
+                if isinstance(tmp, (str, bytes)):
+                    break
+                else:
+                    time.sleep (3)
+                    continue
+            else:
+                break
+
+        assert isinstance(tmp, (str, bytes))
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             with open (tmp_dir + '/' + i, "w") as cf:
