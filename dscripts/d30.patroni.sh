@@ -108,32 +108,33 @@ EOF
 
 systemd_setup () {
 
-    if [ -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service ]; then return 0; fi
+    test -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service || {
 
-    postgres_version=${1:-"13"}
-    postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
+        postgres_version=${1:-"13"}
+        postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
-    default_postgres_path=$(su - postgres -c "echo $PATH")
+        default_postgres_path=$(su - postgres -c "echo $PATH")
 
-    case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
-            systemd_service="postgresql-${postgres_version}.service"
-            postgres_bin="/usr/pgsql-${postgres_version}/bin/"
-            ;;
-        'debian' | 'ubuntu')
-            systemd_service="postgresql.service"
-            postgres_bin="/usr/lib/postgresql/${postgres_version}/bin/"
-            ;;
-        *)
-            echo "${os_id} not implemented" 1>&2
-            exit 1
-            ;;
-    esac
-    if systemctl is-enabled --quiet ${systemd_service} ; then systemctl disable  ${systemd_service}; fi
-    if systemctl is-active --quiet ${systemd_service} ; then systemctl stop  ${systemd_service}; fi
-    systemd_patroni_tmpl "${postgres_version}" "${postgres_bin}" > \
-                         /etc/systemd/system/postgresql-${postgres_version}_patroni.service
-    systemctl daemon-reload
+        case "${os_id}" in
+            'rhel' | 'centos' | 'fedora')
+                systemd_service="postgresql-${postgres_version}.service"
+                postgres_bin="/usr/pgsql-${postgres_version}/bin/"
+                ;;
+            'debian' | 'ubuntu')
+                systemd_service="postgresql.service"
+                postgres_bin="/usr/lib/postgresql/${postgres_version}/bin/"
+                ;;
+            *)
+                echo "${os_id} not implemented" 1>&2
+                exit 1
+                ;;
+        esac
+        if systemctl is-enabled --quiet ${systemd_service} ; then systemctl disable  ${systemd_service}; fi
+        if systemctl is-active --quiet ${systemd_service} ; then systemctl stop  ${systemd_service}; fi
+        systemd_patroni_tmpl "${postgres_version}" "${postgres_bin}" > \
+                             /etc/systemd/system/postgresql-${postgres_version}_patroni.service
+        systemctl daemon-reload
+    }
 }
 
 softdog_setup () {
@@ -171,15 +172,14 @@ EOF
 
 init() {
     postgres_version=${1:-"13"}
-    patroni_version=${2:-"2.1"}
+    patroni_version=${2:-"2.0.2"}
 
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
             py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
-            test "${py_ver}" -le 36 || exit 1
-            # python36 use python3-pip 9.0.3 which start to be quiet old.
+            test "${py_ver}" -ge 38 || { echo "python36 use python3-pip 9.0.3 which start to be quiet old." >&2; exit 1 ; }
             if [ "${os_major_version_id}" -lt 8 ]; then
                 rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel haproxy python${py_ver}-PyYAML python${py_ver}-requests"
                 # psycopg2 is shipped by epel on centos 7
@@ -255,7 +255,6 @@ EOF
 
 enable() {
     postgres_version=${1:-"13"}
-    patroni_version=${2:-"2.1"}
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
     case "${os_id}" in

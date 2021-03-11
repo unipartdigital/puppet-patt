@@ -100,7 +100,7 @@ if __name__ == "__main__":
     cli.add_argument('-r','--postgres_release', help='postgres release version 11|12|13', default="13", required=False)
     cli.add_argument('-pp','--postgres_parameters', help='list of configuration settings for Postgres', default=[""], required=False)
 
-    cli.add_argument('--patroni_release', help='patroni release version', default="2.1", required=False)
+    cli.add_argument('--patroni_release', help='patroni release version', default="2.0.2", required=False)
     cli.add_argument('-t','--patroni_template_file', help='patroni template file', required=False)
 
     cli.add_argument('-hp', '--haproxy_peers', help='haproxy peers', required=False)
