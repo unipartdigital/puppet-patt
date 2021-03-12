@@ -45,7 +45,7 @@ class patt::packages_dnf()
   }
  }
 
-if "${is_etcd}" == "true" {
+if "${patt::is_etcd}" == "true" {
  notify {"etcd peer install":}
  Exec{'/etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo':
   command  => '/usr/bin/curl -f https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo > /etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo',
@@ -57,7 +57,7 @@ if "${is_etcd}" == "true" {
                   install_only => true}
 }
 
-if "${is_postgres}" == "true" {
+if "${patt::is_postgres}" == "true" {
  notify {"postgres peer install":}
 
  exec { 'dnf_module_disable_postgresql':

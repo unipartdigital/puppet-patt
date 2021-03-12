@@ -9,6 +9,10 @@ class patt::packages()
     contain patt::packages_dnf
   }
    default:{
+    notify {"warning using default package class: $facts['osfamily']":
+    withpath => true,
+ }
+
   }
  }
 

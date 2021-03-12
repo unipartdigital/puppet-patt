@@ -43,7 +43,7 @@ class patt::packages_apt()
  }
  Package{'haproxy': ensure => installed, require => [Exec['systemd_mask_haproxy']]}
 
- if "${is_etcd}" == "true" {
+ if "${patt::is_etcd}" == "true" {
   notify {"etcd peer install":}
 
   Exec {'systemd_mask_etcd':
@@ -54,7 +54,7 @@ class patt::packages_apt()
   Package{'etcd': ensure => installed, require => [Exec['systemd_mask_etcd']]}
  }
 
- if "${is_postgres}" == "true" {
+ if "${patt::is_postgres}" == "true" {
   notify {"postgres peer install":}
 
   $repo_release = "${facts['os']['distro']['codename']}-pgdg"
@@ -91,7 +91,7 @@ END
 
   Package{"postgresql-${patt::postgres_release}":
    ensure => installed,
-   require => [apt::source["pgdg"], File['/etc/postgresql-common/createcluster.conf']],
+   require => [Apt::Source['pgdg'], File['/etc/postgresql-common/createcluster.conf']],
    alias  => "postgresql_${patt::postgres_release}_server",
   }
 
