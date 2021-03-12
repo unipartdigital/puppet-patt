@@ -26,6 +26,7 @@ if $is_any_empty {
  }
 
  file { '/home/patt/.ssh/id_rsa':
+    ensure  => file,
     content => inline_epp(@(END), k => $prv),
 <%=$k%>
 END
@@ -36,6 +37,7 @@ END
  }
 
  file { '/home/patt/.ssh/authorized_keys':
+    ensure  => file,
     content => inline_epp(@(END), k => $pub),
 <%=$k%>
 END

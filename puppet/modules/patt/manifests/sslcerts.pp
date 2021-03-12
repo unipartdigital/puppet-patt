@@ -32,6 +32,7 @@ if "${is_postgres}" == "true" {
   }
 
  file {"${postgres_home}/.postgresql/root.crt":
+    ensure  => file,
     content => inline_epp(@(END), k => $ca_crt),
 <%=$k%>
 END
@@ -42,7 +43,8 @@ END
   }
 
   file {"${postgres_home}/.postgresql/root.key":
-     content => inline_epp(@(END), k => $ca_key),
+    ensure  => file,
+    content => inline_epp(@(END), k => $ca_key),
 <%=$k%>
 END
     owner   => postgres,

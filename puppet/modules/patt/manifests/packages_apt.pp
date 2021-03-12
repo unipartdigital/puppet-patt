@@ -77,6 +77,7 @@ class patt::packages_apt()
   }
 
   File{'/etc/postgresql-common/createcluster.conf':,
+   ensure  => file,
    content => inline_epp(@(END)),
 create_main_cluster = false
 start_conf = 'disabled'
