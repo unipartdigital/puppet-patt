@@ -22,10 +22,10 @@ init () {
 
     downloader=""
     wget --version > /dev/null 2>&1 && {
-        downloader="wget -L"
+        downloader="wget -q -L"
     } || {
         curl --version > /dev/null 2>&1 && {
-            downloader="curl -O -L"
+            downloader="curl -f -s -O -L"
         }
     }
 
@@ -38,7 +38,7 @@ init () {
              test "`./wal-g --version | awk '{print $3}'`" == "${walg_release}" && {
                  sudo install -o root -g root -m 755 wal-g ${prefix}/bin/wal-g
              }
-            )
+            ) > /dev/null
             rm -f ${tmp}/wal-g ${tmp}/`basename ${download_url}`
             rmdir ${tmp}
         }
