@@ -16,6 +16,7 @@ class patt (
  Optional[Array[String]] $postgres_peers,
  Optional[Array[String]] $postgres_parameters = [],
  Optional[String]        $postgres_release,
+ Optional[String]        $walg_release,
  Optional[String]        $ssh_keyfile,
  Optional[String]        $ssh_login,
  Optional[Array[Struct[{name => String, options => Optional[Array[String]]}]]] $pg_create_role = [],
@@ -118,6 +119,7 @@ notify {"is postgres peer: ${is_postgres}":
 # patt::patt_loglevel: 10
 # patt::postgres_release: '13'
 # patt::patroni_release: '2.0.1'
+# patt::walg_release: 'v0.2.19'
 # patt::add_repo:
 #   - 'https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo'
 # patt::haproxy_template_file: ''

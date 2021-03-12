@@ -28,6 +28,7 @@ puppet-module:
 	install -m 644 dscripts/d10.etcd.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d20.postgres.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d25.floating_ip.sh $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/d27.walg.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d30.patroni.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d40.haproxy.sh $(DESTDIR)/patt/files/patt/dscripts/
 
@@ -54,6 +55,7 @@ puppet-module:
 	install -m 644 patt_patroni.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_postgres.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_syst.py $(DESTDIR)/patt/files/patt/.
+	install -m 644 patt_walg.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 file_lock.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 requirements.txt $(DESTDIR)/patt/files/patt/.
 

@@ -34,6 +34,7 @@ postgres_parameters:
 - <%= $pp %>
 <% } -%>
 postgres_release: <%=$patt::postgres_release%>
+walg_release: <%=$patt::walg_release%>
 ssh_keyfile: <%=$patt::ssh_keyfile%>
 ssh_login: <%=$patt::ssh_login%>
 create_role:

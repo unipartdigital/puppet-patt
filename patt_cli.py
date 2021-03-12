@@ -4,6 +4,7 @@ import patt
 import patt_syst
 import patt_etcd
 import patt_postgres
+import patt_walg
 import patt_patroni
 import patt_haproxy
 import logging
@@ -35,6 +36,7 @@ class Config(object):
         self.loglevel = None
         self.lock_dir = None
         self.nodes = None
+        self.walg_release = None
         self.patroni_release = None
         self.patroni_template_file = None
         self.postgres_peers = None
@@ -99,6 +101,8 @@ if __name__ == "__main__":
     cli.add_argument('-p','--postgres_peers', action='append', help='postgres peers', required=False)
     cli.add_argument('-r','--postgres_release', help='postgres release version 11|12|13', default="13", required=False)
     cli.add_argument('-pp','--postgres_parameters', help='list of configuration settings for Postgres', default=[""], required=False)
+
+    cli.add_argument('--walg_release', help='wal-g release version', default="v0.2.19", required=False)
 
     cli.add_argument('--patroni_release', help='patroni release version', default="2.0.2", required=False)
     cli.add_argument('-t','--patroni_template_file', help='patroni template file', required=False)
@@ -244,6 +248,12 @@ if __name__ == "__main__":
         progress_bar (7, 14)
 
         patt_patroni.floating_ip_build(nodes=postgres_peers)
+
+        progress_bar (8, 14)
+
+        if postgres_peers:
+            walg_init_ok = patt_walg.walg_init(walg_version=cfg.walg_release, nodes=postgres_peers)
+            assert walg_init_ok, "wal-g installation error"
 
         progress_bar (8, 14)
 
