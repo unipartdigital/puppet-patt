@@ -42,7 +42,7 @@ init() {
                 ;;
             "debian" | "ubuntu")
                 pkg="util-linux xfsprogs lvm2 cryptsetup-bin psmisc"
-                apt-get install -y $pkg
+                apt-get install -qq -y $pkg
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2

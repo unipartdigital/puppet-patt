@@ -191,8 +191,8 @@ init() {
             softdog_setup || softdog_setup || { echo "warning: watchdog setup error" 1>&2; }
             ;;
         'debian' | 'ubuntu')
-            apt-get update
-            apt-get install -y python3-psycopg2 python3-pip python3-dev python3-yaml gcc haproxy policycoreutils checkpolicy semodule-utils selinux-policy-default
+            apt-get update -q
+            apt-get install -qq -y python3-psycopg2 python3-pip python3-dev python3-yaml gcc haproxy policycoreutils checkpolicy semodule-utils selinux-policy-default
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2

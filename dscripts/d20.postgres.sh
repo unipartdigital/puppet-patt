@@ -27,8 +27,9 @@ init() {
     postgresql_version=${1:-"13"}
 
     case "${os_id}" in
+
         'rhel' | 'centos' | 'fedora')
-            /usr/pgsql-${postgresql_version}/bin/postgres --version || {
+            /usr/pgsql-${postgresql_version}/bin/postgres --version > /dev/null 2>&1 || {
                 rel_repo="https://download.postgresql.org/pub/repos/yum/reporpms/EL-${os_major_version_id}-${os_arch}/pgdg-redhat-repo-latest.noarch.rpm"
                 rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
@@ -41,7 +42,7 @@ init() {
                     #postgresql${postgresql_version}-devel
                 else
                     dnf install -y ${rel_repo} epel-release
-                    dnf update
+                    # dnf update -y
                     dnf -qy module disable postgresql
                     # disable default shipped version
                     dnf install -y \
@@ -55,10 +56,8 @@ init() {
             ;;
 
         'debian' | 'ubuntu')
-
             /usr/lib/postgresql/${postgresql_version}/bin/postgres --version > /dev/null 2>&1 || {
-
-                apt-get install -y gnupg wget
+                apt-get install -qq -y gnupg wget
                 if ! /usr/bin/test -s /etc/apt/sources.list.d/pgdg.list; then
                     echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
                 fi
@@ -66,7 +65,7 @@ init() {
                     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
                         sudo apt-key add -
                 fi
-                apt-get update
+                apt-get update -q
                 test -d /etc/postgresql-common/ || mkdir -p   /etc/postgresql-common/
                 test -f /etc/postgresql-common/createcluster.conf || \
                     cat <<EOF > /etc/postgresql-common/createcluster.conf
@@ -76,7 +75,7 @@ data_directory = /dev/null
 ssl = off
 EOF
                 test -x /usr/lib/postgresql/${postgresql_version}/bin/postgres || \
-                    apt-get install -y postgresql-${postgresql_version}
+                    apt-get install -qq -y postgresql-${postgresql_version}
                 #postgresql-server-dev-${postgresql_version}
             }
             pg_hba_conf_sample="/usr/share/postgresql/${postgresql_version}/pg_hba.conf.sample"
@@ -100,6 +99,14 @@ EOF
             test "$(stat -c '%a' ${pg_home})" == "711" || chmod 711 ${pg_home}
             # ensure sane permission
         }
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            /usr/pgsql-${postgresql_version}/bin/postgres --version
+            ;;
+        'debian' | 'ubuntu')
+            /usr/lib/postgresql/${postgresql_version}/bin/postgres --version
+            ;;
+    esac
 }
 
 {

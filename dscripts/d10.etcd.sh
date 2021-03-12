@@ -42,8 +42,8 @@ init() {
             'debian' | 'ubuntu')
                 etcd --version || (cd /etc/systemd/system && ln -sf /dev/null etcd.service)
                 # don't let dpkg start the service during install
-                apt-get update
-                apt-get install -y etcd
+                apt-get update -q
+                apt-get install -qq -y etcd
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2

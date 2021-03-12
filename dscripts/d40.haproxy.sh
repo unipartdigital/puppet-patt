@@ -37,8 +37,8 @@ init() {
         'debian' | 'ubuntu')
             haproxy -v || (cd /etc/systemd/system && ln -sf /dev/null haproxy.service)
             # don't let dpkg start the service during install
-            apt-get update
-            apt-get install -y haproxy policycoreutils
+            apt-get update -q
+            apt-get install -qq -y haproxy policycoreutils
 
             ;;
         *)

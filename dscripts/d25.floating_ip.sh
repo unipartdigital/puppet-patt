@@ -51,7 +51,7 @@ init() {
                 fi
                 ;;
             'debian' | 'ubuntu')
-                apt-get install -y python3-pip gcc libpython3-all-dev cython3 python3-scapy make
+                apt-get install -qq -y python3-pip gcc libpython3-all-dev cython3 python3-scapy make
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2

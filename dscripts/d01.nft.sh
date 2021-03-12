@@ -43,7 +43,7 @@ init() {
                 nftables_conf="/etc/sysconfig/nftables.conf"
                 ;;
             "debian" | "ubuntu")
-                apt-get install -y $pkg
+                apt-get install -qq -y $pkg
                 test -d /etc/nftables/ || mkdir -p /etc/nftables/
                 nftables_conf="/etc/nftables.conf"
                 ;;

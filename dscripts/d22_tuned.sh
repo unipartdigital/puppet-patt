@@ -30,7 +30,7 @@ tune () {
                 dnf install -y tuned
                 ;;
             'debian' | 'ubuntu')
-                apt-get install -y tuned
+                apt-get install -qq -y tuned
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2

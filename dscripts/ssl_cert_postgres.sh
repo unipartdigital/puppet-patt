@@ -33,7 +33,7 @@ init() {
                 } || yum install -y python${py_ver}-cryptography
                 ;;
             'debian' | 'ubuntu')
-                apt-get install -y python3-cryptography
+                apt-get install -qq -y python3-cryptography
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2
