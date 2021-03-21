@@ -5,7 +5,7 @@ touch ${lock_file} 2> /dev/null; chmod o+r+w ${lock_file}
 srcdir=$(cd $(dirname $0); pwd)
 # Exit the script on errors:
 set -e
-trap '{ echo "$0 FAILED on line $LINENO!; rm -f $0 ; exit 1 ; }" | tee ${srcdir}/$(basename $0).log' ERR
+trap '{ echo "$0 FAILED on line $LINENO!" ; rm -f $0 ; exit 1 ; } | tee ${srcdir}/$(basename $0).log' ERR
 # clean up on exit
 trap "{ rm -f ${lock_file} ; rm -f $0 ; }" EXIT
 
@@ -88,26 +88,30 @@ enable () {
     fi
 }
 
-{
-    flock -n 9 || exit 1
+touch ${lock_file} 2> /dev/null || true
 
-    case "${1:-""}" in
-        'init')
-            shift 1
-            init "$@"
-            ;;
-        'build')
-            cd ${srcdir}
-            shift 1
-            build "$@"
-            ;;
-        'enable')
-            shift 1
-            enable "$@"
-            ;;
-        *)
-            echo "usage: $0 init|build|enable <list of floating_ip>"
-            exit 1
-            ;;
-    esac
-} 9> ${lock_file}
+case "${1:-""}" in
+    'init')
+        shift 1
+        { flock -n 9 || exit 1
+          init "$@"
+        } 9< ${lock_file}
+        ;;
+    'build')
+        { flock -n 9 || exit 1
+          cd ${srcdir}
+          shift 1
+          build "$@"
+        } 9< ${lock_file}
+        ;;
+    'enable')
+        shift 1
+        { flock -n 9 || exit 1
+          enable "$@"
+        } 9< ${lock_file}
+        ;;
+    *)
+        echo "usage: $0 init|build|enable <list of floating_ip>"
+        exit 1
+        ;;
+esac
