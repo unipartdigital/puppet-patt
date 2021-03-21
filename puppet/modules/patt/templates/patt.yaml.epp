@@ -35,6 +35,9 @@ postgres_parameters:
 <% } -%>
 postgres_release: <%=$patt::postgres_release%>
 walg_release: <%=$patt::walg_release%>
+<% unless empty($patt::walg_ssh_destination) { -%>
+walg_ssh_destination: <%=$patt::walg_ssh_destination%>
+<% } -%>
 ssh_keyfile: <%=$patt::ssh_keyfile%>
 ssh_login: <%=$patt::ssh_login%>
 create_role:
@@ -45,6 +48,7 @@ create_database:
 <% $patt::pg_create_database.flatten.each|$n| { -%>
 - {name: <%= $n['name'] %>, owner: <%= $n['owner'] %>}
 <% } -%>
+vol_size_walg: <%=$patt::vol_size_walg%>
 vol_size_etcd: <%=$patt::vol_size_etcd%>
 vol_size_pgsql: <%=$patt::vol_size_pgsql%>
 gc_cron_df_pc: <%=$patt::gc_cron_df_pc%>

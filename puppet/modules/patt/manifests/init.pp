@@ -17,11 +17,13 @@ class patt (
  Optional[Array[String]] $postgres_parameters = [],
  Optional[String]        $postgres_release,
  Optional[String]        $walg_release,
+ Optional[String]        $walg_ssh_destination = '',
  Optional[String]        $ssh_keyfile,
  Optional[String]        $ssh_login,
  Optional[Array[Struct[{name => String, options => Optional[Array[String]]}]]] $pg_create_role = [],
  Optional[Array[Struct[{name => String, owner => String}]]] $pg_create_database = [],
 
+ Optional[String]        $vol_size_walg  = '2G',
  Optional[String]        $vol_size_etcd  = '2G',
  Optional[String]        $vol_size_pgsql = '2G',
  # size may be increased between run but not shrinked

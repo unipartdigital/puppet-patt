@@ -28,6 +28,7 @@ class Config(object):
         self.cluster_name = None
         self.vol_size_etcd = None
         self.vol_size_pgsql = None
+        self.vol_size_walg = None
         self.etcd_peers = None
         self.floating_ip = None
         self.haproxy_peers = None
@@ -37,6 +38,7 @@ class Config(object):
         self.lock_dir = None
         self.nodes = None
         self.walg_release = None
+        self.walg_ssh_destination = None
         self.patroni_release = None
         self.patroni_template_file = None
         self.postgres_peers = None
@@ -178,6 +180,9 @@ if __name__ == "__main__":
         else:
             haproxy_peers=nodes
 
+        if cfg.walg_ssh_destination:
+            walg_ssh_destination =  patt.to_nodes ([cfg.walg_ssh_destination], ssh_login, cfg.ssh_keyfile)
+
         progress_bar (1, 14)
 
         # Peer check
@@ -212,11 +217,14 @@ if __name__ == "__main__":
                                       postgres_clients=["::0/0"])
         progress_bar (3, 14)
 
-        if cfg.vol_size_etcd:
+        if etcd_peers and cfg.vol_size_etcd:
             patt_syst.disk_init (etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd)
 
-        if cfg.vol_size_pgsql:
+        if postgres_peers and cfg.vol_size_pgsql:
             patt_syst.disk_init (postgres_peers, user='postgres', vol_size=cfg.vol_size_pgsql)
+
+        if walg_ssh_destination and cfg.vol_size_walg:
+            patt_syst.disk_init (walg_ssh_destination, mnt="/var/lib/walg", vol_size=cfg.vol_size_walg)
 
         progress_bar (4, 14)
 
@@ -252,8 +260,29 @@ if __name__ == "__main__":
         progress_bar (8, 14)
 
         if postgres_peers:
-            walg_init_ok = patt_walg.walg_init(walg_version=cfg.walg_release, nodes=postgres_peers)
-            assert walg_init_ok, "wal-g installation error"
+            init_ok = patt_walg.walg_init(walg_version=cfg.walg_release, nodes=postgres_peers)
+            assert init_ok, "wal-g installation error"
+
+        if walg_ssh_destination and postgres_peers:
+
+            init_ok = patt_walg.walg_ssh_archiving_init(nodes=walg_ssh_destination)
+
+            add_ok = patt_walg.walg_archiving_add(cluster_name=cfg.cluster_name, nodes=walg_ssh_destination)
+            assert add_ok, "walg archiving add error"
+
+            walg_keys = patt_walg.walg_ssh_gen(cluster_name=cfg.cluster_name, nodes=postgres_peers)
+            assert all(x == True for x in [bool(n) for n in walg_keys]), "walg public key error"
+            assert len(walg_keys) == len (postgres_peers), "walg public key error"
+
+            walg_authorize_keys_ok = patt_walg.walg_authorize_keys(cfg.cluster_name,
+                                                                   nodes=walg_ssh_destination,
+                                                                   keys=walg_keys)
+            assert walg_authorize_keys_ok, "error walg_authorize_keys"
+
+            known_hosts_ok = patt_walg.walg_ssh_known_hosts(cluster_name=cfg.cluster_name,
+                                                            nodes=postgres_peers,
+                                                            archiving_server=walg_ssh_destination)
+            assert known_hosts_ok, "error validating known_hosts file"
 
         progress_bar (8, 14)
 
