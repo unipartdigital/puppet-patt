@@ -3,6 +3,8 @@ class patt::service (
 {
 
  require patt::sslcerts
+ require patt::packages
+ require patt::install
 
  file{"/var/log/patt/":
     ensure  =>  directory,
