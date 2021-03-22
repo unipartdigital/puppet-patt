@@ -35,7 +35,8 @@ make patt-puppet.tar.xz
  patt::log_file: '/var/log/patt/patt.log'
  patt::patt_loglevel: 10
  patt::postgres_release: '13'
- patt::patroni_release: '2.0.1'
+ patt::patroni_release: '2.0.2'
+ patt::walg_release: 'v0.2.19'
  patt::add_repo:
    - 'https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo'
  patt::haproxy_template_file: ''
@@ -116,10 +117,11 @@ haproxy_peers:
 haproxy_template_file:
 log_file: /var/log/patt/patt.log
 loglevel: 10
-patroni_release: 2.0.1
+patroni_release: 2.0.2
 patroni_template_file: config/postgres-ipv6.yaml
 postgres_parameters:
 postgres_release: 13
+walg_release: v0.2.19
 add_repo:
 - https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo
 ssh_keyfile:
