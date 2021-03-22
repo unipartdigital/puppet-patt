@@ -193,7 +193,7 @@ ssh_known_hosts () {
     home="$(getent passwd  ${user_name} | cut -d: -f6)"
     known_hosts="${home}/.ssh/known_hosts"
     if test -s ${known_hosts} ; then
-        ssh-keyscan "${archive_host}" > "${known_hosts}.tmp"
+        ssh-keyscan -t rsa "${archive_host}" > "${known_hosts}.tmp"
         new_md5=`grep "^${archive_host} " ${known_hosts}.tmp | sort -u | md5sum | cut -d' ' -f1`
         old_md5=`grep "^${archive_host} " ${known_hosts} | sort -u | md5sum | cut -d' ' -f1`
         if test "${new_md5}" == "${old_md5}" ; then
@@ -208,7 +208,7 @@ ssh_known_hosts () {
         fi
         rm -f ${known_hosts}.tmp
     else
-        ssh-keyscan "${archive_host}" > "${known_hosts}"
+        ssh-keyscan -t rsa "${archive_host}" > "${known_hosts}"
         chown "${user_name}"."${group}" "${known_hosts}"
     fi
 }
