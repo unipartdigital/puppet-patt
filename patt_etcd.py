@@ -224,7 +224,9 @@ def etcd_init(cluster_name, nodes):
     logger.warn ("member ko {}".format (bad_members))
     assert good_members
     ok_nodes = [n for n in nodes if n.hostname in good_members and n.hostname not in bad_members]
+    assert ok_nodes
     if bad_members:
+        time.sleep(3)
         bad_members = get_members(ok_nodes, cluster_name, 'bad')
         assert not bad_members
 
