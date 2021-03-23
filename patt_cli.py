@@ -180,6 +180,7 @@ if __name__ == "__main__":
         else:
             haproxy_peers=nodes
 
+        walg_ssh_destination = None
         if cfg.walg_ssh_destination:
             walg_ssh_destination =  patt.to_nodes ([cfg.walg_ssh_destination], ssh_login, cfg.ssh_keyfile)
 
