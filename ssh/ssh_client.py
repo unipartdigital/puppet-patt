@@ -32,6 +32,20 @@ except ImportError:
 logger = logging.getLogger('ssh_client')
 logging.getLogger("paramiko").setLevel(logging.WARNING)
 
+def _ipv6_nri_split (nri):
+    (login, s, hostname) = nri.rpartition('@')
+    t1=hostname.find('[')
+    t2=hostname.find(']')
+    port=''
+    if t1 >= 0 and t2 >= 0:
+        port="".join([n for n in hostname[t2+2:] if hostname[t2+1] == ':'])
+        hostname=hostname[t1+1:t2]
+    elif len ([n for n in hostname if n == ':']) == 1:
+        t1=hostname.find(':')
+        port=hostname[t1 + 1:]
+        hostname=hostname[:t1+1]
+    return (login, hostname, port)
+
 class ssh_client:
 
     class CmdResp:
@@ -48,15 +62,13 @@ class ssh_client:
     - destination: hostname or ip address
     """
     def __init__(self, destination, login=None, password=None, port=22, log_file=None, keyfile=None):
-        (l,s,h) = destination.rpartition('@')
-        self.hostname = h
+        (self.username, self.hostname, self.port) = _ipv6_nri_split(destination)
         if login:
             self.username = login
-        elif l != '':
-            self.username = l
-        else:
+        elif not self.username:
             self.username = getpass.getuser()
-        self.port = port
+        if port:
+            self.port = port
         self.log_file = log_file
         self.password = password
         self.client=None
@@ -92,7 +104,7 @@ class ssh_client:
                 pass
             elif 'identityfile' in self.ssh_config:
                 self.keyfile = self.ssh_config['identityfile']
-            logger.info ("Connecting:{}@{}".format(self.username, self.hostname))
+            logger.info ("Connecting:{}@{} :{}".format(self.username, self.hostname, self.port))
 
             if not self.UseGSSAPI and not self.DoGSSAPIKeyExchange:
                 self.client.connect(self.hostname, self.port, self.username, self.password, timeout=timeout,

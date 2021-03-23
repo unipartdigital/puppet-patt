@@ -51,23 +51,29 @@ class Source:
         return False
 
 class Node:
-    def __init__(self, ssh_uri, default_login=None, default_keyfile=None):
+
+    def __init__(self, ssh_uri, default_login=None, default_keyfile=None, default_port=22):
         self.hostname = None
         self.login = None
+        self.port = None
         self.id = None
         self.ip_aliases = []
         self.user_object = []
         # embedded user param
-        (self.login, s, self.hostname) = ssh_uri.rpartition('@')
-        if self.login == '':
+        (self.login, self.hostname, self.port) = ssh_client._ipv6_nri_split(ssh_uri)
+        if self.login == '' and default_login:
             self.login = default_login
+        if self.port:
+            self.port = int(self.port)
+        elif default_port:
+            self.port = default_port
         self.keyfile = default_keyfile
 
     """
     check connectivity and if we can run sudo command
     """
     def _check_priv (self):
-        clt = ssh_client.ssh_client (self.hostname,login=self.login, keyfile=self.keyfile)
+        clt = ssh_client.ssh_client (self.hostname, port=self.port, login=self.login, keyfile=self.keyfile)
         try:
             clt.open(timeout=10)
             result = clt.exec ('sudo id -u')
@@ -92,7 +98,8 @@ class Node:
     """
     def _host_id (self):
         try:
-            clt = ssh_client.ssh_client (self.hostname,login=self.login, keyfile=self.keyfile)
+            clt = ssh_client.ssh_client (
+                self.hostname, port=self.port, login=self.login, keyfile=self.keyfile)
             clt.open(timeout=10)
             # result = clt.exec ('hostid')
             result = clt.exec ('cat /etc/machine-id')
@@ -113,7 +120,8 @@ class Node:
     """
     def _host_ip_aliases (self):
         try:
-            clt = ssh_client.ssh_client (self.hostname,login=self.login, keyfile=self.keyfile)
+            clt = ssh_client.ssh_client (
+                self.hostname, port=self.port, login=self.login, keyfile=self.keyfile)
             clt.open(timeout=10)
             result = clt.exec (
                 "/sbin/ip -br -6 a show to 2000::/3 | sed 's|[[:space:]]\+| |g' | cut -d' ' -f 3- ")
@@ -140,7 +148,8 @@ class Node:
             logger.info ("{} -> {}".format (self.hostname, self.user_object))
         try:
             r = Resp()
-            clt = ssh_client.ssh_client (self.hostname,login=self.login, keyfile=self.keyfile)
+            clt = ssh_client.ssh_client (
+                self.hostname, port=self.port, login=self.login, keyfile=self.keyfile)
             clt.open(timeout=None)
             rscript = clt.mktemp_send_file (src, 0o700)
 

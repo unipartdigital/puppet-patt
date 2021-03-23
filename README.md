@@ -150,7 +150,7 @@ gc_cron_target: /etc/cron.hourly/postgres-gc.sh
 * IPv6 only.
 
 ### SSH
-* Any node definition accept the form 'username@IPV6'.
+* Any node definition accept the form 'username@[IPV6]:PORT', username@IPV6, IPV6.
 
 ### OS
 * Should work with:
