@@ -267,7 +267,16 @@ if __name__ == "__main__":
 
             init_ok = patt_walg.walg_ssh_archiving_init(nodes=walg_ssh_destination)
 
-            add_ok = patt_walg.walg_archiving_add(cluster_name=cfg.cluster_name, nodes=walg_ssh_destination)
+            for i in range(10):
+                try:
+                    add_ok = patt_walg.walg_archiving_add(
+                        cluster_name=cfg.cluster_name, nodes=walg_ssh_destination)
+                    assert add_ok
+                except:
+                    time.sleep(1)
+                    continue
+                else:
+                    break
             assert add_ok, "walg archiving add error"
 
             walg_keys = patt_walg.walg_ssh_gen(cluster_name=cfg.cluster_name, nodes=postgres_peers)
