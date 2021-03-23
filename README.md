@@ -37,12 +37,14 @@ make patt-puppet.tar.xz
  patt::postgres_release: '13'
  patt::patroni_release: '2.0.2'
  patt::walg_release: 'v0.2.19'
+ #patt::walg_ssh_destination: 'user1@2001:db8:3c4d:15:f321:3eff:fe21:d83a'
  patt::add_repo:
    - 'https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo'
  patt::haproxy_template_file: ''
  patt::patroni_template_file: 'config/postgres-ipv6.yaml'
  patt::ssh_keyfile: ''
  patt::ssh_login: ''
+ patt::vol_size_walg: '16G'
  patt::vol_size_etcd: '2G'
  patt::vol_size_pgsql: '8G'
  patt::gc_cron_df_pc: '80'
@@ -122,6 +124,7 @@ patroni_template_file: config/postgres-ipv6.yaml
 postgres_parameters:
 postgres_release: 13
 walg_release: v0.2.19
+#walg_ssh_destination: 'user1@2001:db8:3c4d:15:f321:3eff:fe21:d83a'
 add_repo:
 - https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo
 ssh_keyfile:
@@ -130,6 +133,7 @@ create_role:
 - {name: example_user, options: [LOGIN, PASSWORD ''md5fff64d4f930006fe343c924f6c32157e'']}
 create_database:
 - {name: example_db, owner: example_user}
+vol_size_walg: 16G
 vol_size_etcd: 2G
 vol_size_pgsql: 8G
 gc_cron_df_pc: 80
@@ -140,10 +144,16 @@ gc_cron_target: /etc/cron.hourly/postgres-gc.sh
 ## Notes
 
 ### Puppet Module
-* if ssh id and ssl root cert are not set then they will be generated in `/dev/shm/` on the puppet server.
+* If ssh id and ssl root cert are not set then they will be generated in `/dev/shm/` on the puppet server.
 
 ### Network
-* ipv6 only.
+* IPv6 only.
+
+### SSH
+* Any node definition accept the form 'username@IPV6'.
 
 ### OS
-* for now RHEL centric, tested on centos8
+* Should work with:
+** CentOS Linux 8
+** Debian GNU/Linux 10
+** Ubuntu 20.04 LTS
