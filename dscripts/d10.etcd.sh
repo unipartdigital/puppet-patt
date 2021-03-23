@@ -40,7 +40,7 @@ init() {
                 fi
                 ;;
             'debian' | 'ubuntu')
-                etcd --version || (cd /etc/systemd/system && ln -sf /dev/null etcd.service)
+                etcd --version > /dev/null 2>&1 || (cd /etc/systemd/system && ln -sf /dev/null etcd.service)
                 # don't let dpkg start the service during install
                 apt-get update -q
                 apt-get install -qq -y etcd
@@ -150,6 +150,8 @@ ETCD_DATA_DIR="${ETCD_DATA_DIR}"
 ETCD_LISTEN_PEER_URLS="https://[::]:2380"
 ETCD_LISTEN_CLIENT_URLS="http://[::]:2379"
 ETCD_NAME="${self_id}"
+ETCD_HEARTBEAT_INTERVAL="150"
+ETCD_ELECTION_TIMEOUT="1500"
 #[Clustering]
 ETCD_INITIAL_ADVERTISE_PEER_URLS="https://[${self_ip}]:2380"
 ETCD_ADVERTISE_CLIENT_URLS="http://[${self_ip}]:2379"
@@ -170,7 +172,8 @@ ETCD_PEER_AUTO_TLS="true"
 #
 #[Logging]
 #ETCD_DEBUG="false"
-#ETCD_LOG_PACKAGE_LEVELS=""
+ETCD_LOG_PACKAGE_LEVELS="etcdmain=Notice,etcdserver=Notice"
+# Debug Info Notice Warning Error
 #ETCD_LOG_OUTPUT="default"
 EOF
 }
