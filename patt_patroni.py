@@ -53,8 +53,9 @@ def patroni_init(postgres_version, patroni_version, nodes):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
 
-    result = patt.exec_script (nodes=nodes, src="./dscripts/d30.patroni.sh",
-                                args=['init'] + [postgres_version] + [patroni_version], sudo=True)
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d30.patroni.sh", payload='config/patroni.te',
+                               args=['init'] + [postgres_version] + [patroni_version] + ['patroni.te'],
+                               sudo=True)
     log_results (result)
 
 """
