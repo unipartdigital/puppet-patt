@@ -14,8 +14,11 @@
 import argparse
 import sys
 import os
+import io
+import hashlib
 from string import Template
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
+from stat import *
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -63,10 +66,24 @@ if __name__ == "__main__":
 
     if output:
         try:
-            with open(output, 'w') as f:
-                print(tmpl.substitute(d), file=f)
+            write_out=True
+            if os.path.isfile(output):
+                buf = io.StringIO()
+                print(tmpl.substitute(d), file=buf)
+                src_md5=hashlib.md5()
+                src_md5.update(buf.getvalue().encode('utf8'))
+                src_hexdigest=src_md5.hexdigest()
+                with open(output, 'r') as f:
+                    dst_hexdigest=hashlib.md5(f.read().encode('utf-8')).hexdigest()
+                if src_hexdigest == dst_hexdigest:
+                    write_out=False
+            if write_out:
+                with open(output, 'w') as f:
+                    print(tmpl.substitute(d), file=f)
             if output_mod:
-                os.chmod(output, output_mod)
+                mode = oct(S_IMODE(os.stat(output).st_mode))
+                if oct(output_mod) != mode:
+                    os.chmod(output, output_mod)
         except:
             raise
     else:
