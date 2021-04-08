@@ -17,7 +17,12 @@ class patt (
  Optional[Array[String]] $postgres_parameters = [],
  Optional[String]        $postgres_release,
  Optional[String]        $walg_release,
+
  Optional[String]        $walg_ssh_destination = '',
+ Optional[String]        $walg_ssh_destination_port = '22',
+ # use wallg via sftp if walg_ssh_destination is set.
+ # if walg_ssh_destination_port != 22, set a dedicated sftpd service, otherwise reuse the main sshd_config
+
  Optional[String]        $ssh_keyfile,
  Optional[String]        $ssh_login,
  Optional[Array[Struct[{name => String, options => Optional[Array[String]]}]]] $pg_create_role = [],

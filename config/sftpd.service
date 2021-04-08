@@ -1,0 +1,18 @@
+[Unit]
+Description=OpenSSH secure file transfer only daemon
+Documentation=man:sshd(8) man:sshd_config(5) man:sftp-server(8)
+After=network.target sshd-keygen.target
+Wants=sshd-keygen.target
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/crypto-policies/back-ends/opensshserver.config
+EnvironmentFile=-/etc/sysconfig/sshd
+ExecStart=/usr/sbin/sshd -f /etc/ssh/sftpd_config -D $$OPTIONS $$CRYPTO_POLICY
+ExecReload=/bin/kill -HUP $$MAINPID
+KillMode=process
+Restart=on-failure
+RestartSec=42s
+
+[Install]
+WantedBy=multi-user.target

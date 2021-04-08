@@ -39,6 +39,7 @@ class Config(object):
         self.nodes = None
         self.walg_release = None
         self.walg_ssh_destination = None
+        self.walg_ssh_destination_port = 22
         self.patroni_release = None
         self.patroni_template_file = None
         self.postgres_peers = None
@@ -268,17 +269,23 @@ if __name__ == "__main__":
 
             init_ok = patt_walg.walg_ssh_archiving_init(nodes=walg_ssh_destination)
 
-            for i in range(10):
+            add_ok=None
+            retry_max=10
+            retry_count=0
+            walg_ssh_destination_port=int(cfg.walg_ssh_destination_port)
+            for i in range(retry_max):
                 try:
-                    add_ok = patt_walg.walg_archiving_add(
-                        cluster_name=cfg.cluster_name, nodes=walg_ssh_destination)
+                    retry_count += 1
+                    add_ok = patt_walg.walg_archiving_add(cluster_name=cfg.cluster_name,
+                                                          nodes=walg_ssh_destination,
+                                                          port=walg_ssh_destination_port)
                     assert add_ok
-                except:
+                except AssertionError as e:
                     time.sleep(1)
                     continue
                 else:
                     break
-            assert add_ok, "walg archiving add error"
+            assert add_ok, "walg archiving add error after {} retry".format(retry_count)
 
             walg_keys = patt_walg.walg_ssh_gen(cluster_name=cfg.cluster_name, nodes=postgres_peers)
             assert all(x == True for x in [bool(n) for n in walg_keys]), "walg public key error"
@@ -364,7 +371,7 @@ if __name__ == "__main__":
                     try:
                         postgres_leader = patt_patroni.get_leader (postgres_peers)
                         assert isinstance(postgres_leader[0], patt.Node)
-                    except:
+                    except AssertionError as e:
                         time.sleep(11)
                         continue
                     else:

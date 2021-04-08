@@ -153,11 +153,55 @@ sshd_configure () {
     }
 }
 
+sftpd_configure () {
+    command=${1}
+    sftpd_port=${2}
+    sftpd_service="sftpd.service"
+    cache_dir="/var/cache/sftpd"
+    case "${command}" in
+        'enable')
+            test -d ${cache_dir} || mkdir ${cache_dir}
+            test -f ${cache_dir}/port || echo "${sftpd_port}" > ${cache_dir}/port
+            test -f ${cache_dir}/port && {
+                prev_port="$(cat ${cache_dir}/port)"
+                if test "${sftpd_port}" == "${prev_port}" ; then
+                    :
+                else
+                    test "$(semanage port -lC | awk '/ssh_port_t/{print $NF}')" == "${prev_port}" && {
+                        semanage port -d -t ssh_port_t -p tcp ${prev_port}
+                    }
+                    semanage port -a -t ssh_port_t -p tcp ${sftpd_port}
+                    echo "${sftpd_port}" > ${cache_dir}/port
+                    systemctl restart ${sftpd_service}
+                fi
+            }
+            systemctl -q is-enabled ${sftpd_service} || systemctl enable --now ${sftpd_service}
+            ;;
+        'disable')
+            systemctl disable --now ${sftpd_service}
+            test -f ${cache_dir}/port && {
+                prev_port="$(cat ${cache_dir}/port)"
+                test "$(semanage port -lC | awk '/ssh_port_t/{print $NF}')" == "${prev_port}" && {
+                    semanage port -d -t ssh_port_t -p tcp ${prev_port}
+                    rm -f ${cache_dir}/port
+                    rmdir ${cache_dir} || true
+                }
+            }
+            ;;
+    esac
+}
+
 ssh_archiving_add () {
     cluster_name=${1}
+    sftpd_port=${2}
     archive_base_dir=/var/lib/walg
     group="walg"
-    sshd_configure "${archive_base_dir}" "${group}"
+    if [ "${sftpd_port}" == 22 ]; then
+        sshd_configure "${archive_base_dir}" "${group}"
+        sftpd_configure "disable"
+    else
+        sftpd_configure "enable" "${sftpd_port}"
+    fi
     ssh_archive_user_add "${cluster_name}" "${archive_base_dir}" "walg"
     cat <<EOF | sudo su
 stat -c "%A %U.%G %n" "${archive_base_dir}/${cluster_name}"

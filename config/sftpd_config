@@ -1,0 +1,15 @@
+
+PidFile /var/run/sftpd.pid
+UseDNS no
+UsePAM yes
+
+AddressFamily inet6
+ListenAddress $listen_address
+DisableForwarding yes
+
+AuthenticationMethods publickey
+AuthorizedKeysFile    .ssh/authorized_keys
+AllowGroups "walg"
+Match Group "walg"
+      ForceCommand internal-sftp
+      ChrootDirectory "/var/lib/walg"

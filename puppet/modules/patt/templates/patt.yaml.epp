@@ -37,6 +37,7 @@ postgres_release: <%=$patt::postgres_release%>
 walg_release: <%=$patt::walg_release%>
 <% unless empty($patt::walg_ssh_destination) { -%>
 walg_ssh_destination: <%=$patt::walg_ssh_destination%>
+walg_ssh_destination_port: <%=$patt::walg_ssh_destination_port%>
 <% } -%>
 ssh_keyfile: <%=$patt::ssh_keyfile%>
 ssh_login: <%=$patt::ssh_login%>

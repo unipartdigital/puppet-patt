@@ -99,16 +99,48 @@ def walg_authorize_keys(cluster_name, nodes, keys=[]):
         log_results (result)
     return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
+"""
+preapare the archive server for chroot sftp
+"""
+def walg_archiving_standalone_sftpd(cluster_name, nodes, listen_addr="::0", listen_port=2222):
+    patt.host_id(nodes)
+    # patt.check_dup_id (nodes)
+
+    tmpl="./config/sftpd.service"
+    result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
+                               payload=tmpl,
+                               args=['-t'] + [os.path.basename (tmpl)] +
+                               ['-o'] + ["/etc/systemd/system/{}".format (os.path.basename (tmpl))] +
+                               ['--chmod'] + ['644'],
+                               sudo=True)
+    log_results (result)
+    assert not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+    tmpl="./config/sftpd_config"
+    result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
+                               payload=tmpl,
+                               args=['-t'] + [os.path.basename (tmpl)] +
+                               ['-o'] + ["/etc/ssh/{}".format (os.path.basename (tmpl))] +
+                               ['--dictionary_key_val'] +
+                               ["listen_address=[{}]:{}".format(listen_addr, listen_port)] +
+                               ['--chmod'] + ['644'],
+                               sudo=True)
+    log_results (result)
+    assert not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
 """
 preapare the archive server for chroot sftp
 """
-def walg_archiving_add(cluster_name, nodes):
+def walg_archiving_add(cluster_name, nodes, port):
     patt.host_id(nodes)
-    # patt.check_dup_id (nodes)
+    patt.check_dup_id (nodes)
+    if not port == 22:
+        assert port > 1024, "error: restricted to unreserved or default ssh port only"
+        walg_archiving_standalone_sftpd(cluster_name=cluster_name, nodes=nodes,
+                                        listen_addr="::0", listen_port=port)
 
     result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh",
-                               args=['ssh_archiving_add'] + [cluster_name], sudo=True)
+                               args=['ssh_archiving_add'] + [cluster_name] + [port], sudo=True)
     log_results (result)
     return all(x == True for x in [bool(n.out == "drwx--x--x {}.{} {}".format (
         cluster_name, "walg", "/var/lib/walg/" + cluster_name)) for n in result])
