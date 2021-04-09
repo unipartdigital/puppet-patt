@@ -298,7 +298,8 @@ if __name__ == "__main__":
 
             known_hosts_ok = patt_walg.walg_ssh_known_hosts(cluster_name=cfg.cluster_name,
                                                             nodes=postgres_peers,
-                                                            archiving_server=walg_ssh_destination)
+                                                            archiving_server=walg_ssh_destination,
+                                                            archiving_server_port=walg_ssh_destination_port)
             assert known_hosts_ok, "error validating known_hosts file"
 
         progress_bar (8, 14)

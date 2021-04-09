@@ -155,13 +155,19 @@ sshd_configure () {
 
 sftpd_configure () {
     command=${1}
-    sftpd_port=${2}
+    sftpd_port=${2:-22}
     sftpd_service="sftpd.service"
     cache_dir="/var/cache/sftpd"
     case "${command}" in
         'enable')
             test -d ${cache_dir} || mkdir ${cache_dir}
-            test -f ${cache_dir}/port || echo "${sftpd_port}" > ${cache_dir}/port
+            test -f ${cache_dir}/port || echo "2222" > ${cache_dir}/port
+            #
+            test "$(nft list set ip6 postgres_patroni sftp_archiving_port | awk '/elements/ {print $4}')" \
+                 == "${sftpd_port}" || {
+                nft flush set ip6 postgres_patroni sftp_archiving_port
+                nft add element ip6 postgres_patroni sftp_archiving_port { "${sftpd_port}" }
+            }
             test -f ${cache_dir}/port && {
                 prev_port="$(cat ${cache_dir}/port)"
                 if test "${sftpd_port}" == "${prev_port}" ; then
@@ -179,13 +185,14 @@ sftpd_configure () {
             ;;
         'disable')
             systemctl disable --now ${sftpd_service}
+            nft flush set ip6 postgres_patroni sftp_archiving_port
             test -f ${cache_dir}/port && {
                 prev_port="$(cat ${cache_dir}/port)"
                 test "$(semanage port -lC | awk '/ssh_port_t/{print $NF}')" == "${prev_port}" && {
                     semanage port -d -t ssh_port_t -p tcp ${prev_port}
-                    rm -f ${cache_dir}/port
-                    rmdir ${cache_dir} || true
                 }
+                rm -f ${cache_dir}/port
+                rmdir ${cache_dir} || true
             }
             ;;
     esac
@@ -232,19 +239,25 @@ ssh_authorize_keys () {
 ssh_known_hosts () {
     cluster_name="${1}"
     archive_host="${2}"
-    user_name="${3:-postgres}"
+    archive_port="${3:-22}"
+    user_name="${4:-postgres}"
     group="$(id -ng ${user_name})"
     home="$(getent passwd  ${user_name} | cut -d: -f6)"
     known_hosts="${home}/.ssh/known_hosts"
     if test -s ${known_hosts} ; then
-        ssh-keyscan -t rsa "${archive_host}" > "${known_hosts}.tmp"
-        new_md5=`grep "^${archive_host} " ${known_hosts}.tmp | sort -u | md5sum | cut -d' ' -f1`
-        old_md5=`grep "^${archive_host} " ${known_hosts} | sort -u | md5sum | cut -d' ' -f1`
+        ssh-keyscan -t rsa -p ${archive_port} "${archive_host}" > "${known_hosts}.tmp"
+        if [ "${archive_port}" -eq 22 ]; then
+            match="^${archive_host}[[:space:]]"
+        else
+            match="^\[${archive_host}\]:${archive_port}[[:space:]]"
+        fi
+        new_md5=`grep "${match}" ${known_hosts}.tmp | sort -u | md5sum | cut -d' ' -f1`
+        old_md5=`grep "${match}" ${known_hosts} | sort -u | md5sum | cut -d' ' -f1`
         if test "${new_md5}" == "${old_md5}" ; then
             :
             # no change
-        elif test "${new_md5}" == "d41d8cd98f00b204e9800998ecf8427e" ; then
-            cat ${new_md5} > "${known_hosts}"
+        elif test "${old_md5}" == "d41d8cd98f00b204e9800998ecf8427e" ; then
+            cat ${known_hosts}.tmp > "${known_hosts}"
             # new archiving server
         else
             echo "error: known_hosts keys ${archive_host}" >&2
@@ -252,7 +265,7 @@ ssh_known_hosts () {
         fi
         rm -f ${known_hosts}.tmp
     else
-        ssh-keyscan -t rsa "${archive_host}" > "${known_hosts}"
+        ssh-keyscan -t rsa -p ${archive_port} "${archive_host}" > "${known_hosts}"
         chown "${user_name}"."${group}" "${known_hosts}"
     fi
 }
