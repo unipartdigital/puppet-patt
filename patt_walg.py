@@ -70,14 +70,14 @@ def walg_ssh_gen(cluster_name, nodes, postgres_user='postgres'):
 """
 gen an initial known_hosts or check if valid
 """
-def walg_ssh_known_hosts(cluster_name, nodes, archiving_server):
+def walg_ssh_known_hosts(cluster_name, nodes, archiving_server, archiving_server_port=22):
     logger.info ("processing {}".format ([n.hostname for n in nodes]))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
 
     result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh",
                                args=['ssh_known_hosts'] + [cluster_name] +
-                               [archiving_server[0].hostname],
+                               [archiving_server[0].hostname] + [archiving_server_port],
                                sudo=True)
     log_results (result)
     return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
@@ -123,6 +123,16 @@ def walg_archiving_standalone_sftpd(cluster_name, nodes, listen_addr="::0", list
                                ['-o'] + ["/etc/ssh/{}".format (os.path.basename (tmpl))] +
                                ['--dictionary_key_val'] +
                                ["listen_address=[{}]:{}".format(listen_addr, listen_port)] +
+                               ['--dictionary-rhel'] +
+                               ["subsystem=/usr/libexec/openssh/sftp-server"] +
+                               ['--dictionary-fedora'] +
+                               ["subsystem=/usr/libexec/openssh/sftp-server"] +
+                               ['--dictionary-centos'] +
+                               ["subsystem=/usr/libexec/openssh/sftp-server"] +
+                               ['--dictionary-debian'] +
+                               ["subsystem=/usr/lib/openssh/sftp-server"] +
+                               ['--dictionary-ubuntu'] +
+                               ["subsystem=/usr/lib/openssh/sftp-server"] +
                                ['--chmod'] + ['644'],
                                sudo=True)
     log_results (result)

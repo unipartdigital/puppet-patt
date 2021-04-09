@@ -7,6 +7,8 @@ AddressFamily inet6
 ListenAddress $listen_address
 DisableForwarding yes
 
+Subsystem   sftp   $subsystem
+
 AuthenticationMethods publickey
 AuthorizedKeysFile    .ssh/authorized_keys
 AllowGroups "walg"
