@@ -20,6 +20,24 @@ from string import Template
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
 from stat import *
 
+def os_release ():
+    os_release_dict = {}
+    with open("/etc/os-release") as osr:
+        lines=osr.readlines()
+        for i in lines:
+            if '=' in i:
+                k,v=i.split('=',1)
+                if k.upper() in ['ID', 'VERSION_ID']:
+                    v=v.strip()
+                    if v.startswith('"') and v.endswith('"'):
+                        v=v[1:-1].strip()
+                    os_release_dict[k.upper()]=v
+                if 'VERSION_ID' in os_release_dict:
+                    os_release_dict['MAJOR_VERSION_ID'] = os_release_dict['VERSION_ID'].split('.')[0]
+    return os_release_dict
+
+os_id = ['rhel', 'fedora', 'centos', 'debian', 'ubuntu']
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
@@ -28,6 +46,10 @@ if __name__ == "__main__":
     parser.add_argument('--chmod', help='chmod the output file octal notation like 755', required=False)
     parser.add_argument('-d', '--dictionary_key_val', help='-d  key1=value1 -d key2=value2', required=False,
                          action='append', type=lambda kv: kv.split("=",1), dest='key_val')
+    for i in os_id:
+        parser.add_argument('--dictionary-{}'.format(i),
+                            help='--dictionary-{}  key1=value1 (to set on {})'.format(i, i), required=False,
+                            action='append', type=lambda kv: kv.split("=",1), dest='{}_key_val'.format(i))
 
     args = parser.parse_args()
 
@@ -43,10 +65,15 @@ if __name__ == "__main__":
     flock(lock_fd, LOCK_EX | LOCK_NB)
     ###
 
+    osr = os_release()
+
+    d = {}
     if args.key_val:
         d = dict(args.key_val)
-    else:
-        d = {}
+    for i in os_id:
+        if hasattr(args, "{}_key_val".format (i)) and getattr(args,"{}_key_val".format (i)):
+            if 'ID' in osr and osr['ID'] == i:
+                d.update (dict(getattr(args,"{}_key_val".format (i))))
 
     template_file = args.tmpl
     if args.output:
