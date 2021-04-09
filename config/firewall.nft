@@ -39,6 +39,10 @@ table ip6 postgres_patroni {
                 type ipv6_addr
         }
 
+        set sftp_archiving_port {
+                type inet_service
+        }
+
         chain incoming {
                 type filter hook input priority 0; policy drop;
 
@@ -72,5 +76,7 @@ table ip6 postgres_patroni {
                 tcp dport { 8008 } ip6 saddr @haproxy_peers accept
                 # haproxy
                 tcp dport { 15432 } ip6 saddr @pg_clients accept
+                # walg sftp archiving
+                tcp dport @sftp_archiving_port accept
         }
 }
