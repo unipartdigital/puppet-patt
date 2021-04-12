@@ -227,7 +227,7 @@ ssh_authorize_keys () {
     test -s "${srcdir}/${keys_file}" || { echo "error: ${srcdir}/${keys_file}" ; exit 1 ; }
     if [ -f "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys" ]; then
         test "`sort -u ${srcdir}/${keys_file} | md5sum  | cut -d' ' -f1`" == "`sort -u ${archive_base_dir}/${cluster_name}/.ssh/authorized_keys | md5sum | cut -d' ' -f1`" || {
-            cat "${srcdir}/${key_files}" > ${archive_base_dir}/${cluster_name}/.ssh/authorized_keys
+            cat "${srcdir}/${keys_file}" > ${archive_base_dir}/${cluster_name}/.ssh/authorized_keys
         }
     else
         cat "${srcdir}/${keys_file}" > "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
@@ -270,6 +270,34 @@ ssh_known_hosts () {
     fi
 }
 
+ssh_json () {
+    postgresql_version=${1:-"13"}
+    cluster_name=${2}
+    archive_host=${3}
+    archive_port=${4:-"22"}
+    user_name=${5:-"postgres"}
+    comd=${6:-"tmpl2file.py"}
+    tmpl=${7:-"walg-ssh.json"}
+    pg_home=$(getent passwd postgres | cut -d':' -f 6)
+    test "x${pg_home}" != "x" || { echo "pg_home not found"    >&2 ; exit 1 ; }
+    test -d ${pg_home} || { echo "${pg_home} not directory"    >&2 ; exit 1 ; }
+    test -f ${srcdir}/${comd} || { echo "script file not found"   >&2 ; exit 1 ; }
+    test -f ${srcdir}/${tmpl} || { echo "template file not found" >&2 ; exit 1 ; }
+    chown "${user_name}" "${srcdir}"
+    chown "${user_name}" "${srcdir}/${comd}"
+
+    cat <<EOF | su - ${user_name}
+python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${tmpl}` \
+--dictionary_key_val "walg_ssh_prefix=${archive_host}"        \
+--dictionary_key_val "prefix=${cluster_name}"                 \
+--dictionary_key_val "ssh_port=${archive_port}"               \
+--dictionary_key_val "ssh_username=${cluster_name}"           \
+--dictionary_key_val "postgres_version=${postgresql_version}" \
+--chmod 644
+EOF
+}
+
+
 touch ${lock_file} 2> /dev/null || true
 case "${1:-''}" in
     # must be run on each postgres peer
@@ -311,6 +339,12 @@ case "${1:-''}" in
           ssh_known_hosts "$@"
         } 8< ${lock_file}
         ;;
+    'ssh_json')
+        shift 1
+        { flock -w 10 8 || exit 1
+          ssh_json "$@"
+        } 8< ${lock_file}
+        ;;
     *)
         {
             cat <<EOF
@@ -320,6 +354,7 @@ usage:
  $0 ssh_archiving_add <cluster name>
  $0 ssh_archive_keygen
  $0 ssh_known_hosts <cluster name> <archive host IP>
+ $0 ssh_json <pg version> <cluster name> <ssh archive_host> <ssh archive_host port> <postgres user>
 EOF
             exit 1
         } >&2

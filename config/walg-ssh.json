@@ -1,0 +1,15 @@
+{
+  "WALG_SSH_PREFIX": "sftp://[$walg_ssh_prefix]/$prefix/$postgres_version",
+  "SSH_PORT": "$ssh_port",
+  "SSH_USERNAME": "$ssh_username",
+  "SSH_PRIVATE_KEY_PATH": "$home/.ssh/walg_rsa",
+  "PGDATA": "$home/$postgres_version/data/",
+  "PGHOST": "/var/run/postgresql",
+  "WALG_PREVENT_WAL_OVERWRITE": "true",
+  "WALG_DOWNLOAD_CONCURRENCY": "1",
+  "WALG_PREFETCH_DIR": "$home/$postgres_version/",
+  "WALG_UPLOAD_CONCURRENCY": "2",
+  "WALG_UPLOAD_DISK_CONCURRENCY": "2",
+  "WALG_DELTA_MAX_STEPS": "0",
+  "WALG_COMPRESSION_METHOD": "brotli"
+}

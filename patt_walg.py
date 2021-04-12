@@ -154,3 +154,22 @@ def walg_archiving_add(cluster_name, nodes, port):
     log_results (result)
     return all(x == True for x in [bool(n.out == "drwx--x--x {}.{} {}".format (
         cluster_name, "walg", "/var/lib/walg/" + cluster_name)) for n in result])
+
+"""
+gen a walg.json file from template (sftp mode)
+"""
+def walg_ssh_json(postgres_version, cluster_name, nodes, archiving_server, archiving_server_port=22):
+    logger.info ("processing {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    patt.check_dup_id (nodes)
+
+    comd="./dscripts/tmpl2file.py"
+    tmpl="./config/walg-ssh.json"
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh",
+                               payload=[comd, tmpl],
+                               args=['ssh_json'] + [postgres_version] + [cluster_name] +
+                               [archiving_server[0].hostname] + [archiving_server_port] +
+                               ['postgres'] + [os.path.basename (comd)] + [os.path.basename (tmpl)],
+                               sudo=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n, 'error')])
