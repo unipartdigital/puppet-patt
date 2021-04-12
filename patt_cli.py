@@ -302,6 +302,13 @@ if __name__ == "__main__":
                                                             archiving_server_port=walg_ssh_destination_port)
             assert known_hosts_ok, "error validating known_hosts file"
 
+            walg_ssh_json_ok = patt_walg.walg_ssh_json(postgres_version=cfg.postgres_release,
+                                                       cluster_name=cfg.cluster_name,
+                                                       nodes=postgres_peers,
+                                                       archiving_server=walg_ssh_destination,
+                                                       archiving_server_port=walg_ssh_destination_port)
+            assert walg_ssh_json_ok, "error setting up walg-ssh.json"
+
         progress_bar (8, 14)
 
         if cfg.floating_ip:
