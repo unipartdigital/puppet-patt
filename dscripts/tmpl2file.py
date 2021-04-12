@@ -9,6 +9,9 @@
  a key key1 will be applied if there is a matching tag $key1
  if your template contain '$' (ie a shell script) use $$ to escape the symbole.
  all tags in the template file should have a match in the dictionary.
+
+ predefined keys:
+ - $home is set on the current user home directory
 """
 
 import argparse
@@ -70,6 +73,7 @@ if __name__ == "__main__":
     d = {}
     if args.key_val:
         d = dict(args.key_val)
+        d['home']=os.path.expanduser("~")
     for i in os_id:
         if hasattr(args, "{}_key_val".format (i)) and getattr(args,"{}_key_val".format (i)):
             if 'ID' in osr and osr['ID'] == i:
