@@ -378,6 +378,7 @@ if __name__ == "__main__":
                 for i in range(30):
                     try:
                         postgres_leader = patt_patroni.get_leader (postgres_peers)
+                        if not postgres_leader: continue
                         assert isinstance(postgres_leader[0], patt.Node)
                     except AssertionError as e:
                         time.sleep(11)

@@ -25,14 +25,19 @@ esac
 
 init() {
     ip_takeover_version=${1:-"0.9"}
-    test "$(sudo /usr/local/sbin/ip_takeover --version)" == "${ip_takeover_version}" || {
+    test "$(sudo /usr/local/sbin/ip_takeover --version 2> /dev/null)" == "${ip_takeover_version}" || {
 
         rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
                 py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
-                test "${py_ver}" -ge 38 || exit 1
+                test "${py_ver}" -ge 38 || {
+                    dnf install -y python38
+                    alternatives --set python3 /usr/bin/python3.8
+                }
+                py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
+                test "${py_ver}" -ge 38 || { echo "python3 < 38" >&2 ; exit 1 ; }
                 # python36 use python3-pip 9.0.3 which start to be quiet old.
                 if [ "${os_major_version_id}" -lt 8 ]; then
                     rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
@@ -45,7 +50,7 @@ init() {
                     # ensure that config-manager is installed
                     dnf config-manager --help > /dev/null 2>&1 || dnf install 'dnf-command(config-manager)' -y
                     # EPEL packages assume that the 'PowerTools' repository is enabled
-                    dnf config-manager --set-enabled PowerTools
+                    dnf config-manager --set-enabled PowerTools || true
                     dnf install -y ${rpm_pkg}
                 fi
                 ;;
@@ -63,7 +68,7 @@ init() {
 
 build () {
     ip_takeover_version=${1:-"0.9"}
-    test "$(sudo /usr/local/sbin/ip_takeover --version)" == "${ip_takeover_version}" || {
+    test "$(sudo /usr/local/sbin/ip_takeover --version 2> /dev/null)" == "${ip_takeover_version}" || {
         make -f ip_takeover.make install || exit 1
         make -f ip_takeover.make distclean
     }

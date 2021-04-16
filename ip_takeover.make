@@ -1,5 +1,5 @@
 
-CYTHON3 := $(shell which cython3 2> /dev/null || which cython 2> /dev/null || which cython3.8 2> /dev/null || which cython3.6 2> /dev/null)
+CYTHON3 := $(shell which cython3 2> /dev/null || which cython-3.9 2> /dev/null || which cython-3.8 2> /dev/null || which cython-3.6 2> /dev/null)
 PYTHON := python3
 
 DESTDIR ?=

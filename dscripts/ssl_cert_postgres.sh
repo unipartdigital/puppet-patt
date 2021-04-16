@@ -24,6 +24,14 @@ case "${os_id}" in
 esac
 
 init() {
+    py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
+    test "${py_ver}" -ge 38 || {
+        dnf install -y python38
+        alternatives --set python3 /usr/bin/python3.8
+    }
+    py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
+    test "${py_ver}" -ge 38 || { echo "python3 < 38" >&2 ; exit 1 ; }
+    python3 -c "import yaml" || { dnf install -y python${py_ver}-pyyaml ; }
     python3 -c "import cryptography.hazmat,cryptography.x509" || {
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
