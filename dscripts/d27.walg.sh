@@ -17,6 +17,15 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+walg_version () {
+    prefix=/usr/local
+    test -x ${prefix}/bin/wal-g && {
+        for i in 1 2 3; do
+            { ${prefix}/bin/wal-g --version | awk '{print $3}' && break ; } || sleep 1
+        done
+    }
+}
+
 init () {
     walg_release=${1:-"v0.2.19"}
     prefix=/usr/local
@@ -30,20 +39,32 @@ init () {
         }
     }
 
-    download_url="https://github.com/wal-g/wal-g/releases/download/${walg_release}/wal-g.linux-amd64.tar.gz"
-    { test -x ${prefix}/bin/wal-g && test "`${prefix}/bin/wal-g --version | awk '{print $3}'`" == "${walg_release}" > /dev/null 2>&1 ;} || {
-        tmp=$(mktemp -d)
-        test -d ${tmp} &&  {
-            (cd $tmp && ${downloader} ${download_url} && tar xvf `basename ${download_url}`
+    { test -x ${prefix}/bin/wal-g && test "`${prefix}/bin/wal-g --version | awk '{print $3}'`" == "${walg_release}" > /dev/null 2>&1 ; } || {
+        if [ -f "$srcdir/wal-g.linux-amd64.tar.gz" ]; then
+            (cd $srcdir
+             tar xvf wal-g.linux-amd64.tar.gz
              chmod 755 wal-g
              test "`./wal-g --version | awk '{print $3}'`" == "${walg_release}" && {
                  sudo install -o root -g root -m 755 wal-g ${prefix}/bin/wal-g
              }
-            ) > /dev/null
-            rm -f ${tmp}/wal-g ${tmp}/`basename ${download_url}`
-            rmdir ${tmp}
-        }
+             rm -f wal-g
+            )
+        fi
     }
+
+    download_url="https://github.com/wal-g/wal-g/releases/download/${walg_release}/wal-g.linux-amd64.tar.gz"
+    { test -x ${prefix}/bin/wal-g && test "`${prefix}/bin/wal-g --version | awk '{print $3}'`" == "${walg_release}" > /dev/null 2>&1 ; } || {
+        tmp=$(mktemp -d)
+        (cd $tmp && ${downloader} ${download_url} && tar xvf `basename ${download_url}`
+         chmod 755 wal-g
+         test "`./wal-g --version | awk '{print $3}'`" == "${walg_release}" && {
+             sudo install -o root -g root -m 755 wal-g ${prefix}/bin/wal-g
+         }
+        ) > /dev/null
+        rm -f ${tmp}/wal-g ${tmp}/`basename ${download_url}`
+        rmdir ${tmp}
+    }
+
     for i in 1 2 3 4 5; do
         { ${prefix}/bin/wal-g --version && break ; } || sleep 1
     done
@@ -300,6 +321,13 @@ EOF
 
 touch ${lock_file} 2> /dev/null || true
 case "${1:-''}" in
+    # get wal-g version on postgres peer
+    'walg_version')
+        shift 1
+        { flock -w 10 8 || exit 1
+          walg_version "$@"
+        } 8< ${lock_file}
+        ;;
     # must be run on each postgres peer
     'init')
         shift 1

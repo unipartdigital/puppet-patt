@@ -35,6 +35,15 @@ def walg_init(walg_version, nodes):
     patt.check_dup_id (nodes)
 
     result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh",
+                               args=['walg_version'], sudo=False)
+    ok = all(x == walg_version for x in [n.out for n in result])
+    if ok: return True
+
+    payload=None
+    if os.path.isfile("./pkg/wal-g.linux-amd64.tar.gz"):
+        payload="./pkg/wal-g.linux-amd64.tar.gz"
+
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh", payload=payload,
                                 args=['init'] + [walg_version], sudo=False)
     log_results (result)
     return all(x == True for x in [bool(n.out) for n in result])
