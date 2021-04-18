@@ -292,7 +292,7 @@ ssh_known_hosts () {
 }
 
 ssh_json () {
-    postgresql_version=${1:-"13"}
+    postgresql_version=${1}
     cluster_name=${2}
     archive_host=${3}
     archive_port=${4:-"22"}
@@ -314,6 +314,38 @@ python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${tmpl}` 
 --dictionary_key_val "ssh_port=${archive_port}"               \
 --dictionary_key_val "ssh_username=${cluster_name}"           \
 --dictionary_key_val "postgres_version=${postgresql_version}" \
+--chmod 644
+EOF
+}
+
+s3_json () {
+    postgresql_version=${1}
+    cluster_name=${2}
+    endpoint=${3}
+    prefix=${4}
+    region=${5}
+    profile=${6}
+    force_path_style=${7}
+    s3_config_file=${8}
+    user_name=${9:-"postgres"}
+    comd=${10:-"tmpl2file.py"}
+    tmpl=${11:-"walg-s3.json"}
+    pg_home=$(getent passwd postgres | cut -d':' -f 6)
+    test "x${pg_home}" != "x" || { echo "pg_home not found"    >&2 ; exit 1 ; }
+    test -d ${pg_home} || { echo "${pg_home} not directory"    >&2 ; exit 1 ; }
+    test -f ${srcdir}/${comd} || { echo "script file not found"   >&2 ; exit 1 ; }
+    test -f ${srcdir}/${tmpl} || { echo "template file not found" >&2 ; exit 1 ; }
+    chown "${user_name}" "${srcdir}"
+    chown "${user_name}" "${srcdir}/${comd}"
+
+    cat <<EOF | su - ${user_name}
+python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${s3_config_file}` \
+--dictionary_key_val "aws_endpoint=${endpoint}"                                           \
+--dictionary_key_val "prefix=${prefix}"                                                   \
+--dictionary_key_val "aws_region=${region}"                                               \
+--dictionary_key_val "aws_profile=${profile}"                                             \
+--dictionary_key_val "aws_s3_force_path_style=${force_path_style}"                        \
+--dictionary_key_val "postgres_version=${postgresql_version}"                             \
 --chmod 644
 EOF
 }
@@ -371,6 +403,12 @@ case "${1:-''}" in
         shift 1
         { flock -w 10 8 || exit 1
           ssh_json "$@"
+        } 8< ${lock_file}
+        ;;
+    's3_json')
+        shift 1
+        { flock -w 10 8 || exit 1
+          s3_json "$@"
         } 8< ${lock_file}
         ;;
     *)

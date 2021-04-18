@@ -182,3 +182,49 @@ def walg_ssh_json(postgres_version, cluster_name, nodes, archiving_server, archi
                                sudo=True)
     log_results (result)
     return not any(x == True for x in [bool(n.error) for n in result if hasattr(n, 'error')])
+
+"""
+s3 json config
+"""
+def walg_s3_json(postgres_version, cluster_name, nodes, walg_store):
+    logger.info ("processing {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    patt.check_dup_id (nodes)
+    comd="./dscripts/tmpl2file.py"
+    tmpl="./config/walg-s3.json"
+    count=0
+    isok = []
+    for c in walg_store:
+        if 'method' in c and c['method'] == 's3':
+            endpoint=c['endpoint']
+            assert endpoint, "missing endpoint definition"
+            prefix=c['prefix']
+            assert prefix, "missing prefix definition"
+            if not (prefix.endswith(cluster_name) or prefix.endswith(cluster_name + '/')):
+                prefix=prefix + '/' + cluster_name
+            region=c['region']
+            assert region, "missing region definition"
+            if 'force_path_style' in c:
+                force_path_style=c['force_path_style']
+            else:
+                force_path_style='true'
+            if 'profile' in c:
+                profile=c['profile']
+            else:
+                profile=''
+
+            if count == 0:
+                s3_config_file=".walg.json"
+            else:
+                s3_config_file="walg-{}-s3.json".format(count)
+
+            result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh", payload=[comd, tmpl],
+                                       args=['s3_json'] + [postgres_version] + [cluster_name] +
+                                       [endpoint] + [prefix] + [region] + [profile] +
+                                       [force_path_style] + [s3_config_file] +
+                                       ['postgres'] + [os.path.basename (comd)] + [os.path.basename (tmpl)],
+                                       sudo=True)
+            isok.append(not any(x == True for x in [bool(n.error) for n in result if hasattr(n, 'error')]))
+            log_results (result)
+        count =+ 1
+    return all(x == True for x in isok)

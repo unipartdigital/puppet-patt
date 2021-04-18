@@ -1,0 +1,16 @@
+{
+  "AWS_PROFILE": "$aws_profile",
+  "WALG_S3_PREFIX": "s3://$prefix/$postgres_version",
+  "AWS_ENDPOINT": "$aws_endpoint",
+  "AWS_REGION": "$aws_region",
+  "AWS_S3_FORCE_PATH_STYLE": "$aws_s3_force_path_style",
+  "PGDATA": "$home/$postgres_version/data/",
+  "PGHOST": "/var/run/postgresql",
+  "WALG_PREVENT_WAL_OVERWRITE": "true",
+  "WALG_DOWNLOAD_CONCURRENCY": "1",
+  "WALG_PREFETCH_DIR": "$home/$postgres_version/",
+  "WALG_UPLOAD_CONCURRENCY": "2",
+  "WALG_UPLOAD_DISK_CONCURRENCY": "2",
+  "WALG_DELTA_MAX_STEPS": "0",
+  "WALG_COMPRESSION_METHOD": "brotli"
+}

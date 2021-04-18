@@ -38,6 +38,7 @@ class Config(object):
         self.lock_dir = None
         self.nodes = None
         self.walg_release = None
+        self.walg_store = None
         self.walg_ssh_destination = None
         self.walg_ssh_destination_port = 22
         self.patroni_release = None
@@ -265,6 +266,14 @@ if __name__ == "__main__":
             init_ok = patt_walg.walg_init(walg_version=cfg.walg_release, nodes=postgres_peers)
             assert init_ok, "wal-g installation error"
 
+        if cfg.walg_store and postgres_peers:
+            # s3 store definition
+            if any(x == True for x in [c['method'] == 's3' for c in cfg.walg_store]):
+                walg_s3_json_ok = patt_walg.walg_s3_json(postgres_version=cfg.postgres_release,
+                                                         cluster_name=cfg.cluster_name,
+                                                         nodes=postgres_peers,
+                                                         walg_store=cfg.walg_store)
+                assert walg_s3_json_ok, "s3 json config error"
         if walg_ssh_destination and postgres_peers:
 
             init_ok = patt_walg.walg_ssh_archiving_init(nodes=walg_ssh_destination)
