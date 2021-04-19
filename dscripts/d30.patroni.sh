@@ -24,7 +24,7 @@ case "${os_id}" in
 esac
 
 bashrc_setup () {
-cat <<EOF | su - postgres
+    cat <<EOF | su - postgres
 if [ -f /etc/bashrc -a ! -f ~/.bashrc ]; then
 cat <<eof >  ~/.bashrc
 # .bashrc
@@ -44,7 +44,7 @@ EOF
 }
 
 bashprofile_setup() {
-cat <<EOF | su - postgres
+    cat <<EOF | su - postgres
 if [ ! -f ~/.pgsql_profile ]; then
 cat <<\eof >  ~/.pgsql_profile
 # .pgsql_profile
@@ -77,7 +77,7 @@ systemd_patroni_tmpl () {
     postgres_bin=${2}
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
-cat <<EOF
+    cat <<EOF
 [Unit]
 Description=Patroni PostgreSQL ${postgres_version} database server
 Documentation=https://www.postgresql.org/docs/${postgres_version}/static/
@@ -107,28 +107,38 @@ EOF
 }
 
 systemd_setup () {
+    postgres_version=${1}
+    postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
+
+    default_postgres_path=$(su - postgres -c "echo $PATH")
+
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            systemd_service="postgresql-${postgres_version}.service"
+            postgres_bin="/usr/pgsql-${postgres_version}/bin/"
+            ;;
+        'debian' | 'ubuntu')
+            systemd_service="postgresql.service"
+            postgres_bin="/usr/lib/postgresql/${postgres_version}/bin/"
+            ;;
+        *)
+            echo "${os_id} not implemented" 1>&2
+            exit 1
+            ;;
+    esac
+
+    test -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service && {
+        test "`systemd_patroni_tmpl ${postgres_version} ${postgres_bin} | md5sum | cut -d' ' -f1`" == \
+             "`md5sum /etc/systemd/system/postgresql-${postgres_version}_patroni.service | cut -d' ' -f1`" || {
+            echo "OVERWRITE /etc/systemd/system/postgresql-${postgres_version}_patroni.service"
+            systemd_patroni_tmpl "${postgres_version}" "${postgres_bin}" > \
+                                 /etc/systemd/system/postgresql-${postgres_version}_patroni.service
+            systemctl daemon-reload
+        }
+    }
 
     test -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service || {
 
-        postgres_version=${1:-"13"}
-        postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
-
-        default_postgres_path=$(su - postgres -c "echo $PATH")
-
-        case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
-                systemd_service="postgresql-${postgres_version}.service"
-                postgres_bin="/usr/pgsql-${postgres_version}/bin/"
-                ;;
-            'debian' | 'ubuntu')
-                systemd_service="postgresql.service"
-                postgres_bin="/usr/lib/postgresql/${postgres_version}/bin/"
-                ;;
-            *)
-                echo "${os_id} not implemented" 1>&2
-                exit 1
-                ;;
-        esac
         if systemctl is-enabled --quiet ${systemd_service} ; then systemctl disable  ${systemd_service}; fi
         if systemctl is-active --quiet ${systemd_service} ; then systemctl stop  ${systemd_service}; fi
         systemd_patroni_tmpl "${postgres_version}" "${postgres_bin}" > \
@@ -181,9 +191,9 @@ selinux_policy () {
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
                 if dnf --version > /dev/null 2>&1 ; then
-                    dnf install -y checkpolicy policycoreutils
+                    dnf install -q -y checkpolicy policycoreutils
                 else
-                    yum install -y checkpolicy policycoreutils
+                    yum install -q -y checkpolicy policycoreutils
                 fi
                 ;;
             'debian' | 'ubuntu')
@@ -198,7 +208,7 @@ selinux_policy () {
 
     test -d "${selinux_packages}" || mkdir -p -m 755 "${selinux_packages}"
     { semodule -l | grep -q "^${module}$" && \
-          test md5sum "`${pe_file} | cut -d' ' -f1`" == \
+          test "`md5sum ${pe_file} | cut -d' ' -f1`" == \
                "`md5sum ${selinux_packages}/${module}.te  2> /dev/null | cut -d' ' -f1`"
     } || {
         # Build a MLS/MCS-enabled non-base policy module.
@@ -245,7 +255,7 @@ init() {
     touch /tmp/patroni_pip.stamp
     cat <<EOF | su - postgres
 PATH=$PATH:~/.local/bin
-pip3 install --user patroni[etcd]==${patroni_version}
+pip3 -q install --user patroni[etcd]==${patroni_version}
 EOF
 
     test -f "${srcdir}/${pe_file}" || { echo "error ${pe_file}" >&2 ; exit 1 ; }
@@ -282,7 +292,7 @@ enable() {
 }
 
 check() {
-cat <<EOF | su - postgres
+    cat <<EOF | su - postgres
 patronictl -c ~/patroni.yaml list
 EOF
 }
