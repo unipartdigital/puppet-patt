@@ -89,14 +89,14 @@ Type=simple
 User=postgres
 Group=postgres
 Environment=PGDATA=${postgres_home}/${postgres_version}/data/
-Environment=PATH=${postgres_bin}:/sbin:/bin:/usr/sbin:/usr/bin
+Environment=PATH=${postgres_bin}:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
 OOMScoreAdjust=-1000
 Environment=PG_OOM_ADJUST_FILE=/proc/self/oom_score_adj
 Environment=PG_OOM_ADJUST_VALUE=0
 ExecStart=${postgres_home}/.local/bin/patroni ${postgres_home}/patroni.yaml
 ExecReload=/bin/kill -HUP \$MAINPID
 KillMode=process
-KillSignal=SIGIN
+KillSignal=SIGINT
 TimeoutSec=0
 Restart=always
 RestartSec=1
