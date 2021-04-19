@@ -106,6 +106,12 @@ postgresql:
   # Server side kerberos spn
 #  krbsrvname: postgres
   parameters:
+    archive_mode: on
+    archive_command: /bin/true
+    # archive on require a restart,
+    # but archive_command: /bin/true make it a no operation and
+    # may be overwrite later with the real command
+
     # Fully qualified kerberos ticket file for the running user
     # same as KRB5CCNAME used by the GSS
 #   krb_server_keyfile: /var/spool/keytabs/postgres
