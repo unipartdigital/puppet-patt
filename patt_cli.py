@@ -7,6 +7,7 @@ import patt_postgres
 import patt_walg
 import patt_patroni
 import patt_haproxy
+
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import file_lock as fl
@@ -182,12 +183,12 @@ if __name__ == "__main__":
         else:
             haproxy_peers=nodes
 
-        walg_ssh_destination = None
-        if cfg.walg_ssh_destination:
-            walg_ssh_destination =  patt.to_nodes ([cfg.walg_ssh_destination], ssh_login, cfg.ssh_keyfile)
+        if cfg.walg_store:
+            sftpd_peers = [n for n in nodes if n.hostname in
+                           [patt.ipv6_nri_split(x['host'])[1] for x in
+                            [c for c in cfg.walg_store if c['method'] == 'sh'] if 'host' in x]]
 
         progress_bar (1, 14)
-
         # Peer check
         for p in [etcd_peers, postgres_peers, haproxy_peers]:
             for n in patt.check_priv(p):
@@ -197,6 +198,7 @@ if __name__ == "__main__":
         patt.check_dup_id ([p for p in etcd_peers])
         patt.check_dup_id ([p for p in postgres_peers])
         patt.check_dup_id ([p for p in haproxy_peers])
+        patt.check_dup_id ([p for p in sftpd_peers])
 
         logger.info ("cluster name   : {}".format(cfg.cluster_name))
         logger.info ("cluster nodes  : {}".format([(n.hostname, n.ip_aliases) for n in nodes]))
@@ -205,6 +207,8 @@ if __name__ == "__main__":
             [(n.hostname, n.id, n.ip_aliases) for n in postgres_peers]))
         if cfg.haproxy_template_file:
             logger.info ("haproxy_peers  : {}".format([(n.hostname, n.id) for n in haproxy_peers]))
+        if sftpd_peers:
+            logger.info ("sftpd_peers  : {}".format([(n.hostname, n.id) for n in sftpd_peers]))
 
         progress_bar (2, 14)
 
@@ -226,8 +230,8 @@ if __name__ == "__main__":
         if postgres_peers and cfg.vol_size_pgsql:
             patt_syst.disk_init (postgres_peers, user='postgres', vol_size=cfg.vol_size_pgsql)
 
-        if walg_ssh_destination and cfg.vol_size_walg:
-            patt_syst.disk_init (walg_ssh_destination, mnt="/var/lib/walg", vol_size=cfg.vol_size_walg)
+        if sftpd_peers and cfg.vol_size_walg:
+            patt_syst.disk_init (sftpd_peers, mnt="/var/lib/walg", vol_size=cfg.vol_size_walg)
 
         progress_bar (4, 14)
 
@@ -262,61 +266,63 @@ if __name__ == "__main__":
 
         progress_bar (8, 14)
 
-        if postgres_peers:
+        if cfg.walg_store and postgres_peers:
             init_ok = patt_walg.walg_init(walg_version=cfg.walg_release, nodes=postgres_peers)
             assert init_ok, "wal-g installation error"
 
-        if cfg.walg_store and postgres_peers:
             # s3 store definition
-            if any(x == True for x in [c['method'] == 's3' for c in cfg.walg_store]):
-                walg_s3_json_ok = patt_walg.walg_s3_json(postgres_version=cfg.postgres_release,
-                                                         cluster_name=cfg.cluster_name,
-                                                         nodes=postgres_peers,
-                                                         walg_store=cfg.walg_store)
-                assert walg_s3_json_ok, "s3 json config error"
-        if walg_ssh_destination and postgres_peers:
+            walg_s3_json_ok = patt_walg.walg_s3_json(postgres_version=cfg.postgres_release,
+                                                     cluster_name=cfg.cluster_name,
+                                                     nodes=postgres_peers,
+                                                     walg_store=cfg.walg_store)
+            assert walg_s3_json_ok, "s3 json config error"
 
-            init_ok = patt_walg.walg_ssh_archiving_init(nodes=walg_ssh_destination)
+            # sh store definition
+            walg_sh_json_ok = patt_walg.walg_sh_json(postgres_version=cfg.postgres_release,
+                                                     cluster_name=cfg.cluster_name,
+                                                     nodes=postgres_peers,
+                                                     walg_store=cfg.walg_store)
+            assert walg_sh_json_ok, "sh json config error"
 
-            add_ok=None
-            retry_max=10
-            retry_count=0
-            walg_ssh_destination_port=int(cfg.walg_ssh_destination_port)
-            for i in range(retry_max):
-                try:
-                    retry_count += 1
-                    add_ok = patt_walg.walg_archiving_add(cluster_name=cfg.cluster_name,
-                                                          nodes=walg_ssh_destination,
-                                                          port=walg_ssh_destination_port)
-                    assert add_ok
-                except AssertionError as e:
-                    time.sleep(1)
-                    continue
-                else:
-                    break
-            assert add_ok, "walg archiving add error after {} retry".format(retry_count)
+            init_ok = patt_walg.walg_ssh_archiving_init(nodes=sftpd_peers)
+            sftpd_archiving = patt_walg.sftpd_peers_service(
+                walg_store=cfg.walg_store, sftpd_peers=sftpd_peers)
+
+            for n in sftpd_archiving:
+                add_ok=None
+                retry_max=10
+                retry_count=0
+                for i in range(retry_max):
+                    try:
+                        retry_count += 1
+                        add_ok = patt_walg.walg_archiving_add(cluster_name=cfg.cluster_name,
+                                                              nodes=[n[0]],
+                                                              port=n[1].port)
+                        assert add_ok
+                    except AssertionError as e:
+                        time.sleep(1)
+                        continue
+                    else:
+                        break
+                assert add_ok, "walg archiving {} add error after {} retry".format(n.hostname, retry_count)
 
             walg_keys = patt_walg.walg_ssh_gen(cluster_name=cfg.cluster_name, nodes=postgres_peers)
             assert all(x == True for x in [bool(n) for n in walg_keys]), "walg public key error"
             assert len(walg_keys) == len (postgres_peers), "walg public key error"
 
-            walg_authorize_keys_ok = patt_walg.walg_authorize_keys(cfg.cluster_name,
-                                                                   nodes=walg_ssh_destination,
-                                                                   keys=walg_keys)
-            assert walg_authorize_keys_ok, "error walg_authorize_keys"
+            for n in sftpd_archiving:
+                walg_authorize_keys_ok = patt_walg.walg_authorize_keys(cfg.cluster_name,
+                                                                       nodes=[n[0]],
+                                                                       keys=walg_keys)
+                assert walg_authorize_keys_ok, "error walg_authorize_keys"
 
-            known_hosts_ok = patt_walg.walg_ssh_known_hosts(cluster_name=cfg.cluster_name,
-                                                            nodes=postgres_peers,
-                                                            archiving_server=walg_ssh_destination,
-                                                            archiving_server_port=walg_ssh_destination_port)
-            assert known_hosts_ok, "error validating known_hosts file"
-
-            walg_ssh_json_ok = patt_walg.walg_ssh_json(postgres_version=cfg.postgres_release,
-                                                       cluster_name=cfg.cluster_name,
-                                                       nodes=postgres_peers,
-                                                       archiving_server=walg_ssh_destination,
-                                                       archiving_server_port=walg_ssh_destination_port)
-            assert walg_ssh_json_ok, "error setting up walg-ssh.json"
+            for n in sftpd_archiving:
+                known_hosts_ok = patt_walg.walg_ssh_known_hosts(
+                    cluster_name=cfg.cluster_name,
+                    nodes=postgres_peers,
+                    archiving_server=n[1].hostname,
+                    archiving_server_port=n[1].port)
+                assert known_hosts_ok, "error validating known_hosts file"
 
         progress_bar (8, 14)
 

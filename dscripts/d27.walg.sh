@@ -75,13 +75,13 @@ ssh_archiving_init () {
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
                 if dnf --version > /dev/null 2>&1; then
-                    dnf install -y policycoreutils-python-utils
+                    dnf install -q -y policycoreutils-python-utils
                 elif yum --version > /dev/null 2>&1; then
-                    yum install -y policycoreutils-python-utils
+                    yum install -q -y policycoreutils-python-utils
                 fi
                 ;;
             'debian' | 'ubuntu')
-                apt-get install -y policycoreutils-python-utils
+                apt-get install -qq -y policycoreutils-python-utils
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2
@@ -278,7 +278,7 @@ ssh_known_hosts () {
             :
             # no change
         elif test "${old_md5}" == "d41d8cd98f00b204e9800998ecf8427e" ; then
-            cat ${known_hosts}.tmp > "${known_hosts}"
+            cat ${known_hosts}.tmp >> "${known_hosts}"
             # new archiving server
         else
             echo "error: known_hosts keys ${archive_host}" >&2
@@ -291,14 +291,18 @@ ssh_known_hosts () {
     fi
 }
 
-ssh_json () {
+sh_json () {
     postgresql_version=${1}
     cluster_name=${2}
     archive_host=${3}
-    archive_port=${4:-"22"}
-    user_name=${5:-"postgres"}
-    comd=${6:-"tmpl2file.py"}
-    tmpl=${7:-"walg-ssh.json"}
+    archive_port=${4}
+    prefix=${5}
+    sh_identity=${6}
+    sh_id_file=${7}
+    sh_config_file=${8}
+    user_name=${9:-"postgres"}
+    comd=${10:-"tmpl2file.py"}
+    tmpl=${11:-"walg-ssh.json"}
     pg_home=$(getent passwd postgres | cut -d':' -f 6)
     test "x${pg_home}" != "x" || { echo "pg_home not found"    >&2 ; exit 1 ; }
     test -d ${pg_home} || { echo "${pg_home} not directory"    >&2 ; exit 1 ; }
@@ -307,12 +311,17 @@ ssh_json () {
     chown "${user_name}" "${srcdir}"
     chown "${user_name}" "${srcdir}/${comd}"
 
+    # clean up opposite entry with the same priority
+    prev_base="$(echo `basename ${sh_config_file}` | cut -d'-' -f 1-2)"
+    test -f ${pg_home}/${prev_base}-s3.json && rm -f ${pg_home}/${prev_base}-s3.json
+
     cat <<EOF | su - ${user_name}
-python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${tmpl}` \
+python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${sh_config_file}` \
 --dictionary_key_val "walg_ssh_prefix=${archive_host}"        \
---dictionary_key_val "prefix=${cluster_name}"                 \
+--dictionary_key_val "prefix=${prefix}"                       \
 --dictionary_key_val "ssh_port=${archive_port}"               \
---dictionary_key_val "ssh_username=${cluster_name}"           \
+--dictionary_key_val "ssh_username=${sh_identity}"            \
+--dictionary_key_val "ssh_id_file=${sh_id_file}"              \
 --dictionary_key_val "postgres_version=${postgresql_version}" \
 --chmod 644
 EOF
@@ -337,6 +346,10 @@ s3_json () {
     test -f ${srcdir}/${tmpl} || { echo "template file not found" >&2 ; exit 1 ; }
     chown "${user_name}" "${srcdir}"
     chown "${user_name}" "${srcdir}/${comd}"
+
+    # clean up opposite entry with the same priority
+    prev_base="$(echo `basename ${sh_config_file}` | cut -d'-' -f 1-2)"
+    test -f ${pg_home}/${prev_base}-sh.json && rm -f ${pg_home}/${prev_base}-sh.json
 
     cat <<EOF | su - ${user_name}
 python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${s3_config_file}` \
@@ -399,10 +412,10 @@ case "${1:-''}" in
           ssh_known_hosts "$@"
         } 8< ${lock_file}
         ;;
-    'ssh_json')
+    'sh_json')
         shift 1
         { flock -w 10 8 || exit 1
-          ssh_json "$@"
+          sh_json "$@"
         } 8< ${lock_file}
         ;;
     's3_json')
@@ -420,7 +433,8 @@ usage:
  $0 ssh_archiving_add <cluster name>
  $0 ssh_archive_keygen
  $0 ssh_known_hosts <cluster name> <archive host IP>
- $0 ssh_json <pg version> <cluster name> <ssh archive_host> <ssh archive_host port> <postgres user>
+ $0 sh_json
+ $0 s3_json
 EOF
             exit 1
         } >&2

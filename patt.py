@@ -288,3 +288,10 @@ def exec_script (nodes, src, sudo=True, payload=None, args=[], log_call=True, ti
         except Exception as e:
             logger.error (str(e))
             raise
+
+"""
+split IPv6 NRI like login@[AA::BB::CC:...]:PORT
+and return (login, hostname, port)
+"""
+def ipv6_nri_split (nri):
+    return ssh_client._ipv6_nri_split (nri)

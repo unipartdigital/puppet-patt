@@ -86,7 +86,7 @@ def walg_ssh_known_hosts(cluster_name, nodes, archiving_server, archiving_server
 
     result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh",
                                args=['ssh_known_hosts'] + [cluster_name] +
-                               [archiving_server[0].hostname] + [archiving_server_port],
+                               [archiving_server] + [archiving_server_port],
                                sudo=True)
     log_results (result)
     return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
@@ -165,25 +165,6 @@ def walg_archiving_add(cluster_name, nodes, port):
         cluster_name, "walg", "/var/lib/walg/" + cluster_name)) for n in result])
 
 """
-gen a walg.json file from template (sftp mode)
-"""
-def walg_ssh_json(postgres_version, cluster_name, nodes, archiving_server, archiving_server_port=22):
-    logger.info ("processing {}".format ([n.hostname for n in nodes]))
-    patt.host_id(nodes)
-    patt.check_dup_id (nodes)
-
-    comd="./dscripts/tmpl2file.py"
-    tmpl="./config/walg-ssh.json"
-    result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh",
-                               payload=[comd, tmpl],
-                               args=['ssh_json'] + [postgres_version] + [cluster_name] +
-                               [archiving_server[0].hostname] + [archiving_server_port] +
-                               ['postgres'] + [os.path.basename (comd)] + [os.path.basename (tmpl)],
-                               sudo=True)
-    log_results (result)
-    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n, 'error')])
-
-"""
 s3 json config
 """
 def walg_s3_json(postgres_version, cluster_name, nodes, walg_store):
@@ -194,7 +175,9 @@ def walg_s3_json(postgres_version, cluster_name, nodes, walg_store):
     tmpl="./config/walg-s3.json"
     count=0
     isok = []
+    logger.debug ("walg_s3_json: {}".format(walg_store))
     for c in walg_store:
+        logger.debug ("walg_s3_json: {}".format(c))
         if 'method' in c and c['method'] == 's3':
             endpoint=c['endpoint']
             assert endpoint, "missing endpoint definition"
@@ -226,5 +209,69 @@ def walg_s3_json(postgres_version, cluster_name, nodes, walg_store):
                                        sudo=True)
             isok.append(not any(x == True for x in [bool(n.error) for n in result if hasattr(n, 'error')]))
             log_results (result)
-        count =+ 1
+        count += 1
     return all(x == True for x in isok)
+
+"""
+sh json config
+"""
+def walg_sh_json(postgres_version, cluster_name, nodes, walg_store):
+    logger.info ("processing {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    patt.check_dup_id (nodes)
+    comd="./dscripts/tmpl2file.py"
+    tmpl="./config/walg-sh.json"
+    count=0
+    isok = []
+    logger.debug ("walg_sh_json: {}".format(walg_store))
+    for c in walg_store:
+        logger.debug ("walg_sh_json: {}".format(c))
+        if 'method' in c and c['method'] == 'sh':
+            host=c['host']
+            assert host, "missing ssh host definition"
+            if 'prefix' in c:
+                prefix=c['prefix']
+            if not prefix:
+                prefix=cluster_name
+            if not (prefix.endswith(cluster_name) or prefix.endswith(cluster_name + '/')):
+                prefix=prefix + '/' + cluster_name
+            (login, hostname, port) = patt.ipv6_nri_split (host)
+            if not login:
+                login = cluster_name
+            if not port:
+                port = 22
+            identity_file=None
+            if 'identity_file' in c:
+                identity_file=c['identity_file']
+            if not identity_file:
+                identity_file="walg_rsa"
+
+            if count == 0:
+                sh_config_file=".walg.json"
+            else:
+                sh_config_file="walg-{}-sh.json".format(count)
+
+            result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh", payload=[comd, tmpl],
+                                       args=['sh_json'] + [postgres_version] + [cluster_name] +
+                                       [hostname] + [port] + [prefix] + [login] +
+                                       [identity_file] + [sh_config_file] +
+                                       ['postgres'] + [os.path.basename (comd)] + [os.path.basename (tmpl)],
+                                       sudo=True)
+            isok.append(not any(x == True for x in [bool(n.error) for n in result if hasattr(n, 'error')]))
+            log_results (result)
+        count += 1
+    return all(x == True for x in isok)
+
+"""
+return a list of tuple of node [(sftpd_peers, sftpd_service)]
+"""
+def sftpd_peers_service(walg_store, sftpd_peers):
+    result=[]
+    sh_store = (patt.to_nodes(
+        [c['host'] for c in walg_store if c['method'] == 'sh' and 'host' in c],
+        None, None))
+    for p in sftpd_peers:
+        for s in sh_store:
+            if p.hostname == s.hostname:
+                result.append((p, s))
+    return result

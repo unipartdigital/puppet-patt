@@ -2,7 +2,7 @@
   "WALG_SSH_PREFIX": "sftp://[$walg_ssh_prefix]/$prefix/$postgres_version",
   "SSH_PORT": "$ssh_port",
   "SSH_USERNAME": "$ssh_username",
-  "SSH_PRIVATE_KEY_PATH": "$home/.ssh/walg_rsa",
+  "SSH_PRIVATE_KEY_PATH": "$home/.ssh/$ssh_id_file",
   "PGDATA": "$home/$postgres_version/data/",
   "PGHOST": "/var/run/postgresql",
   "WALG_PREVENT_WAL_OVERWRITE": "true",
