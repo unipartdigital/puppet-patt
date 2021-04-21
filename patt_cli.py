@@ -178,10 +178,9 @@ if __name__ == "__main__":
         else:
             postgres_peers=nodes
 
+        haproxy_peers = []
         if cfg.haproxy_peers:
             haproxy_peers = patt.to_nodes (cfg.haproxy_peers, ssh_login, cfg.ssh_keyfile)
-        else:
-            haproxy_peers=nodes
 
         if cfg.walg_store:
             sftpd_peers = [n for n in nodes if n.hostname in
@@ -190,7 +189,8 @@ if __name__ == "__main__":
 
         progress_bar (1, 14)
         # Peer check
-        for p in [etcd_peers, postgres_peers, haproxy_peers]:
+        for p in [etcd_peers, postgres_peers, haproxy_peers, sftpd_peers]:
+            if not p: continue
             for n in patt.check_priv(p):
                 assert (n.sudo == True)
                 patt.host_id(p)
@@ -222,6 +222,16 @@ if __name__ == "__main__":
                                       etcd_peers=etcd_peers,
                                       haproxy_peers=haproxy_peers,
                                       postgres_clients=["::0/0"])
+
+        sftpd_only_id = list(set([n.id for n in sftpd_peers]) - set([n.id for n in etcd_peers] +
+                                                                    [n.id for n in postgres_peers] +
+                                                                    [n.id for n in haproxy_peers]))
+        sftpd_only=[n for n in sftpd_peers if n.id in sftpd_only_id]
+        if sftpd_only:
+            patt_syst.nftables_configure (cluster_name=cfg.cluster_name,
+                                          template_src='./config/firewall.nft',
+                                          config_file_target='/etc/nftables/postgres_patroni.nft',
+                                          sftpd_peers=sftpd_only)
         progress_bar (3, 14)
 
         if etcd_peers and cfg.vol_size_etcd:

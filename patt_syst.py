@@ -63,22 +63,37 @@ def nftables_enable(nodes):
     log_results (result)
 
 def nftables_configure(cluster_name, template_src, config_file_target,
-                       patroni_peers=[], etcd_peers=[], haproxy_peers=[], postgres_clients=[]):
-    nodes = list ({n.hostname: n for n in patroni_peers + etcd_peers + haproxy_peers}.values())
+                       patroni_peers=[], etcd_peers=[], haproxy_peers=[], sftpd_peers=[],
+                       postgres_clients=[]):
+    nodes = list ({n.hostname: n for n in
+                   patroni_peers + etcd_peers + haproxy_peers + sftpd_peers}.values())
     logger.debug ("nftables_configure {}".format ([n.hostname for n in nodes]))
 
     nft_init (nodes)
 
+    x_patroni=[x.hostname for x in patroni_peers]
+    if not x_patroni:
+        x_patroni=['::1']
+    x_etcd=[x.hostname for x in etcd_peers]
+    if not x_etcd:
+        x_etcd=['::1']
+    x_haproxy=[x.hostname for x in haproxy_peers]
+    if not x_haproxy:
+        x_haproxy=['::1']
+    x_postgres_clients=[c for c in postgres_clients]
+    if not x_postgres_clients:
+        x_postgres_clients=['::1/128']
+
     result = patt.exec_script (nodes=nodes, src="./dscripts/nft_config.py", payload=template_src,
                                 args=['-t'] + [os.path.basename (template_src)] +
                                 ['-d'] + [config_file_target] +
-                                ['-p'] + [p.hostname for p in patroni_peers] +
+                                ['-p'] + x_patroni +
                                 list ([" ".join(p.ip_aliases) for p in patroni_peers]) +
-                                ['-e'] + [e.hostname for e in etcd_peers] +
+                                ['-e'] + x_etcd +
                                 list ([" ".join(e.ip_aliases) for e in etcd_peers]) +
-                                ['-x'] + [x.hostname for x in haproxy_peers] +
+                                ['-x'] + x_haproxy +
                                 list ([" ".join(x.ip_aliases) for x in haproxy_peers]) +
-                                ['-c'] + [c for c in postgres_clients],
+                                ['-c'] + x_postgres_clients,
                                 sudo=True)
     log_results (result)
     nftables_enable (nodes)
