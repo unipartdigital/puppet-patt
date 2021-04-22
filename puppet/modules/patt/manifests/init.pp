@@ -109,9 +109,20 @@ if is_array($patt::haproxy_peers) {
 <% } -%>
 |- END
 
+if "${patt::is_etcd}" == "true" {
+ $is_peer_installer = "true"
+}elsif "${patt::is_postgres}" == "true" {
+ $is_peer_installer = "true"
+}else{
+ $is_peer_installer = "false"
+}
+
 # notify {"$iplist":
 #  withpath => true,
 #  }
+notify {"is installer peer: ${is_peer_installer}":
+ withpath => true,
+ }
 notify {"is etcd peer: ${is_etcd}":
  withpath => true,
  }
@@ -124,11 +135,13 @@ notify {"is haproxy peer: ${is_haproxy}":
 
   contain patt::require
   contain patt::packages
-  contain patt::swap
-  contain patt::install
-  contain patt::mount
-  contain patt::config
-  contain patt::service
+  if "${patt::is_peer_installer}" == "true" {
+   contain patt::swap
+   contain patt::install
+   contain patt::mount
+   contain patt::config
+   contain patt::service
+  }
 }
 
 # example with 3 monitor and 2 data nodes
@@ -160,8 +173,8 @@ notify {"is haproxy peer: ${is_haproxy}":
 #     force_path_style: 'true'
 #    }
 #  - {method: 'sh', host: '<login default cluster_name>@[ipv6_sftp_archive_host]:<port default to 22>',
-#        prefix: '',               # default cluster_name (in auto configure mode)
-#        identity_file: '',        # default walg_rsa (in auto configure mode)
+#     prefix: '',               # default cluster_name (in auto configure mode)
+#     identity_file: '',        # default walg_rsa (in auto configure mode)
 #    }
 # patt::add_repo:
 #   - 'https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo'

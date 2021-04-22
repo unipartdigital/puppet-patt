@@ -20,17 +20,22 @@ class patt::packages_dnf
   'psmisc'
  ]
 
-
- $pyth = [
-  "python3-scapy",
-  "python${pv}-Cython",
+ $base_peer = [
   "python${pv}-PyYAML",
-  "python${pv}-devel",
-  "python${pv}-pip",
-  "python${pv}-psycopg2",
   "python${pv}-cryptography",
-  "python${pv}-requests"
+  "python${pv}-pip",
+ ]
+
+ $base_pg_node = [
+  'gcc',
+  'make',
+  "python${pv}-Cython",
+  "python${pv}-devel",
+  "python${pv}-psycopg2",
+  "python${pv}-requests",
+  "python3-scapy",
   ]
+
 
  $base.each|$b| {
   unless defined(Package["$b"]) {
@@ -41,36 +46,33 @@ class patt::packages_dnf
 
  package {"python${pv}" : ensure => 'installed'}
 
- exec {"python${pv}_alternative":
-    command => "/sbin/alternatives --set python3 /usr/bin/python${python_version}",
-    user => 'root',
-    require => [Package["python${pv}"]],
-    unless => ['/usr/bin/python3 --version | /usr/bin/grep -q ${python_version}'],
- }
+ if "${patt::is_peer_installer}" == "true" {
+  notify {"peer installer":}
 
- exec {"pip${pv}_alternative":
-    command => "/sbin/alternatives --set pip3 /usr/bin/pip${python_version}",
-    user => 'root',
-    require => [Package["python${pv}"], Exec["python${pv}_alternative"]],
-    unless => ['/usr/bin/pip3 --version | /usr/bin/grep -q "python ${python_version}"'],
- }
-
- $pyth.each|$p| {
-  unless defined(Package["$p"]) {
-   package { $p: ensure => 'installed' , require => Exec["python${pv}_alternative"]}
+  exec {"python${pv}_alternative":
+     command => "/sbin/alternatives --set python3 /usr/bin/python${python_version}",
+     user => 'root',
+     require => [Package["python${pv}"]],
+     unless => ['/usr/bin/python3 --version | /usr/bin/grep -q ${python_version}'],
   }
- }
 
- unless defined(Package["pgdg-redhat-repo"]) {
-  package{'pgdg-redhat-repo':
-   provider => 'dnf',
-   ensure => 'present',
-   source => 'https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm',
+  exec {"pip${pv}_alternative":
+     command => "/sbin/alternatives --set pip3 /usr/bin/pip${python_version}",
+     user => 'root',
+     require => [Package["python${pv}"], Exec["python${pv}_alternative"]],
+     unless => ['/usr/bin/pip3 --version | /usr/bin/grep -q "python ${python_version}"'],
+  }
+
+  $base_peer.each|$p| {
+   unless defined(Package["$p"]) {
+    package { $p: ensure => 'installed' , require => Exec["python${pv}_alternative"]}
+   }
   }
  }
 
  if "${patt::is_etcd}" == "true" {
   notify {"etcd peer install":}
+
   Exec{'/etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo':
    command  => '/usr/bin/curl -f https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo > /etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo',
    unless => '/bin/test -f /etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo'
@@ -84,17 +86,19 @@ class patt::packages_dnf
  if "${patt::is_postgres}" == "true" {
   notify {"postgres peer install":}
 
-  $base_pg_node = [
-   'gcc',
-   'make',
-  ]
-
   $base_pg_node.each|$b| {
    unless defined(Package["$b"]) {
     package { $b: ensure => 'installed' }
    }
   }
 
+  unless defined(Package["pgdg-redhat-repo"]) {
+   package{'pgdg-redhat-repo':
+    provider => 'dnf',
+    ensure => 'present',
+    source => 'https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm',
+   }
+  }
 
   exec { 'dnf_module_disable_postgresql':
      command => "/usr/bin/dnf -qy module disable postgresql",
@@ -121,6 +125,7 @@ class patt::packages_dnf
 
  if "${patt::is_haproxy}" == "true" {
     notify {"haproxy peer install":}
+
     Package{'haproxy': ensure => installed}
  }
 
