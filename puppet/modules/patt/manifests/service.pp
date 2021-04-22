@@ -2,6 +2,7 @@ class patt::service (
 )
 {
 
+ require patt::aws_cred
  require patt::sslcerts
  require patt::packages
  require patt::install

@@ -41,7 +41,6 @@ class patt::packages_apt()
   unless  => '/bin/test "$(haproxy -v)"',
  # don't let dpkg start the service at first install
  }
- Package{'haproxy': ensure => installed, require => [Exec['systemd_mask_haproxy']]}
 
  if "${patt::is_etcd}" == "true" {
   notify {"etcd peer install":}
@@ -96,6 +95,11 @@ END
    alias  => "postgresql_${patt::postgres_release}_server",
   }
 
+ }
+
+ if "${patt::is_haproxy}" == "true" {
+   notify {"haproxy peer install":}
+   Package{'haproxy': ensure => installed, require => [Exec['systemd_mask_haproxy']]}
  }
 
 }

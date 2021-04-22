@@ -34,11 +34,36 @@ postgres_parameters:
 - <%= $pp %>
 <% } -%>
 postgres_release: <%=$patt::postgres_release%>
+
 walg_release: <%=$patt::walg_release%>
-<% unless empty($patt::walg_ssh_destination) { -%>
-walg_ssh_destination: <%=$patt::walg_ssh_destination%>
-walg_ssh_destination_port: <%=$patt::walg_ssh_destination_port%>
-<% } -%>
+<%- unless empty($patt::walg_store) { -%>
+walg_store:
+<%- [$patt::walg_store].flatten.each |$store| { -%>
+ <%- if $store["method"] == "s3" { -%>
+- {
+   method: 's3',
+   profile: '<%=$store["profile"]%>',
+   endpoint: '<%=$store["endpoint"]%>',
+   prefix: '<%=$store["prefix"]%>',
+   region: '<%=$store["region"]%>',
+   <%- if $store["force_path_style"] == "false" { -%>
+   force_path_style: 'false'
+<%- }else{ -%>
+   force_path_style: 'true'
+<%- } -%>
+  }
+<%- } -%>
+ <%- if $store["method"] == "sh" { -%>
+- {
+   method: 'sh',
+   host: '<%=$store["host"]%>',
+   prefix: '<%=$store["prefix"]%>',
+   identity_file: '<%=$store["identity_file"]%>'
+  }
+<%- } -%>
+<%- } -%>
+<%- } -%>
+
 ssh_keyfile: <%=$patt::ssh_keyfile%>
 ssh_login: <%=$patt::ssh_login%>
 create_role:

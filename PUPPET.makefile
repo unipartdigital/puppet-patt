@@ -21,6 +21,8 @@ puppet-module:
 	install -m 644 config/pg_create_database.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/postgres-gc.sh.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/patroni.te $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/walg-s3.json $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/walg-sh.json $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d02.util.sh $(DESTDIR)/patt/files/patt/dscripts/
@@ -81,6 +83,7 @@ puppet-module:
 	install -m 644 puppet/modules/patt/manifests/packages_apt.pp $(DESTDIR)/patt/manifests/
 	install -m 644 puppet/modules/patt/manifests/packages_dnf.pp $(DESTDIR)/patt/manifests/
 	install -m 644 puppet/modules/patt/manifests/swap.pp $(DESTDIR)/patt/manifests/
+	install -m 644 puppet/modules/patt/manifests/aws_cred.pp $(DESTDIR)/patt/manifests/
 
 	install -m 644 puppet/modules/patt/templates/patt.yaml.epp $(DESTDIR)/patt/templates/
 

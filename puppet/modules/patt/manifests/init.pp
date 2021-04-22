@@ -17,12 +17,19 @@ class patt (
  Optional[Array[String]] $postgres_parameters = [],
  Optional[String]        $postgres_release,
  Optional[String]        $walg_release,
-
- Optional[String]        $walg_ssh_destination = '',
- Optional[String]        $walg_ssh_destination_port = '22',
- # use wallg via sftp if walg_ssh_destination is set.
- # if walg_ssh_destination_port != 22, set a dedicated sftpd service, otherwise reuse the main sshd_config
-
+ Optional[Array[Struct[{method => Enum[s3, sh],
+                        # s3
+                        profile => Optional[String],
+                        endpoint => Optional[String],
+                        region => Optional[String],
+                        force_path_style => Optional[String],
+                        # s3/sh
+                        prefix => Optional[String],
+                        # sh
+                        host => Optional[String],
+                        identity_file => Optional[String],
+                        }]]] $walg_store = [],
+ Optional[String]        $aws_credentials,
  Optional[String]        $ssh_keyfile,
  Optional[String]        $ssh_login,
  Optional[Array[Struct[{name => String, options => Optional[Array[String]]}]]] $pg_create_role = [],
@@ -86,6 +93,22 @@ if is_array($patt::postgres_peers) {
 <% } -%>
 |- END
 
+if is_array($patt::haproxy_peers) {
+ $haproxy_p = $patt::haproxy_peers
+}else{
+ $haproxy_p = []
+}
+
+ $is_haproxy = inline_epp(@(END))
+<% [$haproxy_p].flatten.each |$peer| { -%>
+<% $iplist.flatten.each |$i| { -%>
+<% if $i == $peer { -%>
+<%=$i == $peer-%>
+<% } -%>
+<% } -%>
+<% } -%>
+|- END
+
 # notify {"$iplist":
 #  withpath => true,
 #  }
@@ -93,6 +116,9 @@ notify {"is etcd peer: ${is_etcd}":
  withpath => true,
  }
 notify {"is postgres peer: ${is_postgres}":
+ withpath => true,
+ }
+notify {"is haproxy peer: ${is_haproxy}":
  withpath => true,
  }
 
@@ -127,6 +153,16 @@ notify {"is postgres peer: ${is_postgres}":
 # patt::postgres_release: '13'
 # patt::patroni_release: '2.0.1'
 # patt::walg_release: 'v0.2.19'
+# patt::walg_store:
+#  - {method: 's3', profile: 'default' # should match ~/.aws/credential [profile]',
+#     endpoint: 'http://aws.end.point:8080', prefix: 'bucket_name',
+#     region: 'eu-west-2',
+#     force_path_style: 'true'
+#    }
+#  - {method: 'sh', host: '<login default cluster_name>@[ipv6_sftp_archive_host]:<port default to 22>',
+#        prefix: '',               # default cluster_name (in auto configure mode)
+#        identity_file: '',        # default walg_rsa (in auto configure mode)
+#    }
 # patt::add_repo:
 #   - 'https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo'
 # patt::haproxy_template_file: ''
