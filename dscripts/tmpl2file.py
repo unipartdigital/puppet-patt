@@ -47,6 +47,8 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--tmpl', help='template file', required=True)
     parser.add_argument('-o', '--output', help='template file', required=False)
     parser.add_argument('--chmod', help='chmod the output file octal notation like 755', required=False)
+    parser.add_argument('--skip', help='optional skip comment', required=False)
+
     parser.add_argument('-d', '--dictionary_key_val', help='-d  key1=value1 -d key2=value2', required=False,
                          action='append', type=lambda kv: kv.split("=",1), dest='key_val')
     for i in os_id:
@@ -89,9 +91,14 @@ if __name__ == "__main__":
     if args.chmod:
         output_mod=int("0o{}".format(args.chmod), 8)
 
+    skip_comments = lambda c, fd: (
+        line for line in fd if not (line.strip().startswith(c) and not line.startswith('#!')))
     with open(template_file, 'r') as t:
         try:
-            tmpl=Template (t.read())
+            if isinstance(args.skip, str):
+                tmpl=Template ("".join(skip_comments(args.skip, t)))
+            else:
+                tmpl=Template (t.read())
         except:
             raise
 
