@@ -189,6 +189,11 @@ notify {"is haproxy peer: ${is_haproxy}":
 # patt::gc_cron_df_pc: '80'
 # patt::gc_cron_target: '/etc/cron.hourly/postgres-gc.sh'
 #
+# patt::postgres_parameters:
+#  # activate wal-g archiving
+#  - archive_mode = on
+#  - archive_command = /usr/local/bin/wal-g wal-push %p
+#
 # patt::pg_create_role:
 #   - {name: example_user, options: ["LOGIN", "PASSWORD ''md5fff64d4f930006fe343c924f6c32157e''"]}
 # patt::pg_create_database:
