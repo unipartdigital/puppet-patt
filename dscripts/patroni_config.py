@@ -214,7 +214,7 @@ class PatroniConfig(object):
       print(yaml.dump(self.tmpl, default_flow_style=False), file=buf)
       new_md5.update(buf.getvalue().encode('utf8'))
 
-      if old_md5.hexdigest() == new_md5.hexdigest():
+      if old_md5.hexdigest() != new_md5.hexdigest():
          try:
             with open(self.file_name, 'w') as f:
                print(yaml.dump(self.tmpl, default_flow_style=False), file=f)
