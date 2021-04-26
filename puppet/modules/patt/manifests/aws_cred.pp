@@ -7,28 +7,28 @@ class patt::aws_cred(
 )
 {
 
-if "${is_postgres}" == "true" {
- notify {"postgres peer aws credentials":}
- }
+ if "${patt::is_postgres}" == "true" {
+  notify {"postgres peer aws credentials":}
 
-unless $patt::aws_credentials {
-  file{"${postgres_home}/.postgresql/":
-     ensure  => directory,
-     owner   => postgres,
-     group   => postgres,
-     mode    => '0700',
-     require => [Package["postgresql${patt::postgres_release}-server"]],
-  }
-  file{"${postgres_home}/.postgresql/.aws":
-     ensure  => directory,
-     owner   => postgres,
-     group   => postgres,
-     mode    => '0700',
-     require => [Package["postgresql${patt::postgres_release}-server"],
-                    File["${postgres_home}/.postgresql/"]],
-  }
 
- file {"${postgres_home}/.postgresql/.aws/credentials":
+  if $patt::aws_credentials {
+   file{"${postgres_home}/":
+      ensure  => directory,
+      owner   => postgres,
+      group   => postgres,
+      mode    => '0700',
+      require => [Package["postgresql${patt::postgres_release}-server"]],
+   }
+   file{"${postgres_home}/.aws/":
+      ensure  => directory,
+      owner   => postgres,
+      group   => postgres,
+      mode    => '0700',
+      require => [Package["postgresql${patt::postgres_release}-server"],
+                     File["${postgres_home}/"]],
+   }
+
+   file {"${postgres_home}/.aws/credentials":
     ensure  => file,
     content => inline_epp(@(END), k => $patt::aws_credentials),
 <%=$k%>
@@ -37,7 +37,8 @@ END
     group   => postgres,
     mode    => '0640',
     require => [Package["postgresql${patt::postgres_release}-server"],
-                   File["${postgres_home}/.postgresql/.aws"]],
+                   File["${postgres_home}/.aws/"]],
+   }
   }
  }
 }
