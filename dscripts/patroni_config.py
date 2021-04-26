@@ -11,7 +11,8 @@ import ast
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
 import hashlib
 import io
-import pwd
+import pwd, grp
+from stat import *
 
 """
 query /etc/os-release and build an os vendor dictionary with 'ID', 'VERSION_ID', 'MAJOR_VERSION_ID'
@@ -88,8 +89,9 @@ def _get_patroni_config (patroni_config="{}/patroni.yaml".format (pwd.getpwnam('
 
 class PatroniConfig(object):
 
-    def __init__(self, cluster_name, template_file, nodes, etcd_peers,
-                 sys_user_pass, dst_file, postgres_version, name_space="/service"):
+   def __init__(self, cluster_name, template_file, nodes, etcd_peers,
+                sys_user_pass, dst_file, postgres_version, name_space="/service",
+                owner='postgres', group='postgres'):
         self.tmpl=None
         self.file_name=dst_file
         self.user_pass_dict = {} if sys_user_pass == None else dict(ast.literal_eval(sys_user_pass))
@@ -97,6 +99,9 @@ class PatroniConfig(object):
         self.pass_rew = ''
         self.pass_sup = ''
         self.prev=_get_patroni_config(self.file_name)
+        self.owner = owner
+        self.group = group
+        self.output_mod = int("0o{}".format(640), 8)
 
         osr = os_release()
 
@@ -192,41 +197,50 @@ class PatroniConfig(object):
                 else:
                     self.tmpl['postgresql']['parameters']['ssl_ca_file'] = pg_home + '/.postgresql/root.crt'
 
-    """
+   """
     write only on change
-    """
-    def write (self):
-        old_md5 = hashlib.md5()
-        new_md5 = hashlib.md5()
-        if os.path.isfile(self.file_name):
-            with open(self.file_name, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    old_md5.update(chunk)
+   """
+   def write (self):
+      uid = pwd.getpwnam(self.owner).pw_uid
+      gid = grp.getgrnam(self.group).gr_gid
+      old_md5 = hashlib.md5()
+      new_md5 = hashlib.md5()
+      if os.path.isfile(self.file_name):
+         with open(self.file_name, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+               old_md5.update(chunk)
 
-        buf = io.StringIO()
-        print(yaml.dump(self.tmpl, default_flow_style=False), file=buf)
-        new_md5.update(buf.getvalue().encode('utf8'))
+      buf = io.StringIO()
+      print(yaml.dump(self.tmpl, default_flow_style=False), file=buf)
+      new_md5.update(buf.getvalue().encode('utf8'))
 
-        if old_md5.hexdigest() == new_md5.hexdigest():
-            return
-        try:
+      if old_md5.hexdigest() == new_md5.hexdigest():
+         try:
             with open(self.file_name, 'w') as f:
-                print(yaml.dump(self.tmpl, default_flow_style=False), file=f)
-        except:
+               print(yaml.dump(self.tmpl, default_flow_style=False), file=f)
+         except:
             raise
-        try:
+         try:
             with open('/tmp/patroni.reload', 'w') as f:
-                pass
-        except:
+               pass
+         except:
             raise
-        finally:
+         finally:
             f.close()
+      if os.stat(self.file_name).st_uid == uid and os.stat(self.file_name).st_gid == gid:
+         pass
+      else:
+         os.chown(self.file_name, uid, gid)
+      if self.output_mod:
+         mode = oct(S_IMODE(os.stat(self.file_name).st_mode))
+         if oct(self.output_mod) != mode:
+            os.chmod(self.file_name, self.output_mod)
 
-    def dump (self):
-        try:
-            print(yaml.dump(self.tmpl, default_flow_style=False))
-        except:
-            raise
+   def dump (self):
+      try:
+         print(yaml.dump(self.tmpl, default_flow_style=False))
+      except:
+         raise
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

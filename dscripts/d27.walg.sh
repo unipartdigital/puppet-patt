@@ -333,7 +333,7 @@ python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${sh_conf
 --dictionary_key_val "ssh_username=${sh_identity}"            \
 --dictionary_key_val "ssh_id_file=${sh_id_file}"              \
 --dictionary_key_val "postgres_version=${postgresql_version}" \
---chmod 644
+--chmod 640
 EOF
 }
 
@@ -369,7 +369,7 @@ python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${s3_conf
 --dictionary_key_val "aws_profile=${profile}"                                             \
 --dictionary_key_val "aws_s3_force_path_style=${force_path_style}"                        \
 --dictionary_key_val "postgres_version=${postgresql_version}"                             \
---chmod 644
+--chmod 640
 EOF
 }
 

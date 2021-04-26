@@ -101,18 +101,18 @@ def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_
             tmpl_file.flush()
 
         result = patt.exec_script (nodes=nodes, src="./dscripts/patroni_config.py", payload=tmpl_file.name,
-                                    args=['-c'] + [cluster_name] + ['-t'] +
-                                    [os.path.basename (tmpl_file.name)] +
-                                    ['-d'] + [config_file_target] +
-                                    ['-u'] + [user] +
-                                    ['-v'] + [postgres_version] +
-                                    ['-p'] + [n.hostname for n in nodes] +
-                                    ['-e'] + [n.hostname for n in etcd_peers] +
-                                    ['-s'] + ['"' + str(sysuser_pass) + '"'],
-                                    sudo=True,
-                                    log_call=False)
+                                   args=['-c'] + [cluster_name] + ['-t'] +
+                                   [os.path.basename (tmpl_file.name)] +
+                                   ['-d'] + [config_file_target] +
+                                   ['-u'] + [user] +
+                                   ['-v'] + [postgres_version] +
+                                   ['-p'] + [n.hostname for n in nodes] +
+                                   ['-e'] + [n.hostname for n in etcd_peers] +
+                                   ['-s'] + ['"' + str(sysuser_pass) + '"'],
+                                   sudo=True,
+                                   log_call=False)
         log_results (result)
-
+        return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
 def floating_ip_init(nodes, ip_takeover_version="0.9"):
     patt.host_id(nodes)

@@ -367,18 +367,21 @@ if __name__ == "__main__":
                     s = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(64))
                     pass_dict[u] = s
 
-            patt_patroni.patroni_configure(postgres_version=cfg.postgres_release,
-                                           cluster_name=cfg.cluster_name,
-                                           template_src=cfg.patroni_template_file,
-                                           nodes=postgres_peers,
-                                           etcd_peers=etcd_peers,
-                                           config_file_target='patroni.yaml',
-                                           user='postgres',
-                                           sysuser_pass=pass_dict,
-                                           postgres_parameters=cfg.postgres_parameters,
-                                           pg_hba_list=patt_patroni.cert_pg_hba_list(
-                                               db_user=cfg.create_database, key_db='name', key_user='owner')
-                                           )
+            patroni_configure_ok=patt_patroni.patroni_configure(
+                postgres_version=cfg.postgres_release,
+                cluster_name=cfg.cluster_name,
+                template_src=cfg.patroni_template_file,
+                nodes=postgres_peers,
+                etcd_peers=etcd_peers,
+                config_file_target='patroni.yaml',
+                user='postgres',
+                sysuser_pass=pass_dict,
+                postgres_parameters=cfg.postgres_parameters,
+                pg_hba_list=patt_patroni.cert_pg_hba_list(
+                    db_user=cfg.create_database, key_db='name', key_user='owner')
+            )
+            assert patroni_configure_ok, "patroni configure error"
+
             progress_bar (11, 14)
 
             patroni_report = patt_patroni.patroni_enable(cfg.postgres_release, cfg.patroni_release,
