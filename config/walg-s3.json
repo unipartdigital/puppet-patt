@@ -8,7 +8,7 @@
   "PGHOST": "/var/run/postgresql",
   "WALG_PREVENT_WAL_OVERWRITE": "true",
   "WALG_DOWNLOAD_CONCURRENCY": "1",
-  "WALG_PREFETCH_DIR": "$home/$postgres_version/",
+  // "WALG_PREFETCH_DIR": "$home/$postgres_version/",
   "WALG_UPLOAD_CONCURRENCY": "2",
   "WALG_UPLOAD_DISK_CONCURRENCY": "2",
   "WALG_DELTA_MAX_STEPS": "0",

@@ -327,6 +327,7 @@ sh_json () {
 
     cat <<EOF | su - ${user_name}
 python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${sh_config_file}` \
+--skip '//'                                                                               \
 --dictionary_key_val "walg_ssh_prefix=${archive_host}"        \
 --dictionary_key_val "prefix=${prefix}"                       \
 --dictionary_key_val "ssh_port=${archive_port}"               \
@@ -363,6 +364,7 @@ s3_json () {
 
     cat <<EOF | su - ${user_name}
 python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${s3_config_file}` \
+--skip '//'                                                                               \
 --dictionary_key_val "aws_endpoint=${endpoint}"                                           \
 --dictionary_key_val "prefix=${prefix}"                                                   \
 --dictionary_key_val "aws_region=${region}"                                               \
