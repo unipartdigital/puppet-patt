@@ -28,7 +28,6 @@ class patt::packages_apt()
   'cython3',
   'gcc',
   'libpython3-all-dev',
-  'make',
   'python3-dev',
   'python3-pip',
   'python3-psycopg2',
@@ -37,6 +36,7 @@ class patt::packages_apt()
 
  if "${patt::is_peer_installer}" == "true" {
   notify {"peer installer":}
+  package { "make" : ensure => 'installed' }
 
   $base_peer.each|$b| {
    unless defined(Package["$b"]) {

@@ -17,6 +17,8 @@ class patt (
  Optional[Array[String]] $postgres_parameters = [],
  Optional[String]        $postgres_release,
  Optional[String]        $walg_release,
+ Optional[String]        $walg_url = '',
+ Optional[String]        $walg_sha256 = '',
  Optional[Array[Struct[{method => Enum[s3, sh],
                         # s3
                         profile => Optional[String],

@@ -28,7 +28,6 @@ class patt::packages_dnf
 
  $base_pg_node = [
   'gcc',
-  'make',
   "python${pv}-Cython",
   "python${pv}-devel",
   "python${pv}-psycopg2",
@@ -48,6 +47,7 @@ class patt::packages_dnf
 
  if "${patt::is_peer_installer}" == "true" {
   notify {"peer installer":}
+  package { "make" : ensure => 'installed' }
 
   exec {"python${pv}_alternative":
      command => "/sbin/alternatives --set python3 /usr/bin/python${python_version}",

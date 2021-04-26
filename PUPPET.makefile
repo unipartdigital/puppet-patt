@@ -23,6 +23,8 @@ puppet-module:
 	install -m 644 config/patroni.te $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/walg-s3.json $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/walg-sh.json $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/sftpd_config $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/sftpd.service $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d02.util.sh $(DESTDIR)/patt/files/patt/dscripts/

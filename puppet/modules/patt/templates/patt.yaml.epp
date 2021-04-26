@@ -36,6 +36,8 @@ postgres_parameters:
 postgres_release: <%=$patt::postgres_release%>
 
 walg_release: <%=$patt::walg_release%>
+walg_url: <%=$patt::walg_url%>
+walg_sha256: <%=$patt::walg_sha256%>
 <%- unless empty($patt::walg_store) { -%>
 walg_store:
 <%- [$patt::walg_store].flatten.each |$store| { -%>

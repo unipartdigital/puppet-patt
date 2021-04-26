@@ -28,7 +28,11 @@ walg_version () {
 
 init () {
     walg_release=${1:-"v0.2.19"}
+    walg_url=${2:-""}
+    walg_sha256=${3:-""}
     prefix=/usr/local
+    walg_pkg="`basename ${walg_url}`"
+    download_url="https://github.com/wal-g/wal-g/releases/download/${walg_release}/wal-g.linux-amd64.tar.gz"
 
     downloader=""
     wget --version > /dev/null 2>&1 && {
@@ -39,31 +43,37 @@ init () {
         }
     }
 
-    { test -x ${prefix}/bin/wal-g && test "`${prefix}/bin/wal-g --version | awk '{print $3}'`" == "${walg_release}" > /dev/null 2>&1 ; } || {
-        if [ -f "$srcdir/wal-g.linux-amd64.tar.gz" ]; then
-            (cd $srcdir
-             tar xvf wal-g.linux-amd64.tar.gz
-             chmod 755 wal-g
-             test "`./wal-g --version | awk '{print $3}'`" == "${walg_release}" && {
-                 sudo install -o root -g root -m 755 wal-g ${prefix}/bin/wal-g
-             }
-             rm -f wal-g
-            )
+    {
+        test -x ${prefix}/bin/wal-g && \
+            test "`${prefix}/bin/wal-g --version | awk '{print $3}'`" == "${walg_release}" > /dev/null 2>&1
+    } || {
+        cd $srcdir
+        if [ -f "$srcdir/${walg_pkg}" ]; then
+        # walg provided by sftp
+            :
+        else
+            if [ "x${walg_url}" != "x" ]; then
+                download_url=${walg_url}
+            fi
+            ${downloader} ${download_url}
         fi
-    }
-
-    download_url="https://github.com/wal-g/wal-g/releases/download/${walg_release}/wal-g.linux-amd64.tar.gz"
-    { test -x ${prefix}/bin/wal-g && test "`${prefix}/bin/wal-g --version | awk '{print $3}'`" == "${walg_release}" > /dev/null 2>&1 ; } || {
-        tmp=$(mktemp -d)
-        (cd $tmp && ${downloader} ${download_url} && tar xvf `basename ${download_url}`
-         chmod 755 wal-g
-         test "`./wal-g --version | awk '{print $3}'`" == "${walg_release}" && {
-             sudo install -o root -g root -m 755 wal-g ${prefix}/bin/wal-g
-         }
-        ) > /dev/null
-        rm -f ${tmp}/wal-g ${tmp}/`basename ${download_url}`
-        rmdir ${tmp}
-    }
+        if [ "x${walg_sha256}" != "x" ]; then
+            echo "sha256sum ${walg_sha256}: `sha256sum ${walg_pkg} | cut -d' ' -f1`"
+            if test "`sha256sum ${walg_pkg} | cut -d' ' -f1`" == "${walg_sha256}" ; then
+                tar xvf ${walg_pkg}
+            else
+                echo "error: sha256sum ${walg_pkg}" >&2
+                exit 1
+            fi
+        else
+            tar xvf ${walg_pkg}
+        fi
+        chmod 755 wal-g
+        test "`./wal-g --version | awk '{print $3}'`" == "${walg_release}" && {
+            sudo install -o root -g root -m 755 wal-g ${prefix}/bin/wal-g
+        }
+        rm -f ${srcdir}/wal-g ${srcdir}/${walg_pkg}
+    } > /dev/null
 
     for i in 1 2 3 4 5; do
         { ${prefix}/bin/wal-g --version && break ; } || sleep 1

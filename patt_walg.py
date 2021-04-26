@@ -29,7 +29,7 @@ def log_results(result, hide_stdout=False):
 """
 install postgres packages and dep on each nodes
 """
-def walg_init(walg_version, nodes):
+def walg_init(walg_version, walg_url, walg_sha256, nodes):
     logger.info ("processing {}".format ([n.hostname for n in nodes]))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
@@ -39,12 +39,15 @@ def walg_init(walg_version, nodes):
     ok = all(x == walg_version for x in [n.out for n in result])
     if ok: return True
 
+    if walg_url is None: walg_url = ""
+    if walg_sha256 is None: walg_sha256 = ""
     payload=None
-    if os.path.isfile("./pkg/wal-g.linux-amd64.tar.gz"):
-        payload="./pkg/wal-g.linux-amd64.tar.gz"
+    walg_local_pkg="./pkg/{}".format(os.path.basename (walg_url))
+    if os.path.isfile(walg_local_pkg):
+        payload=walg_local_pkg
 
     result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh", payload=payload,
-                                args=['init'] + [walg_version], sudo=False)
+                                args=['init'] + [walg_version] + [walg_url] + [walg_sha256], sudo=False)
     log_results (result)
     return all(x == True for x in [bool(n.out) for n in result])
 

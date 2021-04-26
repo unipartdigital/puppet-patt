@@ -39,9 +39,9 @@ class Config(object):
         self.lock_dir = None
         self.nodes = None
         self.walg_release = None
+        self.walg_url = None
+        self.walg_sha256 = None
         self.walg_store = None
-        self.walg_ssh_destination = None
-        self.walg_ssh_destination_port = 22
         self.patroni_release = None
         self.patroni_template_file = None
         self.postgres_peers = None
@@ -277,7 +277,10 @@ if __name__ == "__main__":
         progress_bar (8, 14)
 
         if cfg.walg_store and postgres_peers:
-            init_ok = patt_walg.walg_init(walg_version=cfg.walg_release, nodes=postgres_peers)
+            init_ok = patt_walg.walg_init(walg_version=cfg.walg_release,
+                                          walg_url=cfg.walg_url,
+                                          walg_sha256=cfg.walg_sha256,
+                                          nodes=postgres_peers)
             assert init_ok, "wal-g installation error"
 
             # s3 store definition
