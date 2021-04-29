@@ -16,7 +16,7 @@ class patt::aws_cred(
       ensure  => directory,
       owner   => postgres,
       group   => postgres,
-      mode    => '0700',
+      mode    => '0711',
       require => [Package["postgresql${patt::postgres_release}-server"]],
    }
    file{"${postgres_home}/.aws/":
