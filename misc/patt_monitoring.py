@@ -3,7 +3,8 @@
 import yaml
 import requests
 import ipaddress
-import pprint
+import time
+from pprint import pformat
 
 def _ipv6_nri_split (nri):
     (login, s, hostname) = nri.rpartition('@')
@@ -18,6 +19,9 @@ def _ipv6_nri_split (nri):
         port=hostname[t1 + 1:]
         hostname=hostname[:t1+1]
     return (login, hostname, port)
+
+def pp_string(s):
+    return pformat(s)
 
 class Gconfig:
     pass
@@ -92,7 +96,7 @@ class ClusterService:
                 result.append("https://" + tmp)
         return result
 
-class Etcd(ClusterService):
+class EtcdService(ClusterService):
 
     def __init__(self, init_urls=[]):
         super().__init__()
@@ -128,23 +132,24 @@ class Etcd(ClusterService):
         clth = self.cluster_health()
         return all([c[1] for c in clth]) and len (clth) > 0
 
-class Patroni(ClusterService):
+class PatroniService(ClusterService):
 
     class Info(object):
         pass
 
     def _to_attr (self, e = {}):
-        info = Patroni.Info()
+        info = PatroniService.Info()
         if e is None: return
         for k in e.keys():
             setattr(info, k, e[k])
         return info
 
-    def __init__(self, init_urls=[]):
+    def __init__(self, init_urls=[], max_time_elapsed_since_replayed=10):
         super().__init__()
         if self.postgres_peers:
             self.init_urls = self.postgres_peers
         self.init_urls = self.http_normalize_url (8008, self.init_urls)
+        self.max_time_elapsed_since_replayed = max_time_elapsed_since_replayed
 
     def _get_api_url(self):
         return self.get ('cluster', 'members', 'api_url', self.init_urls)
@@ -154,44 +159,93 @@ class Patroni(ClusterService):
 
     def get_info(self):
         self.info = ([self._to_attr(i) for i in self._get_info(self._get_api_url())])
+        try:
+            self.info = sorted(self.info, key=lambda peer: peer.role)
+        except AttributeError:
+            pass
         return self.info
 
     def has_master(self):
         if not self.info:
             self.get_info
-        return any([n.role == "master" and n.state == "running" for n in self.info])
+        return any([n.role == "master" and n.state == "running"
+                    for n in self.info if hasattr(n, 'role')])
 
     def has_replica(self):
         if not self.info:
             self.get_info
-        return any([n.role == "replica" and n.state == "running" for n in self.info])
+        return any([n.role == "replica" and n.state == "running" for n in self.info if hasattr(n, 'role')])
 
     def match_config(self):
         if not self.info:
             self.get_info
         return len (self.postgres_peers) == len(self.info)
 
+    def master_xlog_location(self):
+        if not self.info:
+            self.get_info
+        return [n.xlog['location'] for n in self.info
+                if hasattr(n, 'role') and n.role == 'master' and 'location' in n.xlog][0]
+
+    def replica_received_replayed (self):
+        if not self.info:
+            self.get_info
+        return [(n.xlog['received_location'], n.xlog['replayed_location'], n.xlog['replayed_timestamp'])
+                for n in self.info if
+                hasattr(n, 'xlog') and n.role == 'replica' and
+                'received_location' and 'replayed_location' in n.xlog]
+
+    def replica_received_replayed_delta(self):
+        mxlog = self.master_xlog_location()
+        now = time.gmtime()
+        tn=time.mktime(now)
+        t0=time.mktime(time.gmtime(0))
+        def time_or_zero(stamp):
+            if stamp:
+                return time.mktime(time.strptime(stamp, "%Y-%m-%d %H:%M:%S.%f %Z"))
+            return t0
+
+        return [(mxlog - n[0],
+                 (n[0] - n[1]),
+                 tn - time_or_zero(n[2]))
+                for n in self.replica_received_replayed()]
+
+    def replica_received_replayed_delta_ok(self):
+        rdlt = self.replica_received_replayed_delta()
+        result = [n[1] == 0 or (n[0] == 0 or n[2] < self.max_time_elapsed_since_replayed) for n in rdlt]
+        return all(result) and bool(result)
+
+    def timeline_match(self):
+        if not self.info:
+            self.get_info
+        return all([n.timeline == self.info[0].timeline for n in self.info if
+                hasattr(self.info[0], 'timeline') and hasattr(n, 'timeline')])
+
     def dump(self):
-        result=[pprint.pformat(vars(i)) for i in self.info]
+        result=[pp_string(vars(i)) for i in self.info if hasattr(i, '__dict__')]
         return "\n\n".join(result)
 
 if __name__ == "__main__":
 
-    print ("+------+")
-    print ("| Etcd |")
-    print ("+------+")
-    etcd=Etcd()
-    print ("Etcd cluster is healthy: {}".format(etcd.is_healthy()))
-    print ("Etcd cluster members:\n{}".format (pprint.pformat(etcd.cluster_health())))
+    print ("+--------------+")
+    print ("| Etcd Service |")
+    print ("+--------------+")
+    etcd=EtcdService()
+    print ("EtcdService cluster is healthy: {}".format(etcd.is_healthy()))
+    print ("EtcdService cluster members:\n{}".format (pp_string(etcd.cluster_health())))
 
     print()
 
-    print ("+---------+")
-    print ("| Patroni |")
-    print ("+---------+")
-    patroni=Patroni()
+    print ("+-----------------+")
+    print ("| Patroni Service |")
+    print ("+-----------------+")
+    patroni=PatroniService()
     patroni.get_info()
     print ("patroni has master : {}".format (patroni.has_master()))
     print ("patroni has replica: {}".format (patroni.has_replica()))
     print ("patroni match config: {}".format (patroni.match_config()))
+    print ("replayed delta ok: {}".format (patroni.replica_received_replayed_delta_ok()))
+    print ("delta xlog received/replayed/since now: {}".format (
+        patroni.replica_received_replayed_delta()))
     print ("patroni dump:\n {}".format (patroni.dump()))
+    print ("timeline_ok: {}".format (patroni.timeline_match()))
