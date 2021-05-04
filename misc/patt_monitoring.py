@@ -5,6 +5,7 @@ import requests
 import ipaddress
 import time
 from pprint import pformat
+import sqlite3
 
 def _ipv6_nri_split (nri):
     (login, s, hostname) = nri.rpartition('@')
@@ -25,6 +26,14 @@ def pp_string(s):
 
 class Gconfig:
     pass
+
+class PersistenceSQL3(object):
+    def __init__(self, database):
+        self.sql3 = sqlite3.connect(database=database)
+    def __enter__(self):
+        return self.sql3
+    def __exit__(self, type, value, traceback):
+        self.sql3.close()
 
 class ClusterService:
 
@@ -225,6 +234,42 @@ class PatroniService(ClusterService):
         result=[pp_string(vars(i)) for i in self.info if hasattr(i, '__dict__')]
         return "\n\n".join(result)
 
+    """
+    take a reply list and return the first values found/
+    """
+    def to_tuple (self, l):
+        for n in l:
+            if n: return n
+
+    """
+    """
+    def replication_health(self, database="/var/tmp/patt_monitoring.sql3"):
+        mxlog = self.master_xlog_location()
+        rdlt = self.to_tuple(self.replica_received_replayed_delta())
+        with PersistenceSQL3(database=database) as db3:
+            db3.row_factory = sqlite3.Row
+            try:
+                cur = db3.cursor()
+                cur.execute("""create table if not exists replication_delta_log (
+                id integer primary key, received integer, replayed integer, stamp integer);
+                """)
+                cur.execute(
+                "SELECT id, received, replayed, stamp from replication_delta_log order by id desc limit 1;")
+                r = cur.fetchone()
+                if r and (rdlt[0] == r["received"] and rdlt[1] == r["replayed"]):
+                    # update only stamp
+                    cur.execute("update replication_delta_log set stamp = ? where id = ?;",
+                                (rdlt[2], r["id"]))
+                else:
+                    cur.execute(
+                        "insert into replication_delta_log(received, replayed, stamp ) values (?,?,?)",
+                        (rdlt[0], rdlt[1], rdlt[2]))
+            except:
+                raise
+            else:
+                db3.commit()
+
+
 if __name__ == "__main__":
 
     print ("+--------------+")
@@ -249,3 +294,4 @@ if __name__ == "__main__":
         patroni.replica_received_replayed_delta()))
     print ("patroni dump:\n {}".format (patroni.dump()))
     print ("timeline_ok: {}".format (patroni.timeline_match()))
+    patroni.replication_health()
