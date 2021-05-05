@@ -6,6 +6,7 @@ import ipaddress
 import time
 from pprint import pformat
 import sqlite3
+import os
 
 def _ipv6_nri_split (nri):
     (login, s, hostname) = nri.rpartition('@')
@@ -243,31 +244,102 @@ class PatroniService(ClusterService):
 
     """
     """
-    def replication_health(self, database="/var/tmp/patt_monitoring.sql3"):
-        mxlog = self.master_xlog_location()
-        rdlt = self.to_tuple(self.replica_received_replayed_delta())
+    def db_create (self, database="/var/tmp/patt_monitoring.sql3"):
         with PersistenceSQL3(database=database) as db3:
             db3.row_factory = sqlite3.Row
             try:
                 cur = db3.cursor()
-                cur.execute("""create table if not exists replication_delta_log (
-                id integer primary key, received integer, replayed integer, stamp integer);
+                cur.execute("""create table if not exists replication_log (
+                id integer primary key, received integer, replayed integer, rstamp integer);
                 """)
                 cur.execute(
-                "SELECT id, received, replayed, stamp from replication_delta_log order by id desc limit 1;")
+                    "select count (id) from replication_log;")
                 r = cur.fetchone()
-                if r and (rdlt[0] == r["received"] and rdlt[1] == r["replayed"]):
-                    # update only stamp
-                    cur.execute("update replication_delta_log set stamp = ? where id = ?;",
-                                (rdlt[2], r["id"]))
-                else:
-                    cur.execute(
-                        "insert into replication_delta_log(received, replayed, stamp ) values (?,?,?)",
-                        (rdlt[0], rdlt[1], rdlt[2]))
+                if r[0] < 3:  # initialize with 2 dummy rows
+                    for i in [1, 2]:
+                        cur.execute(
+                            "insert into replication_log(received, replayed, rstamp ) values (0,0,0);"
+                        )
             except:
                 raise
             else:
                 db3.commit()
+
+    """
+    param:
+    max_keep_sample = 1000, numer of row to keep should not be too high or max_db_size may have no effect.
+    max_db_size=64, when dbsize > max_db_size in KB, cleanup (delete + vacuum)
+    """
+    def db_cleanup (self, database="/var/tmp/patt_monitoring.sql3",
+                    max_keep_sample=3000, max_db_size=64):
+        if os.path.exists(database):
+            db_size = os.stat(os.path.abspath(database)).st_size
+            if int(db_size / 1024) < int(max_db_size): return
+
+        with PersistenceSQL3(database=database) as db3:
+            db3.row_factory = sqlite3.Row
+            try:
+                cur = db3.cursor()
+                cur.execute("""select (SELECT count (*) from replication_log) > ? as cleanup;""",
+                            [max_keep_sample])
+                r = cur.fetchone()
+                if r and not bool(r["cleanup"]): return
+                cur.execute("""delete from replication_log where id in
+                (select id from replication_log where
+                id < (select id from replication_log order by id desc limit 1)
+                order by id asc limit (select (select count (*) from replication_log) - ?));""",
+                            [max_keep_sample])
+            except:
+                raise
+            else:
+                db3.commit()
+
+        with PersistenceSQL3(database=database) as db3:
+            try:
+                db3.isolation_level = None
+                db3.execute('VACUUM')
+                db3.isolation_level = ''
+            except:
+                raise
+
+
+    def replication_health(self, database="/var/tmp/patt_monitoring.sql3"):
+        mxlog = self.master_xlog_location()
+        rdlt = self.to_tuple(self.replica_received_replayed())
+        self.db_create()
+        self.db_cleanup()
+        with PersistenceSQL3(database=database) as db3:
+            db3.row_factory = sqlite3.Row
+            try:
+                rstamp = time.mktime(time.gmtime(0))
+                if rdlt[2]:
+                    rstamp = time.mktime(time.strptime(rdlt[2], "%Y-%m-%d %H:%M:%S.%f %Z"))
+                cur = db3.cursor()
+                cur.execute(
+                    "select id, received, replayed, rstamp from replication_log order by id desc limit 1;")
+                r = cur.fetchone()
+                if r and (r["received"] == mxlog or r["replayed"] == mxlog):
+                    # convergence to xlog reached
+                    pass
+                else:
+                    cur.execute(
+                        "insert into replication_log(received, replayed, rstamp ) values (?,?,?)",
+                        (rdlt[0], rdlt[1], rstamp))
+                cur.execute("""
+                SELECT id, avg (received) OVER (order by id ROWS BETWEEN 7 PRECEDING AND CURRENT ROW) as
+                moving_avg from replication_log where id in
+                (select id from replication_log order by id DESC limit 3);
+                """)
+                r = cur.fetchall()
+                health=False
+                if len (r) >= 3:
+                    health = not (r[0]["moving_avg"] == r[1]["moving_avg"] and
+                                  r[0]["moving_avg"] == r[2]["moving_avg"])
+            except:
+                raise
+            else:
+                db3.commit()
+                return health
 
 
 if __name__ == "__main__":
@@ -294,4 +366,4 @@ if __name__ == "__main__":
         patroni.replica_received_replayed_delta()))
     print ("patroni dump:\n {}".format (patroni.dump()))
     print ("timeline_ok: {}".format (patroni.timeline_match()))
-    patroni.replication_health()
+    print ("replication_health: {}".format (patroni.replication_health()))
