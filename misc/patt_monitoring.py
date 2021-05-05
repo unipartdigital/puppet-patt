@@ -23,7 +23,7 @@ def _ipv6_nri_split (nri):
     return (login, hostname, port)
 
 def pp_string(s):
-    return pformat(s)
+    return pformat(s, sort_dicts=False)
 
 class Gconfig:
     pass
@@ -108,7 +108,7 @@ class ClusterService:
 
 class EtcdService(ClusterService):
 
-    def __init__(self, init_urls=[]):
+    def __init__(self):
         super().__init__()
         if self.etcd_peers:
             self.init_urls = self.etcd_peers
@@ -154,8 +154,11 @@ class PatroniService(ClusterService):
             setattr(info, k, e[k])
         return info
 
-    def __init__(self, init_urls=[], max_time_elapsed_since_replayed=10):
+    def __init__(self,
+                 max_time_elapsed_since_replayed=3600,
+                 database="/var/tmp/patt_monitoring-{}.sql3".format(f"{os.getuid()}")):
         super().__init__()
+        self.database=database
         if self.postgres_peers:
             self.init_urls = self.postgres_peers
         self.init_urls = self.http_normalize_url (8008, self.init_urls)
@@ -244,8 +247,8 @@ class PatroniService(ClusterService):
 
     """
     """
-    def db_create (self, database="/var/tmp/patt_monitoring.sql3"):
-        with PersistenceSQL3(database=database) as db3:
+    def db_create (self):
+        with PersistenceSQL3(database=self.database) as db3:
             db3.row_factory = sqlite3.Row
             try:
                 cur = db3.cursor()
@@ -270,13 +273,12 @@ class PatroniService(ClusterService):
     max_keep_sample = 1000, numer of row to keep should not be too high or max_db_size may have no effect.
     max_db_size=64, when dbsize > max_db_size in KB, cleanup (delete + vacuum)
     """
-    def db_cleanup (self, database="/var/tmp/patt_monitoring.sql3",
-                    max_keep_sample=3000, max_db_size=64):
-        if os.path.exists(database):
-            db_size = os.stat(os.path.abspath(database)).st_size
+    def db_cleanup (self, max_keep_sample=3000, max_db_size=64):
+        if os.path.exists(self.database):
+            db_size = os.stat(os.path.abspath(self.database)).st_size
             if int(db_size / 1024) < int(max_db_size): return
 
-        with PersistenceSQL3(database=database) as db3:
+        with PersistenceSQL3(database=self.database) as db3:
             db3.row_factory = sqlite3.Row
             try:
                 cur = db3.cursor()
@@ -294,7 +296,7 @@ class PatroniService(ClusterService):
             else:
                 db3.commit()
 
-        with PersistenceSQL3(database=database) as db3:
+        with PersistenceSQL3(database=self.database) as db3:
             try:
                 db3.isolation_level = None
                 db3.execute('VACUUM')
@@ -303,14 +305,13 @@ class PatroniService(ClusterService):
                 raise
 
 
-    def replication_health(self, database="/var/tmp/patt_monitoring.sql3",
-                           avg_win=7, sample_limit=21, result_limit=3):
+    def replication_health(self, avg_win=7, sample_limit=21, result_limit=3):
         mxlog = self.master_xlog_location()
         rdlt = self.to_tuple(self.replica_received_replayed())
         assert result_limit < sample_limit
         self.db_create()
         self.db_cleanup()
-        with PersistenceSQL3(database=database) as db3:
+        with PersistenceSQL3(database=self.database) as db3:
             db3.row_factory = sqlite3.Row
             try:
                 rstamp = time.mktime(time.gmtime(0))
@@ -344,27 +345,43 @@ class PatroniService(ClusterService):
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-v','--verbose', help='verbose', action='store_true', required=False)
+    parser.add_argument('-vv','--verbose2', help='more verbose', action='store_true', required=False)
+    parser.add_argument('-x', '--exclude',  help='exclude checks', action='append', required=False)
+    args = parser.parse_args()
+    exclude=[]
+    if args.exclude and 'etcd' in args.exclude:
+        exclude.append('etcd')
+    if args.exclude and 'patroni' in args.exclude:
+        exclude.append('patroni')
+    if args.verbose2:
+        args.verbose = True
 
-    print ("+--------------+")
-    print ("| Etcd Service |")
-    print ("+--------------+")
-    etcd=EtcdService()
-    print ("EtcdService cluster is healthy: {}".format(etcd.is_healthy()))
-    print ("EtcdService cluster members:\n{}".format (pp_string(etcd.cluster_health())))
+    if 'etcd' not in exclude:
+        etcd=EtcdService()
+        etcd_healthy=etcd.is_healthy()
+        print ("Etcd    cluster is healthy: {}".format(etcd_healthy))
+        if args.verbose2 or not etcd_healthy:
+            print ("EtcdService cluster members:\n{}".format (pp_string(etcd.cluster_health())))
 
-    print()
-
-    print ("+-----------------+")
-    print ("| Patroni Service |")
-    print ("+-----------------+")
-    patroni=PatroniService()
-    patroni.get_info()
-    print ("patroni has master : {}".format (patroni.has_master()))
-    print ("patroni has replica: {}".format (patroni.has_replica()))
-    print ("patroni match config: {}".format (patroni.match_config()))
-    print ("replayed delta ok: {}".format (patroni.replica_received_replayed_delta_ok()))
-    print ("delta xlog received/replayed/since now: {}".format (
-        patroni.replica_received_replayed_delta()))
-    print ("patroni dump:\n {}".format (patroni.dump()))
-    print ("timeline_ok: {}".format (patroni.timeline_match()))
-    print ("replication_health: {}".format (patroni.replication_health()))
+    if 'patroni' not in exclude:
+        patroni=PatroniService()
+        patroni.get_info()
+        patroni_healthy=all([n == True for n in [
+            patroni.has_master(), patroni.has_replica(), patroni.match_config(),
+            patroni.replica_received_replayed_delta_ok(), patroni.timeline_match(),
+            patroni.replication_health()]])
+        print ("Patroni cluster is healthy: {}".format (patroni_healthy))
+        if args.verbose or not patroni_healthy:
+            print ("Patroni have master : {}".format (patroni.has_master()))
+            print ("Patroni have replica: {}".format (patroni.has_replica()))
+            print ("Patroni match config: {}".format (patroni.match_config()))
+            print ("replayed delta ok   : {}".format (patroni.replica_received_replayed_delta_ok()))
+            print ("delta xlog received/replayed/since now: {}".format (
+                patroni.replica_received_replayed_delta()))
+            print ("timeline_ok         : {}".format (patroni.timeline_match()))
+            print ("replication_health  : {}".format (patroni.replication_health()))
+        if args.verbose2 or not patroni_healthy:
+            print ("patroni dump:\n {}".format (patroni.dump()))
