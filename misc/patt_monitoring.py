@@ -303,9 +303,11 @@ class PatroniService(ClusterService):
                 raise
 
 
-    def replication_health(self, database="/var/tmp/patt_monitoring.sql3"):
+    def replication_health(self, database="/var/tmp/patt_monitoring.sql3",
+                           avg_win=7, sample_limit=21, result_limit=3):
         mxlog = self.master_xlog_location()
         rdlt = self.to_tuple(self.replica_received_replayed())
+        assert result_limit < sample_limit
         self.db_create()
         self.db_cleanup()
         with PersistenceSQL3(database=database) as db3:
@@ -326,15 +328,14 @@ class PatroniService(ClusterService):
                         "insert into replication_log(received, replayed, rstamp ) values (?,?,?)",
                         (rdlt[0], rdlt[1], rstamp))
                 cur.execute("""
-                SELECT id, avg (received) OVER (order by id ROWS BETWEEN 7 PRECEDING AND CURRENT ROW) as
+                SELECT id, avg (received) OVER (order by id ROWS BETWEEN ? PRECEDING AND CURRENT ROW) as
                 moving_avg from replication_log where id in
-                (select id from replication_log order by id DESC limit 3);
-                """)
+                (select id from replication_log order by id DESC limit ?) order by id DESC limit ?;""",
+                            [avg_win, sample_limit, result_limit])
                 r = cur.fetchall()
                 health=False
                 if len (r) >= 3:
-                    health = not (r[0]["moving_avg"] == r[1]["moving_avg"] and
-                                  r[0]["moving_avg"] == r[2]["moving_avg"])
+                    health = not (all ([r[0]["moving_avg"] == x["moving_avg"] for x in r[1:]]))
             except:
                 raise
             else:
