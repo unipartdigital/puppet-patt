@@ -7,6 +7,8 @@ import time
 from pprint import pformat
 import sqlite3
 import os
+from sys import exit as sys_exit
+from sys import stderr
 
 def _ipv6_nri_split (nri):
     (login, s, hostname) = nri.rpartition('@')
@@ -347,6 +349,7 @@ class PatroniService(ClusterService):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument('-q','--quiet', help='quiet exit 0 if all ok', action='store_true', required=False)
     parser.add_argument('-v','--verbose', help='verbose', action='store_true', required=False)
     parser.add_argument('-vv','--verbose2', help='more verbose', action='store_true', required=False)
     parser.add_argument('-x', '--exclude',  help='exclude checks', action='append', required=False)
@@ -359,12 +362,17 @@ if __name__ == "__main__":
     if args.verbose2:
         args.verbose = True
 
+    status=[]
+
     if 'etcd' not in exclude:
         etcd=EtcdService()
         etcd_healthy=etcd.is_healthy()
-        print ("Etcd    cluster is healthy: {}".format(etcd_healthy))
-        if args.verbose2 or not etcd_healthy:
-            print ("EtcdService cluster members:\n{}".format (pp_string(etcd.cluster_health())))
+        if args.quiet:
+            status.append(etcd_healthy)
+        else:
+            print ("Etcd    cluster is healthy: {}".format(etcd_healthy))
+            if args.verbose2 or not etcd_healthy:
+                print ("EtcdService cluster members:\n{}".format (pp_string(etcd.cluster_health())))
 
     if 'patroni' not in exclude:
         patroni=PatroniService()
@@ -373,15 +381,22 @@ if __name__ == "__main__":
             patroni.has_master(), patroni.has_replica(), patroni.match_config(),
             patroni.replica_received_replayed_delta_ok(), patroni.timeline_match(),
             patroni.replication_health()]])
-        print ("Patroni cluster is healthy: {}".format (patroni_healthy))
-        if args.verbose or not patroni_healthy:
-            print ("Patroni have master : {}".format (patroni.has_master()))
-            print ("Patroni have replica: {}".format (patroni.has_replica()))
-            print ("Patroni match config: {}".format (patroni.match_config()))
-            print ("replayed delta ok   : {}".format (patroni.replica_received_replayed_delta_ok()))
-            print ("delta xlog received/replayed/since now: {}".format (
-                patroni.replica_received_replayed_delta()))
-            print ("timeline_ok         : {}".format (patroni.timeline_match()))
-            print ("replication_health  : {}".format (patroni.replication_health()))
-        if args.verbose2 or not patroni_healthy:
-            print ("patroni dump:\n {}".format (patroni.dump()))
+        if args.quiet:
+            status.append(patroni_healthy)
+        else:
+            print ("Patroni cluster is healthy: {}".format (patroni_healthy))
+            if args.verbose or not patroni_healthy:
+                print ("Patroni have master : {}".format (patroni.has_master()))
+                print ("Patroni have replica: {}".format (patroni.has_replica()))
+                print ("Patroni match config: {}".format (patroni.match_config()))
+                print ("replayed delta ok   : {}".format (patroni.replica_received_replayed_delta_ok()))
+                print ("delta xlog received/replayed/since now: {}".format (
+                    patroni.replica_received_replayed_delta()))
+                print ("timeline_ok         : {}".format (patroni.timeline_match()))
+                print ("replication_health  : {}".format (patroni.replication_health()))
+            if args.verbose2 or not patroni_healthy:
+                print ("patroni dump:\n {}".format (patroni.dump()))
+
+    if args.quiet:
+        if not status: print ("warning no result available", file=stderr)
+        sys_exit(not all([x == True for x in status]))
