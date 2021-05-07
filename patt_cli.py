@@ -7,6 +7,7 @@ import patt_postgres
 import patt_walg
 import patt_patroni
 import patt_haproxy
+import patt_health
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -442,3 +443,9 @@ if __name__ == "__main__":
                 patroni_cluster_info = patt_patroni.get_cluster_info(postgres_peers)
                 print ("\nPostgres Cluster\n{}".format(pformat(patroni_cluster_info)))
                 logger.info ("Postgres Cluster\n{}".format(pformat(patroni_cluster_info)))
+
+            if postgres_peers:
+                health_init = patt_health.health_init (postgres_peers)
+                assert health_init, "health init error"
+                health_configure = patt_health.health_configure (postgres_peers)
+                assert health_configure, "health configure error"

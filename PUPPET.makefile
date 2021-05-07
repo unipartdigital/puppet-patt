@@ -25,6 +25,7 @@ puppet-module:
 	install -m 644 config/walg-sh.json $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/sftpd_config $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/sftpd.service $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/monitoring-httpd.conf $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d02.util.sh $(DESTDIR)/patt/files/patt/dscripts/
@@ -36,6 +37,7 @@ puppet-module:
 	install -m 644 dscripts/d27.walg.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d30.patroni.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d40.haproxy.sh $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/d50.health.sh $(DESTDIR)/patt/files/patt/dscripts/
 
 	install -m 644 dscripts/haproxy_config.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/nft_config.py $(DESTDIR)/patt/files/patt/dscripts/
@@ -48,9 +50,9 @@ puppet-module:
 	install -m 644 dscripts/tmpl2file.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/pg_wait_ready.sh $(DESTDIR)/patt/files/patt/dscripts/
 
-
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/patt/files/patt/misc/
 	install -m 644 misc/__init__.py $(DESTDIR)/patt/files/patt/misc/
+	install -m 755 misc/patt_monitoring.py $(DESTDIR)/patt/files/patt/misc/
 	install -m 644 ip_takeover.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 ip_takeover.make $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt.py $(DESTDIR)/patt/files/patt/.
@@ -61,6 +63,7 @@ puppet-module:
 	install -m 644 patt_postgres.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_syst.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_walg.py $(DESTDIR)/patt/files/patt/.
+	install -m 644 patt_health.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 file_lock.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 requirements.txt $(DESTDIR)/patt/files/patt/.
 
