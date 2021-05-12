@@ -17,6 +17,44 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
+cluster_health_user="cluster-health"
+
+selinux_policy () {
+    pe_file="${1}"
+    module=`awk '/^[[:space:]]*module[[:space:]]/{print $2}' ${pe_file}`
+    selinux_packages="/usr/local/share/selinux/packages/"
+    {
+        test -x /usr/sbin/semodule && test -x /usr/bin/checkmodule && test -x /usr/bin/semodule_package
+    } || {
+        case "${os_id}" in
+            'rhel' | 'centos' | 'fedora')
+                dnf install -q -y checkpolicy policycoreutils
+                ;;
+            'debian' | 'ubuntu')
+                apt-get install -qq -y policycoreutils checkpolicy semodule-utils selinux-policy-default
+                ;;
+            *)
+                echo "unsupported release vendor: ${os_id}" 1>&2
+                exit 1
+                ;;
+        esac
+    }
+
+    test -d "${selinux_packages}" || mkdir -p -m 755 "${selinux_packages}"
+    { semodule -l | grep -q "^${module}$" && \
+          test "`md5sum ${pe_file} | cut -d' ' -f1`" == \
+               "`md5sum ${selinux_packages}/${module}.te  2> /dev/null | cut -d' ' -f1`"
+    } || {
+        # Build a MLS/MCS-enabled non-base policy module.
+        checkmodule -M -m ${srcdir}/${module}.te -o ${srcdir}/${module}.mod
+        semodule_package -o ${srcdir}/${module}.pp -m ${srcdir}/${module}.mod
+        semodule -X 300 -i ${srcdir}/${module}.pp && {
+            cp -f ${srcdir}/${module}.pp ${selinux_packages}/${module}.pp
+            cp -f ${srcdir}/${module}.te ${selinux_packages}/${module}.te
+        }
+        rm -f ${srcdir}/${module}.te ${srcdir}/${module}.mod ${srcdir}/${module}.pp
+    }
+}
 
 init () {
     case "${os_id}" in
@@ -43,9 +81,23 @@ init () {
 }
 
 configure () {
-    comd=${1:-"tmpl2file.py"}
-    tmpl=${2:-"monitoring-httpd.conf"}
-    httpd_instance=${3:-"patt_health"}
+    httpd_instance=${1:-"patt_health"}
+    comd=${2:-"tmpl2file.py"}
+    tmpl=${3:-"monitoring-httpd.conf"}
+    monitoring=${4:-"patt_monitoring.py"}
+    wsgi_file=${5:-"cluster-health.wsgi"}
+    pe_file=${6-:"cluster_health.te"}
+    wsgi_user=${7:-$cluster_health_user}
+    test "$(getent passwd  ${wsgi_user} | cut -d: -f1)" == "${wsgi_user}" || {
+        useradd --home-dir "/home/${wsgi_user}" --user-group  \
+                --comment "cluster health user" \
+                --system --no-log-init \
+                --shell /bin/false ${wsgi_user}
+    }
+    test -d /home/${wsgi_user} || {
+        mkdir -m 711 -p /home/${wsgi_user}
+        chown ${wsgi_user}.${wsgi_user} /home/${wsgi_user}
+    }
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
             test -d /etc/httpd/conf/conf.minimal.d || mkdir -p /etc/httpd/conf/conf.minimal.d
@@ -58,7 +110,9 @@ configure () {
                     --dictionary_key_val "customlog=logs/\${HTTPD_INSTANCE}_access_log"              \
                     --dictionary_key_val "mimemagicfile=conf/magic"                                  \
                     --dictionary_key_val "config_dir=conf/conf.minimal.d"                            \
-                    --chmod 644
+                    --dictionary_key_val "wsgi_user=${wsgi_user}"                                    \
+                    --chmod 644                                                                      \
+                    --touch /var/tmp/$(basename $0 .sh).reload
             test -f /etc/httpd/conf/conf.minimal.d/00.conf || {
                 cat <<EOF > /etc/httpd/conf/conf.minimal.d/00.conf
 LoadModule mpm_event_module modules/mod_mpm_event.so
@@ -91,7 +145,9 @@ EOF
                     --dictionary_key_val "customlog=\${APACHE_LOG_DIR}/access_log" \
                     --dictionary_key_val "mimemagicfile=magic"                     \
                     --dictionary_key_val "confid_dir=conf.minimal.d"               \
-                    --chmod 644
+                    --dictionary_key_val "wsgi_user=${wsgi_user}"                  \
+                    --chmod 644                                                    \
+                    --touch /var/tmp/$(basename $0 .sh).reload
             test -f /etc/apache2-${httpd_instance}/conf.minimal.d/00.conf || {
                 cat <<EOF > /etc/apache2-${httpd_instance}/conf.minimal.d/00.conf
 LoadModule mpm_event_module /usr/lib/apache2/modules/mod_mpm_event.so
@@ -107,6 +163,39 @@ EOF
             exit 1
             ;;
     esac
+    test -d /usr/local/share/patt/monitoring/wsgi/ || mkdir -p /usr/local/share/patt/monitoring/wsgi/
+    python3 ${srcdir}/${comd} -t ${srcdir}/${monitoring} \
+            -o /usr/local/share/patt/monitoring/${monitoring} \
+            --chmod 644 \
+            --touch /var/tmp/$(basename $0 .sh).reload
+
+    python3 ${srcdir}/${comd} -t ${srcdir}/${wsgi_file} \
+            -o /usr/local/share/patt/monitoring/wsgi/${wsgi_file} \
+            --chmod 644 \
+            --touch /var/tmp/$(basename $0 .sh).reload
+
+    test -f "${srcdir}/${pe_file}" || { echo "error ${pe_file}" >&2 ; exit 1 ; }
+    selinux_policy "${srcdir}/${pe_file}"
+
+}
+
+enable () {
+    httpd_instance=${1:-"patt_health"}
+    if ! systemctl is-enabled -q httpd\@${httpd_instance} ; then
+        test -f /var/tmp/$(basename $0 .sh).reload && {
+            systemctl is-active httpd@patt_health.service || {
+                systemctl restart httpd\@${httpd_instance} && rm -f /var/tmp/$(basename $0 .sh).reload
+            }
+        }
+        systemctl enable --now  httpd\@${httpd_instance}
+    elif test -f /var/tmp/$(basename $0 .sh).reload ; then
+        systemctl restart httpd\@${httpd_instance} && rm -f /var/tmp/$(basename $0 .sh).reload
+    elif ! systemctl -q is-active httpd\@patt_health.service ; then
+        systemctl start httpd\@${httpd_instance}
+    fi
+    systemctl status httpd\@${httpd_instance} > /dev/null ||  {
+        systemctl status  httpd\@${httpd_instance}  >&2 ; exit 1
+    }
 }
 
 touch ${lock_file} 2> /dev/null || true
@@ -122,6 +211,12 @@ case "${1:-''}" in
         shift 1
         { flock -w 10 8 || exit 1
           configure "$@"
+        } 8< ${lock_file}
+        ;;
+    'enable')
+        shift 1
+        { flock -w 10 8 || exit 1
+          enable "$@"
         } 8< ${lock_file}
         ;;
     *)

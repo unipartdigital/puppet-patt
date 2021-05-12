@@ -222,7 +222,8 @@ if __name__ == "__main__":
                                       patroni_peers=postgres_peers,
                                       etcd_peers=etcd_peers,
                                       haproxy_peers=haproxy_peers,
-                                      postgres_clients=["::0/0"])
+                                      postgres_clients=["::0/0"],
+                                      monitoring_clients=["::0/0"])
 
         sftpd_only_id = list(set([n.id for n in sftpd_peers]) - set([n.id for n in etcd_peers] +
                                                                     [n.id for n in postgres_peers] +
@@ -449,3 +450,5 @@ if __name__ == "__main__":
                 assert health_init, "health init error"
                 health_configure = patt_health.health_configure (postgres_peers)
                 assert health_configure, "health configure error"
+                health_enable = patt_health.health_enable (postgres_peers)
+                assert health_enable, "health enable error"

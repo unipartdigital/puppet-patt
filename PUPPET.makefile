@@ -7,6 +7,7 @@ puppet-module:
 	mkdir -m 755 $(DESTDIR)/patt/files/patt/dscripts
 	mkdir -m 755 $(DESTDIR)/patt/files/patt/ssh
 	mkdir -m 755 $(DESTDIR)/patt/files/patt/misc
+	mkdir -m 755 $(DESTDIR)/patt/files/patt/monitoring
 
 	git log --pretty=oneline > $(DESTDIR)/patt/ChangeLog.txt
 
@@ -21,6 +22,7 @@ puppet-module:
 	install -m 644 config/pg_create_database.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/postgres-gc.sh.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/patroni.te $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/cluster_health.te $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/walg-s3.json $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/walg-sh.json $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/sftpd_config $(DESTDIR)/patt/files/patt/config
@@ -52,7 +54,8 @@ puppet-module:
 
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/patt/files/patt/misc/
 	install -m 644 misc/__init__.py $(DESTDIR)/patt/files/patt/misc/
-	install -m 755 misc/patt_monitoring.py $(DESTDIR)/patt/files/patt/misc/
+	install -m 755 monitoring/patt_monitoring.py $(DESTDIR)/patt/files/patt/monitoring/
+	install -m 755 monitoring/cluster-health.wsgi $(DESTDIR)/patt/files/patt/monitoring/
 	install -m 644 ip_takeover.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 ip_takeover.make $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt.py $(DESTDIR)/patt/files/patt/.

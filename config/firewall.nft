@@ -43,6 +43,12 @@ table ip6 postgres_patroni {
                 type inet_service
         }
 
+        set monitoring_clients {
+                type ipv6_addr
+                flags interval
+                elements = {$monitoring_clients}
+        }
+
         chain incoming {
                 type filter hook input priority 0; policy drop;
 
@@ -78,5 +84,8 @@ table ip6 postgres_patroni {
                 tcp dport { 15432 } ip6 saddr @pg_clients accept
                 # walg sftp archiving
                 tcp dport @sftp_archiving_port accept
+                # monitoring (cluster health) clients
+                tcp dport { 80 } ip6 saddr @monitoring_clients accept
+
         }
 }

@@ -9,7 +9,8 @@ from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
 
 class NftConfig(object):
 
-    def __init__(self, template_file, patroni_peers=[], etcd_peers=[], haproxy_peers=[], postgres_clients=[]):
+    def __init__(self, template_file, patroni_peers=[], etcd_peers=[], haproxy_peers=[],
+                 postgres_clients=[], monitoring_clients=[]):
         tmpl=None
         self.dic = {}
         with open(template_file, 'r') as t:
@@ -26,11 +27,14 @@ class NftConfig(object):
             haproxy_peers=["::1"]
         if not postgres_clients:
             postgres_clients=["::0/0"]
+        if not monitoring_clients:
+            monitoring_clients=["::0/0"]
 
         self.dic['etcd_peers'] = ", ".join (etcd_peers)
         self.dic['patroni_peers'] = ", ".join (patroni_peers)
         self.dic['haproxy_peers'] = ", ".join (haproxy_peers)
         self.dic['postgres_clients'] = ", ".join (postgres_clients)
+        self.dic['monitoring_clients'] = ", ".join (monitoring_clients)
 
     def write (self, file_name):
         try:
@@ -54,6 +58,7 @@ if __name__ == "__main__":
     parser.add_argument('-e','--etcd_peers', help='etcd peers', required=True, nargs='+')
     parser.add_argument('-x','--haproxy_peers', help='haproxy peers', required=False, nargs='+')
     parser.add_argument('-c','--postgres_clients', help='postgres_clients', required=False, nargs='+')
+    parser.add_argument('-m','--monitoring_clients', help='monitoring_clients', required=False, nargs='+')
     parser.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
 
     args = parser.parse_args()
@@ -71,7 +76,8 @@ if __name__ == "__main__":
                      patroni_peers=args.patroni_peers,
                      etcd_peers=args.etcd_peers,
                      haproxy_peers=args.haproxy_peers,
-                     postgres_clients=args.postgres_clients)
+                     postgres_clients=args.postgres_clients,
+                     monitoring_clients=args.monitoring_clients)
     if args.destination_file:
         nft.write (args.destination_file)
     else:
