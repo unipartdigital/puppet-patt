@@ -41,6 +41,10 @@ def os_release ():
 
 os_id = ['rhel', 'fedora', 'centos', 'debian', 'ubuntu']
 
+def touch(fname, times=None):
+    with open(fname, 'a'):
+        os.utime(fname, times)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
@@ -48,6 +52,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', help='template file', required=False)
     parser.add_argument('--chmod', help='chmod the output file octal notation like 755', required=False)
     parser.add_argument('--skip', help='optional skip comment', required=False)
+    parser.add_argument('--touch', help='touch filename if output has changed', required=False)
 
     parser.add_argument('-d', '--dictionary_key_val', help='-d  key1=value1 -d key2=value2', required=False,
                          action='append', type=lambda kv: kv.split("=",1), dest='key_val')
@@ -118,6 +123,8 @@ if __name__ == "__main__":
             if write_out:
                 with open(output, 'w') as f:
                     print(tmpl.substitute(d), file=f)
+                if args.output:
+                    touch (args.output)
             if output_mod:
                 mode = oct(S_IMODE(os.stat(output).st_mode))
                 if oct(output_mod) != mode:
