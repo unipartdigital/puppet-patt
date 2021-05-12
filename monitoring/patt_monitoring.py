@@ -84,7 +84,7 @@ class ClusterService:
                             assert isinstance(result, list)
                     else:
                         result = rj
-            except TimeoutError as te:
+            except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout) as te:
                 continue
             except AssertionError as e:
                 continue
@@ -92,6 +92,7 @@ class ClusterService:
                 raise
             else:
                 return result
+        return ''
 
     def http_normalize_url(self, service_port, peers=[]):
         result=[]
@@ -125,7 +126,7 @@ class EtcdService(ClusterService):
             try:
                 r = requests.get("{}/health".format(c), timeout=(9.0, 10.0)) # (connect, read)
                 rj = r.json()
-            except TimeoutError as te:
+            except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout) as te:
                 continue
             except requests.exceptions.ConnectionError:
                 continue
@@ -138,11 +139,15 @@ class EtcdService(ClusterService):
 
     def cluster_health(self):
         cluster_client_urls = self.get_client_urls()
-        return [(c, self.node_health ([c])) for c in cluster_client_urls]
+        if cluster_client_urls:
+            return [(c, self.node_health ([c])) for c in cluster_client_urls]
+        return ([(c, False) for c in self.etcd_peers])
+    # return cluster_config.yaml etcd list set to False if all down
 
     def is_healthy(self):
         clth = self.cluster_health()
-        return all([c[1] for c in clth]) and len (clth) > 0
+        if clth:
+            return all([c[1] for c in clth]) and len (clth) > 0
 
 class PatroniService(ClusterService):
 
@@ -199,8 +204,9 @@ class PatroniService(ClusterService):
     def master_xlog_location(self):
         if not self.info:
             self.get_info
-        return [n.xlog['location'] for n in self.info
-                if hasattr(n, 'role') and n.role == 'master' and 'location' in n.xlog][0]
+        if self.info:
+            return [n.xlog['location'] for n in self.info
+                    if hasattr(n, 'role') and n.role == 'master' and 'location' in n.xlog][0]
 
     def replica_received_replayed (self):
         if not self.info:
@@ -221,7 +227,7 @@ class PatroniService(ClusterService):
             return t0
 
         return [(mxlog - n[0],
-                 (n[0] - n[1]),
+                 (mxlog - n[1]),
                  tn - time_or_zero(n[2]))
                 for n in self.replica_received_replayed()]
 
@@ -310,6 +316,7 @@ class PatroniService(ClusterService):
     def replication_health(self, avg_win=7, sample_limit=21, result_limit=3):
         mxlog = self.master_xlog_location()
         rdlt = self.to_tuple(self.replica_received_replayed())
+        if rdlt is None: return False
         assert result_limit < sample_limit
         self.db_create()
         self.db_cleanup()
