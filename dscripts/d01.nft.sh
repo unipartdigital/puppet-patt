@@ -35,15 +35,11 @@ init() {
 
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
-                if [ "${os_major_version_id}" -lt 8 ]; then
-                    yum install -y $pkg
-                else
-                    dnf install -y $pkg
-                fi
+                dnf -q -y install $pkg
                 nftables_conf="/etc/sysconfig/nftables.conf"
                 ;;
             "debian" | "ubuntu")
-                apt-get install -qq -y $pkg
+                apt-get -qq -y install $pkg
                 test -d /etc/nftables/ || mkdir -p /etc/nftables/
                 nftables_conf="/etc/nftables.conf"
                 ;;

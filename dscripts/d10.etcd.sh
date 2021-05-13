@@ -32,18 +32,14 @@ init() {
     etcd --version > /dev/null 2>&1 || {
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
-                if [ "${os_major_version_id}" -lt 8 ]; then
-                    yum install -y etcd
-                else
-                    # centos8 don't provide etcd yet
-                    dnf install --nogpgcheck -y etcd
-                fi
+                # centos8 don't provide etcd yet
+                dnf -q -y --nogpgcheck install etcd
                 ;;
             'debian' | 'ubuntu')
                 etcd --version > /dev/null 2>&1 || (cd /etc/systemd/system && ln -sf /dev/null etcd.service)
                 # don't let dpkg start the service during install
-                apt-get update -q
-                apt-get install -qq -y etcd
+                apt-get -q update
+                apt-get -qq -y install etcd
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2

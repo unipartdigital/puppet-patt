@@ -28,10 +28,10 @@ selinux_policy () {
     } || {
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
-                dnf install -q -y checkpolicy policycoreutils
+                dnf -q -y install checkpolicy policycoreutils
                 ;;
             'debian' | 'ubuntu')
-                apt-get install -qq -y policycoreutils checkpolicy semodule-utils selinux-policy-default
+                apt-get -qq -y install policycoreutils checkpolicy semodule-utils selinux-policy-default
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2
@@ -61,14 +61,14 @@ init () {
         'rhel' | 'centos' | 'fedora')
             { test -x /usr/sbin/httpd && test -f /usr/lib64/httpd/modules/mod_wsgi_python3.so ; } || {
                 py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
-                dnf install -q -y python${py_ver}-mod_wsgi httpd
+                dnf -q -y install python${py_ver}-mod_wsgi httpd
                 systemctl mask httpd.service
             }
             ;;
         'debian' | 'ubuntu')
             { test -x /usr/sbin/apache2 && test -f /usr/lib/apache2/modules/mod_wsgi.so ; } || {
                 (cd /etc/systemd/system ;  ln -sf /dev/null apache2.service)
-                apt-get install -qq -y libapache2-mod-wsgi-py3 apache2
+                apt-get -qq -y install libapache2-mod-wsgi-py3 apache2
                 rm -f /etc/systemd/system/apache2.service
                 systemctl mask apache2.service
             }

@@ -36,9 +36,7 @@ add_repo () {
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
             # some images may not provide the config-manager plugin
-            if [ "${os_major_version_id}" -ge 8 ]; then
-                dnf config-manager --help > /dev/null 2>&1 || dnf install 'dnf-command(config-manager)' -y
-            fi
+            dnf config-manager --help > /dev/null 2>&1 || dnf -q -y install 'dnf-command(config-manager)'
 
             for r in ${repo_url[*]}; do
                 if [ "x$r" == "x" ]; then

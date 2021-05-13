@@ -28,17 +28,13 @@ init() {
         'rhel' | 'centos' | 'fedora')
             rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
             rpm_pkg="haproxy policycoreutils"
-            if [ "${os_major_version_id}" -lt 8 ]; then
-                yum install -y ${rel_epel} ${rpm_pkg}
-            else
-                dnf install -y epel-release ${rpm_pkg}
-            fi
+            dnf -q -y install epel-release ${rpm_pkg}
             ;;
         'debian' | 'ubuntu')
             haproxy -v || (cd /etc/systemd/system && ln -sf /dev/null haproxy.service)
             # don't let dpkg start the service during install
-            apt-get update -q
-            apt-get install -qq -y haproxy policycoreutils
+            apt-get -q update
+            apt-get -qq -y install haproxy policycoreutils
 
             ;;
         *)

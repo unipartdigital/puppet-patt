@@ -84,14 +84,10 @@ ssh_archiving_init () {
     /sbin/semanage -h > /dev/null 2>&1 || {
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
-                if dnf --version > /dev/null 2>&1; then
-                    dnf install -q -y policycoreutils-python-utils
-                elif yum --version > /dev/null 2>&1; then
-                    yum install -q -y policycoreutils-python-utils
-                fi
+                dnf -q -y install policycoreutils-python-utils
                 ;;
             'debian' | 'ubuntu')
-                apt-get install -qq -y policycoreutils-python-utils
+                apt-get -qq -y install policycoreutils-python-utils
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2

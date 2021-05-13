@@ -33,29 +33,23 @@ init() {
             'rhel' | 'centos' | 'fedora')
                 py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
                 test "${py_ver}" -ge 38 || {
-                    dnf install -y python38
+                    dnf -q -y install python38
                     alternatives --set python3 /usr/bin/python3.8
                 }
                 py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
                 test "${py_ver}" -ge 38 || { echo "python3 < 38" >&2 ; exit 1 ; }
                 # python36 use python3-pip 9.0.3 which start to be quiet old.
-                if [ "${os_major_version_id}" -lt 8 ]; then
-                    rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
-                    # psycopg2 is shipped by epel on centos 7
-                    yum install -y ${rel_epel} ${rpm_pkg}
-                else
-                    rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
-                    # psycopg2 is shipped by epel on centos 7
-                    dnf install -y epel-release
-                    # ensure that config-manager is installed
-                    dnf config-manager --help > /dev/null 2>&1 || dnf install 'dnf-command(config-manager)' -y
-                    # EPEL packages assume that the 'PowerTools' repository is enabled
-                    dnf config-manager --set-enabled PowerTools || true
-                    dnf install -y ${rpm_pkg}
-                fi
+                rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel python${py_ver}-Cython python3-scapy make"
+                # psycopg2 is shipped by epel on centos 7
+                dnf -q -y install epel-release
+                # ensure that config-manager is installed
+                dnf config-manager --help > /dev/null 2>&1 || dnf -y install 'dnf-command(config-manager)'
+                # EPEL packages assume that the 'PowerTools' repository is enabled
+                dnf config-manager --set-enabled PowerTools || true
+                dnf -q -y install ${rpm_pkg}
                 ;;
             'debian' | 'ubuntu')
-                apt-get install -qq -y python3-pip gcc libpython3-all-dev cython3 python3-scapy make
+                apt-get -qq -y install python3-pip gcc libpython3-all-dev cython3 python3-scapy make
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2

@@ -190,14 +190,10 @@ selinux_policy () {
     } || {
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
-                if dnf --version > /dev/null 2>&1 ; then
-                    dnf install -q -y checkpolicy policycoreutils
-                else
-                    yum install -q -y checkpolicy policycoreutils
-                fi
+                dnf -q -y install checkpolicy policycoreutils
                 ;;
             'debian' | 'ubuntu')
-                apt-get install -qq -y policycoreutils checkpolicy semodule-utils selinux-policy-default
+                apt-get -qq -y install policycoreutils checkpolicy semodule-utils selinux-policy-default
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2
@@ -235,16 +231,12 @@ init() {
             test "${py_ver}" -ge 38 || {
                 echo "python36 use python3-pip 9.0.3 which start to be quiet old." >&2; exit 1 ; }
             rpm_pkg="python${py_ver}-psycopg2 python${py_ver}-pip gcc python${py_ver}-devel haproxy python${py_ver}-PyYAML python${py_ver}-requests"
-            if dnf --version > /dev/null 2>&1 ; then
-                dnf install -y epel-release ${rpm_pkg}
-            else
-                # psycopg2 is shipped by epel on centos 7
-                yum install -y ${rel_epel} ${rpm_pkg}
-            fi
+            dnf -q -y install epel-release ${rpm_pkg}
+            # psycopg2 is shipped by epel on centos 7
             softdog_setup || softdog_setup || { echo "warning: watchdog setup error" 1>&2 ; }
             ;;
         'debian' | 'ubuntu')
-            apt-get install -qq -y python3-psycopg2 python3-pip python3-dev python3-yaml gcc haproxy
+            apt-get -qq -y install python3-psycopg2 python3-pip python3-dev python3-yaml gcc haproxy
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2

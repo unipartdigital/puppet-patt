@@ -34,15 +34,11 @@ init() {
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
                 pkg="util-linux xfsprogs lvm2 cryptsetup psmisc"
-                if [ "${os_major_version_id}" -lt 8 ]; then
-                    yum install -y $pkg
-                else
-                    dnf install -y $pkg
-                fi
+                dnf -q -y install $pkg
                 ;;
             "debian" | "ubuntu")
                 pkg="util-linux xfsprogs lvm2 cryptsetup-bin psmisc"
-                apt-get install -qq -y $pkg
+                apt-get -qq -y install $pkg
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2

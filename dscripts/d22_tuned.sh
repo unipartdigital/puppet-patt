@@ -27,10 +27,10 @@ tune () {
     tuned --version > /dev/null 2>&1 || {
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora')
-                dnf install -y tuned
+                dnf -q -y install tuned
                 ;;
             'debian' | 'ubuntu')
-                apt-get install -qq -y tuned
+                apt-get -qq -y install tuned
                 ;;
             *)
                 echo "unsupported release vendor: ${os_id}" 1>&2
