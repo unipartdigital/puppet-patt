@@ -64,26 +64,26 @@ def nftables_enable(nodes):
 
 def nftables_configure(cluster_name, template_src, config_file_target,
                        patroni_peers=[], etcd_peers=[], haproxy_peers=[], sftpd_peers=[],
-                       postgres_clients=[], monitoring_clients=[]):
+                       postgres_clients=[], monitoring_clients=[], floating_ip=[]):
     nodes = list ({n.hostname: n for n in
                    patroni_peers + etcd_peers + haproxy_peers + sftpd_peers}.values())
     logger.debug ("nftables_configure {}".format ([n.hostname for n in nodes]))
 
     nft_init (nodes)
 
-    x_patroni=[x.hostname for x in patroni_peers]
+    x_patroni=[x.hostname for x in patroni_peers] + floating_ip
     if not x_patroni:
         x_patroni=['::1']
-    x_etcd=[x.hostname for x in etcd_peers]
+    x_etcd=[x.hostname for x in etcd_peers] + floating_ip
     if not x_etcd:
         x_etcd=['::1']
-    x_haproxy=[x.hostname for x in haproxy_peers]
+    x_haproxy=[x.hostname for x in haproxy_peers] + floating_ip
     if not x_haproxy:
         x_haproxy=['::1']
     x_postgres_clients=[c for c in postgres_clients]
     if not x_postgres_clients:
         x_postgres_clients=['::1/128']
-    x_monitoring_clients=[c for c in postgres_clients]
+    x_monitoring_clients=[c for c in monitoring_clients]
     if not x_monitoring_clients:
         x_monitoring_clients=['::1/128']
 
@@ -113,10 +113,10 @@ def disk_init(nodes, vol_size, mnt=None, user=None):
     util_init(nodes)
     if mnt:
         result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
-                                   args=['-m'] + [mnt] + ['-s'] + [vol_size], sudo=True)
+                                   args=['-m'] + [mnt] + ['-s'] +  [vol_size] + ['--fail'], sudo=True)
     elif user:
         result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
-                                   args=['-u'] + [user] + ['-s'] + [vol_size], sudo=True)
+                                   args=['-u'] + [user] + ['-s'] + [vol_size] + ['--fail'], sudo=True)
     log_results (result)
 
 

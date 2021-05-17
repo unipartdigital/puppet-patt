@@ -216,6 +216,7 @@ if __name__ == "__main__":
         if cfg.add_repo:
             patt_syst.add_repo (repo_url=cfg.add_repo, nodes=etcd_peers)
 
+        floating_ip = cfg.floating_ip if cfg.floating_ip else []
         patt_syst.nftables_configure (cluster_name=cfg.cluster_name,
                                       template_src='./config/firewall.nft',
                                       config_file_target='/etc/nftables/postgres_patroni.nft',
@@ -223,7 +224,8 @@ if __name__ == "__main__":
                                       etcd_peers=etcd_peers,
                                       haproxy_peers=haproxy_peers,
                                       postgres_clients=["::0/0"],
-                                      monitoring_clients=["::0/0"])
+                                      monitoring_clients=["::0/0"],
+                                      floating_ip=floating_ip)
 
         sftpd_only_id = list(set([n.id for n in sftpd_peers]) - set([n.id for n in etcd_peers] +
                                                                     [n.id for n in postgres_peers] +
