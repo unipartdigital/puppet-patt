@@ -32,45 +32,33 @@ logger () {
 
 add_repo () {
     repo_url="$*"
-
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
-            # some images may not provide the config-manager plugin
-            dnf config-manager --help > /dev/null 2>&1 || dnf -q -y install 'dnf-command(config-manager)'
-
             for r in ${repo_url[*]}; do
-                if [ "x$r" == "x" ]; then
+                test "x$r" == "x" && continue
+                repo_name=$(basename ${r})
+                tmp_file=`mktemp`
+                curl -f -k ${r} -o ${tmp_file} || {
+                    rm -f ${tmp_file}
                     continue
-                fi
-                br=$(echo $(basename ${r}))
-                if [ "$(echo ${br} | rev | cut -d '.' -f 1 | rev)" == "repo" ]; then
-                    (cd /etc/yum.repos.d/
-                     curl -f -k ${r} > /dev/null || continue
-                     echo "curl -f -k ${r} > ${br}" 2>&1
-                     curl -f -k ${r} > ${br}
-                     if  [ -f ${br} ]; then
-                         if grep -q "skip_if_unavailable" ${br} ; then
-                             if ! grep -iq "skip_if_unavailable=true" ${br} ; then
-                                 sed -i -e "s|skip_if_unavailable=.*|skip_if_unavailable=True|"
-                             fi
-                         else
-                             echo "skip_if_unavailable=True" >> ${br}
-                         fi
-                     fi
-                    )
-                else
-                    echo "curl -f -k ${r}" 1>&2
-                    curl -f -k ${r} > /dev/null || continue
-                    repo_name=$(echo "$r" | sed -e "s|https*://||" -e "s|[\.:/]|_|g" -e "s|\[|_|" -e "s|\]|_|" -e "s|_\+|_|g")
+                }
+                test -n "`cat ${tmp_file} 2> /dev/null`" || { rm -f ${tmp_file} ; continue ; }
+                grep -q '^[[:space:]]*baseurl' ${tmp_file} && {
+                    grep -q '^[[:space:]]*skip_if_unavailable' ${tmp_file} || {
+                        echo "skip_if_unavailable=True" >> ${tmp_file}
+                    }
+                    mv ${tmp_file} /etc/yum.repos.d/${repo_name}.repo
+                } || {
+                    rm -f ${tmp_file}
                     cat <<EOF > /etc/yum.repos.d/${repo_name}.repo
 [${repo_name}]
-name=created by $0 from ${r}
+name=created by `basename $0` from ${r}
 baseurl=${r}
 enabled=1
 skip_if_unavailable=True
 gpgcheck=0
 EOF
-                fi
+                }
             done
             ;;
         'debian' | 'ubuntu')
