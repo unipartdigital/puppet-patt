@@ -1,8 +1,10 @@
 class patt::packages_dnf
  (
+
   $python_version="3.8"
  )
 {
+  include patt::mount
 
   $pkg_p=split("$python_version", '\.')
   $pv="${pkg_p[0]}${pkg_p[1]}"
@@ -74,7 +76,7 @@ class patt::packages_dnf
   notify {"etcd peer install":}
 
   Exec{'/etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo':
-   command  => '/usr/bin/curl -f https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo > /etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo',
+   command  => '/usr/bin/curl -f https://copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8/unipartdigital-pkgs-epel-8.repo -o /etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo',
    unless => '/bin/test -f /etc/yum.repos.d/unipartdigital-pkgs-epel-8.repo'
    }
 
@@ -105,22 +107,22 @@ class patt::packages_dnf
      require => Package['pgdg-redhat-repo'],
   }
 
-  $pg_pkg = [
-          "postgresql${patt::postgres_release}",
-          "postgresql${patt::postgres_release}-server",
-          "postgresql${patt::postgres_release}-contrib"
-          ]
-
-  $pg_pkg.each|$p| {
-   unless defined(Package["$p"]) {
-    if ($p == "postgresql${patt::postgres_release}-server") {
-     package { $p: ensure => 'installed', require => Exec['dnf_module_disable_postgresql'],
-                   alias  => "postgresql_${patt::postgres_release}_server"}
-    }else{
-     package { $p: ensure => 'installed', require => Exec['dnf_module_disable_postgresql'] }
-    }
-   }
+  package {"postgresql${patt::postgres_release}-server":
+     ensure => 'installed',
+     require => [Exec['dnf_module_disable_postgresql']],
+     alias  => "postgresql_${patt::postgres_release}_server",
   }
+
+  package {"postgresql${patt::postgres_release}-contrib":
+     ensure => 'installed',
+     require => [Package["postgresql${patt::postgres_release}-server"]],
+  }
+
+  package {"postgresql${patt::postgres_release}":
+     ensure => 'installed',
+     require => [Package["postgresql${patt::postgres_release}-server"]],
+  }
+
  }
 
  if "${patt::is_haproxy}" == "true" {

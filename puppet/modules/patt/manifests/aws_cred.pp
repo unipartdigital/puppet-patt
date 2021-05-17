@@ -11,13 +11,16 @@ class patt::aws_cred(
   notify {"postgres peer aws credentials":}
 
 
+
   if $patt::aws_credentials {
-   file{"${postgres_home}/":
-      ensure  => directory,
-      owner   => postgres,
-      group   => postgres,
-      mode    => '0711',
-      require => [Package["postgresql${patt::postgres_release}-server"]],
+   unless defined(File["${postgres_home}"]) {
+    file{"${postgres_home}":
+       ensure  => directory,
+       owner   => postgres,
+       group   => postgres,
+       mode    => '0711',
+       require => [Package["postgresql${patt::postgres_release}-server"]],
+    }
    }
    file{"${postgres_home}/.aws/":
       ensure  => directory,
@@ -25,7 +28,7 @@ class patt::aws_cred(
       group   => postgres,
       mode    => '0700',
       require => [Package["postgresql${patt::postgres_release}-server"],
-                     File["${postgres_home}/"]],
+                     File["${postgres_home}"], Exec["mount_$postgres_home"]],
    }
 
    file {"${postgres_home}/.aws/credentials":
