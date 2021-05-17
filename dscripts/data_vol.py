@@ -136,7 +136,7 @@ def vg_list():
         vg = json.loads(vg_list_cmd.stdout)['report'][0]['vg'][:]
         return [i['vg_name'] for i in vg]
 
-def volume_data_extend (mnt, created_pv=[], extend_full=False, lv_size="1G"):
+def volume_data_extend (mnt, created_pv=[], extend_full=False, lv_size="1G", fail=False):
    print ("volume_data_extend")
    d = get_bdev()
    d_mnt = bdev_by_mnt(d, mnt)
@@ -150,6 +150,7 @@ def volume_data_extend (mnt, created_pv=[], extend_full=False, lv_size="1G"):
                print (vg_extend_cmd.stdout.decode())
             else:
                print (vg_extend_cmd.stderr.decode(), file=sys.stderr)
+               if fail: sys.exit(pvcreate_cmd.returncode)
          except:
             raise
 
@@ -165,10 +166,11 @@ def volume_data_extend (mnt, created_pv=[], extend_full=False, lv_size="1G"):
             print (lv_extend_cmd.stdout.decode())
          else:
             print (lv_extend_cmd.stderr.decode(), file=sys.stderr)
+            if fail: sys.exit(pvcreate_cmd.returncode)
       except:
          raise
 
-def volume_data_create (mnt, created_pv=[], extend_full=False, lv_size="1G"):
+def volume_data_create (mnt, created_pv=[], extend_full=False, lv_size="1G", fail=False):
    print ("volume_data_create")
    d = get_bdev()
    d_mnt = bdev_by_mnt(d, mnt)
@@ -186,6 +188,7 @@ def volume_data_create (mnt, created_pv=[], extend_full=False, lv_size="1G"):
                   print (vg_create_cmd.stdout.decode())
                else:
                   print (vg_create_cmd.stderr.decode(), file=sys.stderr)
+                  if fail: sys.exit(pvcreate_cmd.returncode)
       except:
          raise
       try:
@@ -199,10 +202,11 @@ def volume_data_create (mnt, created_pv=[], extend_full=False, lv_size="1G"):
                print (lv_create_cmd.stdout.decode())
             else:
                print (lv_create_cmd.stderr.decode(), file=sys.stderr)
+               if fail: sys.exit(pvcreate_cmd.returncode)
       except:
          raise
 
-def volume_data_mount_point (mnt, fs="xfs", manage_fstab=True, fstab_uuid=True):
+def volume_data_mount_point (mnt, fs="xfs", manage_fstab=True, fstab_uuid=True, fail=False):
    d = get_bdev()
    d_mnt = bdev_by_mnt(d, mnt)
    if d_mnt: return
@@ -223,6 +227,9 @@ def volume_data_mount_point (mnt, fs="xfs", manage_fstab=True, fstab_uuid=True):
    if mkfs_cmd.returncode == 0:
       if not os.path.isdir (mnt):
          pathlib.Path(mnt).mkdir(parents=True, exist_ok=True)
+      else:
+         print (mkfs_cmd.stderr.decode(), file=sys.stderr)
+         if fail: sys.exit(mkfs_cmd.returncode)
    try:
       uuid = None
       fstab_line = None
@@ -271,7 +278,7 @@ create vg and lv if necessary
 or extend lv if allowed
 """
 def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
-                      manage_fstab=True, fstab_uuid=True):
+                      manage_fstab=True, fstab_uuid=True, fail=False):
    mnt = "{}".format (pathlib.Path(mnt).resolve())
    d = get_bdev()
    d_mnt = bdev_by_mnt(d, mnt)
@@ -293,18 +300,19 @@ def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
                print (pvcreate_cmd.stdout.decode())
             else:
                print (pvcreate_cmd.stderr.decode(), file=sys.stderr)
+               if fail: sys.exit(pvcreate_cmd.returncode)
                continue
          except:
             raise
 
    if (os.path.isdir(mnt) and len(os.listdir(mnt)) == 0) or not os.path.isdir(mnt):
       # create
-      volume_data_create (mnt, created_pv=created_pv, extend_full=extend_full, lv_size=lv_size)
+      volume_data_create (mnt, created_pv=created_pv, extend_full=extend_full, lv_size=lv_size, fail=fail)
       # mount point
-      volume_data_mount_point (mnt, fs=mkfs,  manage_fstab=manage_fstab, fstab_uuid=fstab_uuid)
+      volume_data_mount_point (mnt, fs=mkfs,  manage_fstab=manage_fstab, fstab_uuid=fstab_uuid, fail=fail)
    else:
       # extend
-      volume_data_extend (mnt, created_pv=created_pv, extend_full=extend_full, lv_size=lv_size,)
+      volume_data_extend (mnt, created_pv=created_pv, extend_full=extend_full, lv_size=lv_size, fail=fail)
 
 if __name__ == "__main__":
    parser = argparse.ArgumentParser()
@@ -312,6 +320,7 @@ if __name__ == "__main__":
    parser.add_argument('-u','--user_name', help='use <user_name> home dir as mount point', required=False)
    parser.add_argument('-s','--volume_size', help='volume size like 1G, 2G, 1.4T', required=True)
    parser.add_argument('-f','--fs_type', help='file system to use ext4 or xfs', required=False, default="xfs")
+   parser.add_argument('--fail', help='exit with error code on first error', action='store_true', required=False)
 
    parser.add_argument('--lock_dir', help='lock directory', required=False, default="/var/run/lock")
 
@@ -377,7 +386,8 @@ if __name__ == "__main__":
          flock(lock_fd, LOCK_EX | LOCK_NB)
 
          init_mount_point (mount_point, lv_size=args.volume_size, extend_full=args.extend_full,
-                           mkfs=args.fs_type, manage_fstab=args.fstab, fstab_uuid=args.fstab_uuid)
+                           mkfs=args.fs_type, manage_fstab=args.fstab, fstab_uuid=args.fstab_uuid,
+                           fail=args.fail)
       except:
          raise
       finally:
