@@ -150,7 +150,7 @@ def volume_data_extend (mnt, created_pv=[], extend_full=False, lv_size="1G", fai
                print (vg_extend_cmd.stdout.decode())
             else:
                print (vg_extend_cmd.stderr.decode(), file=sys.stderr)
-               if fail: sys.exit(pvcreate_cmd.returncode)
+               if fail: sys.exit(vg_extend_cmd.returncode)
          except:
             raise
 
@@ -166,7 +166,7 @@ def volume_data_extend (mnt, created_pv=[], extend_full=False, lv_size="1G", fai
             print (lv_extend_cmd.stdout.decode())
          else:
             print (lv_extend_cmd.stderr.decode(), file=sys.stderr)
-            if fail: sys.exit(pvcreate_cmd.returncode)
+            if fail: sys.exit(lv_extend_cmd.returncode)
       except:
          raise
 
@@ -188,7 +188,7 @@ def volume_data_create (mnt, created_pv=[], extend_full=False, lv_size="1G", fai
                   print (vg_create_cmd.stdout.decode())
                else:
                   print (vg_create_cmd.stderr.decode(), file=sys.stderr)
-                  if fail: sys.exit(pvcreate_cmd.returncode)
+                  if fail: sys.exit(vg_create_cmd.returncode)
       except:
          raise
       try:
@@ -202,7 +202,7 @@ def volume_data_create (mnt, created_pv=[], extend_full=False, lv_size="1G", fai
                print (lv_create_cmd.stdout.decode())
             else:
                print (lv_create_cmd.stderr.decode(), file=sys.stderr)
-               if fail: sys.exit(pvcreate_cmd.returncode)
+               if fail: sys.exit(lv_create_cmd.returncode)
       except:
          raise
 
