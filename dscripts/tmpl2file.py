@@ -123,8 +123,8 @@ if __name__ == "__main__":
             if write_out:
                 with open(output, 'w') as f:
                     print(tmpl.substitute(d), file=f)
-                if args.output:
-                    touch (args.output)
+                if args.touch:
+                    touch (args.touch)
             if output_mod:
                 mode = oct(S_IMODE(os.stat(output).st_mode))
                 if oct(output_mod) != mode:
