@@ -96,6 +96,7 @@ if __name__ == "__main__":
 
     yml = subparsers.add_parser('yaml')
     yml.add_argument('-f','--yaml_config_file', help='config file', required=True)
+    yml.add_argument('--aws_credentials', help='add file contain to each postgres peers', required=False)
 
     cli = subparsers.add_parser('cli')
     cli.add_argument('-n','--nodes', action='append', help='nodes name or address', required=True)
@@ -214,46 +215,58 @@ if __name__ == "__main__":
         progress_bar (2, 14)
 
         if cfg.add_repo:
-            patt_syst.add_repo (repo_url=cfg.add_repo, nodes=etcd_peers)
+            add_repo_ok = patt_syst.add_repo (repo_url=cfg.add_repo, nodes=etcd_peers)
+            assert add_repo_ok, "add repo error"
 
         floating_ip = cfg.floating_ip if cfg.floating_ip else []
-        patt_syst.nftables_configure (cluster_name=cfg.cluster_name,
-                                      template_src='./config/firewall.nft',
-                                      config_file_target='/etc/nftables/postgres_patroni.nft',
-                                      patroni_peers=postgres_peers,
-                                      etcd_peers=etcd_peers,
-                                      haproxy_peers=haproxy_peers,
-                                      postgres_clients=["::0/0"],
-                                      monitoring_clients=["::0/0"],
-                                      floating_ip=floating_ip)
+        nftables_configure_ok = patt_syst.nftables_configure (
+            cluster_name=cfg.cluster_name,
+            template_src='./config/firewall.nft',
+            config_file_target='/etc/nftables/postgres_patroni.nft',
+            patroni_peers=postgres_peers,
+            etcd_peers=etcd_peers,
+            haproxy_peers=haproxy_peers,
+            postgres_clients=["::0/0"],
+            monitoring_clients=["::0/0"],
+            floating_ip=floating_ip)
+        assert nftables_configure_ok, "nftables configure error"
 
         sftpd_only_id = list(set([n.id for n in sftpd_peers]) - set([n.id for n in etcd_peers] +
                                                                     [n.id for n in postgres_peers] +
                                                                     [n.id for n in haproxy_peers]))
         sftpd_only=[n for n in sftpd_peers if n.id in sftpd_only_id]
         if sftpd_only:
-            patt_syst.nftables_configure (cluster_name=cfg.cluster_name,
-                                          template_src='./config/firewall.nft',
-                                          config_file_target='/etc/nftables/postgres_patroni.nft',
-                                          sftpd_peers=sftpd_only)
+            nftables_configure_ok = patt_syst.nftables_configure (
+                cluster_name=cfg.cluster_name,
+                template_src='./config/firewall.nft',
+                config_file_target='/etc/nftables/postgres_patroni.nft',
+                sftpd_peers=sftpd_only)
+            assert nftables_configure_ok, "nftables configure error"
+
         progress_bar (3, 14)
 
         if etcd_peers and cfg.vol_size_etcd:
-            patt_syst.disk_init (etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd)
+            vol_etcd_ok = patt_syst.disk_init (
+                etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd)
+            assert vol_etcd_ok, "vol etcd error"
 
         if postgres_peers and cfg.vol_size_pgsql:
-            patt_syst.disk_init (postgres_peers, user='postgres', vol_size=cfg.vol_size_pgsql)
+            vol_pgsql_ok = patt_syst.disk_init (
+                postgres_peers, user='postgres', vol_size=cfg.vol_size_pgsql)
+            assert vol_pgsql_ok, "vol pgsql error"
 
         if sftpd_peers and cfg.vol_size_walg:
-            patt_syst.disk_init (sftpd_peers, mnt="/var/lib/walg", vol_size=cfg.vol_size_walg)
-
+            vol_walg_ok = patt_syst.disk_init (
+                sftpd_peers, mnt="/var/lib/walg", vol_size=cfg.vol_size_walg)
+            assert vol_walg_ok, "vol walg error"
         progress_bar (4, 14)
 
         etcd_report = patt_etcd.etcd_init(cfg.cluster_name, etcd_peers)
 
         progress_bar (5, 14)
 
-        patt_syst.tuned_postgresql (postgres_peers)
+        tuned_postgresql_ok = patt_syst.tuned_postgresql (postgres_peers)
+        assert tuned_postgresql_ok, "tuned postgresql error"
 
         progress_bar (5, 14)
 
@@ -286,6 +299,13 @@ if __name__ == "__main__":
                                           walg_sha256=cfg.walg_sha256,
                                           nodes=postgres_peers)
             assert init_ok, "wal-g installation error"
+
+            # if args.aws_credentials:
+            aws_credentials_ok = patt_walg.walg_aws_credentials(
+                nodes=postgres_peers,
+                aws_credentials=args.aws_credentials,
+                error_on_file_not_found=False)
+            assert aws_credentials_ok, "s3 aws credentials error"
 
             # s3 store definition
             walg_s3_json_ok = patt_walg.walg_s3_json(postgres_version=cfg.postgres_release,
