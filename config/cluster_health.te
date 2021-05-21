@@ -4,9 +4,10 @@ require {
         type httpd_t;
         type unreserved_port_t;
         type user_home_t;
+        type cache_home_t;
         type http_port_t;
-        class dir read;
-        class file { ioctl open read };
+        class dir { read add_name remove_name write };
+        class file { ioctl create getattr lock open read unlink write };
         class tcp_socket name_connect;
 }
 
@@ -25,3 +26,9 @@ allow httpd_t user_home_t:dir read;
 
 #!!!! This avc can be allowed using the boolean 'httpd_read_user_content'
 allow httpd_t user_home_t:file { ioctl open read };
+
+#!!!! This avc can be allowed using the boolean 'httpd_read_user_content'
+allow httpd_t cache_home_t:dir { add_name remove_name write };
+
+#!!!! This avc can be allowed using the boolean 'httpd_read_user_content'
+allow httpd_t cache_home_t:file { getattr lock create open read unlink write };

@@ -98,6 +98,11 @@ configure () {
         mkdir -m 711 -p /home/${wsgi_user}
         chown ${wsgi_user}.${wsgi_user} /home/${wsgi_user}
     }
+    test -d /home/${wsgi_user}/.cache || {
+        mkdir -m 700 -p /home/${wsgi_user}/.cache
+        chown ${wsgi_user}.${wsgi_user} /home/${wsgi_user}/.cache
+    }
+
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
             test -d /etc/httpd/conf/conf.minimal.d || mkdir -p /etc/httpd/conf/conf.minimal.d

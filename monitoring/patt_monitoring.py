@@ -161,9 +161,15 @@ class PatroniService(ClusterService):
             setattr(info, k, e[k])
         return info
 
+    def _default_db_path():
+        p = "{}/.cache".format(os.path.expanduser("~"))
+        if os.path.isdir (p) :
+            return "{}/patt_monitoring.sql3".format (p)
+        return "/var/tmp/patt_monitoring-{}.sql3".format(os.getuid())
+
     def __init__(self,
                  max_time_elapsed_since_replayed=3600,
-                 database="/var/tmp/patt_monitoring-{}.sql3".format(f"{os.getuid()}")):
+                 database="{}".format(f"{_default_db_path()}")):
         super().__init__()
         self.database=database
         if self.postgres_peers:
