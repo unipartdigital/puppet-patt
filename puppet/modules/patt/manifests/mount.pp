@@ -19,7 +19,7 @@ class patt::mount
 
   if $do_mount_etcd {
    exec{"mount_$etcd_data":
-     command => "${patt::install_dir}/dscripts/data_vol.py -m ${etcd_data} -s ${patt::vol_size_etcd} --fail",
+     command => "${patt::install_dir}/dscripts/data_vol.py -m ${etcd_data} -s ${patt::vol_size_etcd}",
      require => [File["${patt::install_dir}/dscripts/data_vol.py"]],
      before  => [Package["etcd"]],
      onlyif  => "/bin/test `ls -CA ${etcd_data} 2> /dev/null | wc -l` == 0",
@@ -52,7 +52,7 @@ class patt::mount
   }
   if $do_mount_postgres {
    exec{"mount_$postgres_home":
-     command => "${patt::install_dir}/dscripts/data_vol.py -m ${postgres_home} -s ${patt::vol_size_pgsql} --fail",
+     command => "${patt::install_dir}/dscripts/data_vol.py -m ${postgres_home} -s ${patt::vol_size_pgsql}",
      require => [File["${patt::install_dir}/dscripts/data_vol.py"]],
      before  => [Package["postgresql_${patt::postgres_release}_server"], File["${postgres_home}"]],
      onlyif  => "/bin/test `ls -CA ${postgres_home} 2> /dev/null | wc -l` == 0",

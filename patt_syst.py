@@ -7,18 +7,11 @@ import logging
 logger = logging.getLogger('patt_syst')
 
 def log_results(result):
-    error_count=0
     for r in result:
         logger.debug ("hostname: {}".format(r.hostname))
         logger.debug ("stdout: {}".format (r.out))
-        if r.error is None:
-            pass
-        elif r.error.strip().startswith("Error: Nothing to do"):
-            pass
-        else:
-            error_count += 1
+        if hasattr(r,'error') and r.error:
             logger.error ("stderr: {}".format (r.error))
-    return error_count
 
 """
 install util system packages and dep on each nodes
@@ -32,6 +25,7 @@ def util_init(nodes):
     result = patt.exec_script (nodes=nodes, src="./dscripts/d02.util.sh",
                                 args=['init'], sudo=True)
     log_results (result)
+    return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
 
 """
@@ -46,6 +40,7 @@ def nft_init(nodes):
     result = patt.exec_script (nodes=nodes, src="./dscripts/d01.nft.sh",
                                 args=['init'], sudo=True)
     log_results (result)
+    return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
 
 """
@@ -61,6 +56,7 @@ def nftables_enable(nodes):
     result = patt.exec_script (nodes=nodes, src="./dscripts/d01.nft.sh",
                                 args=['nftables_enable'], sudo=True)
     log_results (result)
+    return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
 def nftables_configure(cluster_name, template_src, config_file_target,
                        patroni_peers=[], etcd_peers=[], haproxy_peers=[], sftpd_peers=[],
@@ -87,20 +83,36 @@ def nftables_configure(cluster_name, template_src, config_file_target,
     if not x_monitoring_clients:
         x_monitoring_clients=['::1/128']
 
+    """
+    vip may show up as an aliases
+    while it is true, clean it up and set it explicitly for all peer
+    """
+    def rm_vip(e=[], vip=[]):
+        try:
+            for v in vip:
+                e.remove(v)
+        except:
+            pass
+        return " ".join(e)
+
     result = patt.exec_script (nodes=nodes, src="./dscripts/nft_config.py", payload=template_src,
                                 args=['-t'] + [os.path.basename (template_src)] +
                                 ['-d'] + [config_file_target] +
                                 ['-p'] + x_patroni +
-                                list ([" ".join(p.ip_aliases) for p in patroni_peers]) +
+                                list ([rm_vip(p.ip_aliases, floating_ip) for p in patroni_peers]) +
                                 ['-e'] + x_etcd +
-                                list ([" ".join(e.ip_aliases) for e in etcd_peers]) +
+                                list ([rm_vip(e.ip_aliases, floating_ip) for e in etcd_peers]) +
                                 ['-x'] + x_haproxy +
-                                list ([" ".join(x.ip_aliases) for x in haproxy_peers]) +
+                                list ([rm_vip(x.ip_aliases, floating_ip) for x in haproxy_peers]) +
                                 ['-c'] + x_postgres_clients +
                                 ['-m'] + x_monitoring_clients,
                                 sudo=True)
     log_results (result)
-    nftables_enable (nodes)
+    all_ok = not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+    if all_ok:
+        all_ok = nftables_enable (nodes)
+        return all_ok
+    return False
 
 """
 setup the free disks on each nodes
@@ -113,12 +125,12 @@ def disk_init(nodes, vol_size, mnt=None, user=None):
     util_init(nodes)
     if mnt:
         result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
-                                   args=['-m'] + [mnt] + ['-s'] +  [vol_size] + ['--fail'], sudo=True)
+                                   args=['-m'] + [mnt] + ['-s'] +  [vol_size], sudo=True)
     elif user:
         result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
-                                   args=['-u'] + [user] + ['-s'] + [vol_size] + ['--fail'], sudo=True)
+                                   args=['-u'] + [user] + ['-s'] + [vol_size], sudo=True)
     log_results (result)
-
+    return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
 """
 additional repo setup
@@ -133,6 +145,7 @@ def add_repo (repo_url, nodes):
     result = patt.exec_script (nodes=nodes, src="./dscripts/d03.repo.sh",
                                 args=['add'] + [" ".join(repo_url)], sudo=True)
     log_results (result)
+    return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
 """
 add a tuned postgresql profile and enable it
@@ -146,3 +159,4 @@ def tuned_postgresql(nodes):
     result = patt.exec_script (nodes=nodes, src="./dscripts/d22_tuned.sh",
                                args=['enable'], sudo=True)
     log_results (result)
+    return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
