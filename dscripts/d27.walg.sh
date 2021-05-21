@@ -371,6 +371,35 @@ python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${s3_conf
 EOF
 }
 
+aws_credentials () {
+    comd=${1:-"tmpl2file.py"}
+    awc=${2:-""}
+    pg_home=$(getent passwd postgres | cut -d':' -f 6)
+    test "x${pg_home}" != "x" || { echo "pg_home not found"     >&2 ; rm -f "${srcdir}/${awc}" ; exit 1 ; }
+    test -d ${pg_home} || { echo "${pg_home} not directory"     >&2 ; rm -f "${srcdir}/${awc}" ; exit 1 ; }
+    test -f ${srcdir}/${comd} || { echo "script file not found" >&2 ; rm -f "${srcdir}/${awc}" ; exit 1 ; }
+    test -f ${srcdir}/${awc} || { echo "credential file not found" >&2 ; exit 1 ; }
+
+    test -d ${pg_home}/.aws || {
+        mkdir -m 700 ${pg_home}/.aws && chown postgres.postgres ${pg_home}/.aws
+    }
+
+    python3 ${srcdir}/${comd} -t ${srcdir}/${awc} -o ${pg_home}/.aws/credentials \
+            --skip '#'                                                           \
+            --chmod 640
+    test "`stat -c '%U' ${pg_home}/.aws/credentials`" == "postgres" || {
+        chown "postgres" ${pg_home}/.aws/credentials
+    }
+    rm -f "${srcdir}/${awc}"
+}
+
+aws_credentials_dump () {
+    comd=${1:-"tmpl2file.py"}
+    pg_home=$(getent passwd postgres | cut -d':' -f 6)
+    test -f ${pg_home}/.aws/credentials && {
+        python3 ${srcdir}/${comd} -t ${pg_home}/.aws/credentials
+    }
+}
 
 touch ${lock_file} 2> /dev/null || true
 case "${1:-''}" in
@@ -432,6 +461,18 @@ case "${1:-''}" in
           s3_json "$@"
         } 8< ${lock_file}
         ;;
+    'aws_credentials')
+        shift 1
+        { flock -w 10 8 || exit 1
+          aws_credentials "$@"
+        } 8< ${lock_file}
+        ;;
+    'aws_credentials_dump')
+        shift 1
+        { flock -w 10 8 || exit 1
+          aws_credentials_dump "$@"
+        } 8< ${lock_file}
+        ;;
     *)
         {
             cat <<EOF
@@ -443,6 +484,8 @@ usage:
  $0 ssh_known_hosts <cluster name> <archive host IP>
  $0 sh_json
  $0 s3_json
+ $0 aws_credentials
+ $0 aws_credentials_dump
 EOF
             exit 1
         } >&2

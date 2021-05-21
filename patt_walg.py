@@ -278,3 +278,57 @@ def sftpd_peers_service(walg_store, sftpd_peers):
             if p.hostname == s.hostname:
                 result.append((p, s))
     return result
+
+"""
+return the contain of <postgres_home>/.aws/credentials file (first found)
+return None otherwise
+"""
+def walg_aws_credentials_get(nodes=[]):
+    comd="./dscripts/tmpl2file.py"
+    for n in nodes:
+        try:
+            result = patt.exec_script (nodes=[n], src="dscripts/d27.walg.sh",
+                                       payload=comd,
+                                       args=['aws_credentials_dump'] +
+                                       [os.path.basename (comd)], sudo=True)
+        except:
+            continue
+        else:
+            for r in result:
+                if r.out:
+                    return r.out
+        finally:
+            log_results (result, hide_stdout=True)
+
+"""
+add the aws credentials into each postgres peer
+ walg_aws_credentials can be made optional with: error_on_file_not_found==False
+"""
+def walg_aws_credentials(nodes, aws_credentials=None, error_on_file_not_found=False):
+    patt.host_id(nodes)
+    # patt.check_dup_id (nodes)
+    source = patt.Source()
+    running_node = source.whoami(nodes)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        if type (running_node) is patt.Node:
+            # installing from peer
+            tmp = walg_aws_credentials_get([running_node])
+            if tmp:
+                with open (tmp_dir + '/' + 'awsc', "w") as awsc:
+                    awsc.write(tmp)
+                    awsc.write('\n')
+                    awsc.flush()
+                    awsc.close()
+                aws_credentials = awsc.name
+        if aws_credentials and error_on_file_not_found:
+            assert os.path.isfile (aws_credentials)
+        if aws_credentials and os.path.isfile (aws_credentials):
+            comd="./dscripts/tmpl2file.py"
+            result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh",
+                                       payload=[comd, aws_credentials],
+                                       args=['aws_credentials'] +
+                                       [os.path.basename (comd)] +
+                                       [os.path.basename (aws_credentials)], sudo=True)
+            log_results (result)
+            return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+        return True
