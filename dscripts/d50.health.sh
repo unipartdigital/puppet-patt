@@ -114,7 +114,7 @@ configure () {
                     --dictionary_key_val "errorlog=logs/\${HTTPD_INSTANCE}_error_log"                \
                     --dictionary_key_val "customlog=logs/\${HTTPD_INSTANCE}_access_log"              \
                     --dictionary_key_val "mimemagicfile=conf/magic"                                  \
-                    --dictionary_key_val "config_dir=conf/conf.minimal.d"                            \
+                    --dictionary_key_val "apache_cfg_dir=conf/conf.minimal.d"                        \
                     --dictionary_key_val "wsgi_user=${wsgi_user}"                                    \
                     --chmod 644                                                                      \
                     --touch /var/tmp/$(basename $0 .sh).reload
@@ -142,16 +142,16 @@ EOF
                 test -f magic || ln -sf ../apache2/magic magic
             }
             python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o /etc/apache2-${httpd_instance}/apache2.conf \
-                    --dictionary_key_val "defaultruntimedir=\${APACHE_RUN_DIR}"    \
-                    --dictionary_key_val "pidfile=\${APACHE_PID_FILE}"             \
-                    --dictionary_key_val "user=\${APACHE_RUN_USER}"                \
-                    --dictionary_key_val "group=\${APACHE_RUN_GROUP}"              \
-                    --dictionary_key_val "errorlog=\${APACHE_LOG_DIR}/error.log"   \
-                    --dictionary_key_val "customlog=\${APACHE_LOG_DIR}/access_log" \
-                    --dictionary_key_val "mimemagicfile=magic"                     \
-                    --dictionary_key_val "confid_dir=conf.minimal.d"               \
-                    --dictionary_key_val "wsgi_user=${wsgi_user}"                  \
-                    --chmod 644                                                    \
+                    --dictionary_key_val "defaultruntimedir=\${APACHE_RUN_DIR}"                           \
+                    --dictionary_key_val "pidfile=\${APACHE_PID_FILE}"                                    \
+                    --dictionary_key_val "user=\${APACHE_RUN_USER}"                                       \
+                    --dictionary_key_val "group=\${APACHE_RUN_GROUP}"                                     \
+                    --dictionary_key_val "errorlog=/var/log/apache2/${httpd_instance}_error.log"          \
+                    --dictionary_key_val "customlog=/var/log/apache2/${httpd_instance}_access_log"        \
+                    --dictionary_key_val "mimemagicfile=magic"                                            \
+                    --dictionary_key_val "apache_cfg_dir=conf.minimal.d"                                  \
+                    --dictionary_key_val "wsgi_user=${wsgi_user}"                                         \
+                    --chmod 644                                                                           \
                     --touch /var/tmp/$(basename $0 .sh).reload
             test -f /etc/apache2-${httpd_instance}/conf.minimal.d/00.conf || {
                 cat <<EOF > /etc/apache2-${httpd_instance}/conf.minimal.d/00.conf
@@ -186,20 +186,35 @@ EOF
 
 enable () {
     httpd_instance=${1:-"patt_health"}
-    if ! systemctl is-enabled -q httpd\@${httpd_instance} ; then
+
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            httpd_service="httpd"
+            ;;
+        'debian' | 'ubuntu')
+            httpd_service="apache2"
+            ;;
+        *)
+            echo "unsupported release vendor: ${os_id}" 1>&2
+            exit 1
+            ;;
+    esac
+
+    if ! systemctl is-enabled -q ${httpd_service}\@${httpd_instance} ; then
         test -f /var/tmp/$(basename $0 .sh).reload && {
-            systemctl is-active httpd@patt_health.service || {
-                systemctl restart httpd\@${httpd_instance} && rm -f /var/tmp/$(basename $0 .sh).reload
+            systemctl is-active ${httpd_service}@patt_health.service || {
+                systemctl restart ${httpd_service}\@${httpd_instance} && \
+                    rm -f /var/tmp/$(basename $0 .sh).reload
             }
         }
-        systemctl enable --now  httpd\@${httpd_instance}
+        systemctl enable --now ${httpd_service}\@${httpd_instance}
     elif test -f /var/tmp/$(basename $0 .sh).reload ; then
-        systemctl restart httpd\@${httpd_instance} && rm -f /var/tmp/$(basename $0 .sh).reload
-    elif ! systemctl -q is-active httpd\@patt_health.service ; then
-        systemctl start httpd\@${httpd_instance}
+        systemctl restart ${httpd_service}\@${httpd_instance} && rm -f /var/tmp/$(basename $0 .sh).reload
+    elif ! systemctl -q is-active ${httpd_service}\@patt_health.service ; then
+        systemctl start ${httpd_service}\@${httpd_instance}
     fi
-    systemctl status httpd\@${httpd_instance} > /dev/null ||  {
-        systemctl status  httpd\@${httpd_instance}  >&2 ; exit 1
+    systemctl status ${httpd_service}\@${httpd_instance} > /dev/null ||  {
+        systemctl status ${httpd_service}\@${httpd_instance}  >&2 ; exit 1
     }
 }
 

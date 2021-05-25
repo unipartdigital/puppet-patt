@@ -25,7 +25,7 @@ def _ipv6_nri_split (nri):
     return (login, hostname, port)
 
 def pp_string(s):
-    return pformat(s, sort_dicts=False)
+    return pformat(s) #, sort_dicts=False)
 
 class Gconfig:
     pass
