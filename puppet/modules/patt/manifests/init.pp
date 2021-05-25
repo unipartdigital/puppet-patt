@@ -3,11 +3,11 @@
 
 class patt (
  String                  $cluster_name,
- Optional[Array[String]] $add_repo,
+ Optional[Array[String]] $add_repo = [],
  Optional[Array[String]] $etcd_peers,
  Array[String]           $floating_ip,
- Optional[Array[String]] $haproxy_peers,
- Optional[String]        $haproxy_template_file,
+ Optional[Array[String]] $haproxy_peers = [],
+ Optional[String]        $haproxy_template_file = '',
  Optional[String]        $log_file,
  Optional[Integer]       $patt_loglevel,
  Array[String]           $nodes,
@@ -31,9 +31,9 @@ class patt (
                         host => Optional[String],
                         identity_file => Optional[String],
                         }]]] $walg_store = [],
- Optional[String]        $aws_credentials,
- Optional[String]        $ssh_keyfile,
- Optional[String]        $ssh_login,
+ Optional[String]        $aws_credentials = '',
+ Optional[String]        $ssh_keyfile = '',
+ Optional[String]        $ssh_login = '',
  Optional[Array[Struct[{name => String, options => Optional[Array[String]]}]]] $pg_create_role = [],
  Optional[Array[Struct[{name => String, owner => String}]]] $pg_create_database = [],
 

@@ -1,5 +1,4 @@
 PYTHON := python3
-PIP := pip3
 
 PY_MOD := $(shell grep -v '\#' ${CURDIR}/requirements.txt)
 
@@ -19,13 +18,13 @@ help:
 
 $(PY_MOD):
 	@echo DEP $@
-	${PYTHON} -c "import `echo $@ | tr A-Z a-z`" || ${PIP} install --user $@; \
+	${PYTHON} -c "import `echo $@ | tr A-Z a-z`" || ${PYTHON} -m pip install --user $@;
 
 depend: $(PY_MOD) paramiko
 
 paramiko:
 	python3 -c "import paramiko;import sys; paramiko.__version__[:3] >= str('2.7') or sys.exit(1)" || \
-${PIP} install -U --user paramiko
+${PYTHON} -m pip install -U --user paramiko
 
 -include PUPPET.makefile
 

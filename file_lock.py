@@ -60,8 +60,12 @@ class file_lock(object):
 
     def release (self):
         if self.is_locked:
-            os.unlink(self.lockfile)
-            self.is_locked = False
+            try:
+                os.unlink(self.lockfile)
+            except FileNotFoundError:
+                self.is_locked = False
+            else:
+                self.is_locked = False
 
     def __enter__(self):
         self.aquire()

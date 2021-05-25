@@ -11,6 +11,7 @@ class patt::packages_apt()
   'policycoreutils',
   'psmisc',
   'python3',
+  'selinux-basics',
   'selinux-policy-default',
   'semodule-utils',
   'tuned',
@@ -19,9 +20,16 @@ class patt::packages_apt()
   'xfsprogs',
  ]
 
+ $base.each|$b| {
+  unless defined(Package["$b"]) {
+   package { $b: ensure => 'installed' }
+  }
+ }
+
  $base_peer = [
   'python3-yaml',
   'python3-cryptography',
+  'python3-pip',
  ]
 
  $base_pg_node = [
@@ -29,7 +37,6 @@ class patt::packages_apt()
   'gcc',
   'libpython3-all-dev',
   'python3-dev',
-  'python3-pip',
   'python3-psycopg2',
   'python3-scapy',
  ]

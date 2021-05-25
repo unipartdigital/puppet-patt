@@ -27,7 +27,7 @@ class patt::aws_cred(
       owner   => postgres,
       group   => postgres,
       mode    => '0700',
-      require => [Package["postgresql${patt::postgres_release}-server"],
+      require => [Package["postgresql_${patt::postgres_release}_server"],
                      File["${postgres_home}"], Exec["mount_$postgres_home"]],
    }
 
@@ -39,7 +39,7 @@ END
     owner   => postgres,
     group   => postgres,
     mode    => '0640',
-    require => [Package["postgresql${patt::postgres_release}-server"],
+    require => [Package["postgresql_${patt::postgres_release}_server"],
                    File["${postgres_home}/.aws/"]],
    }
   }

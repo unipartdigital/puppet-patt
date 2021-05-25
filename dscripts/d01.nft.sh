@@ -63,9 +63,9 @@ init() {
             ;;
     esac
 
-    if [ ! -f /etc/nftables/postgres_patroni ]; then
-        touch /etc/nftables/postgres_patroni || exit 1
-    fi
+    test -d /etc/nftables/ || mkdir -p /etc/nftables/
+    test -f /etc/nftables/postgres_patroni || touch /etc/nftables/postgres_patroni
+
     if grep  -q "include[[:space:]]*$rule_file" ${nftables_conf} ; then
         if ! grep  -q "^[[:space:]]*${rule_file}" ${nftables_conf} ; then
             sed -i -e "s|.*\("include[[:space:]]*$rule_file"\)|\1|" ${nftables_conf}

@@ -1,17 +1,7 @@
 #!/usr/bin/env python3
 
-import patt
-import patt_syst
-import patt_etcd
-import patt_postgres
-import patt_walg
-import patt_patroni
-import patt_haproxy
-import patt_health
-
 import logging
 from logging.handlers import TimedRotatingFileHandler
-import file_lock as fl
 
 import secrets
 import string
@@ -21,6 +11,16 @@ import time
 import sys
 import os
 from pprint import pformat
+
+import patt
+import patt_syst
+import patt_etcd
+import patt_postgres
+import patt_walg
+import patt_patroni
+import patt_haproxy
+import patt_health
+import file_lock as fl
 
 logger = logging.getLogger('patt_cli')
 
@@ -184,6 +184,7 @@ if __name__ == "__main__":
         if cfg.haproxy_peers:
             haproxy_peers = patt.to_nodes (cfg.haproxy_peers, ssh_login, cfg.ssh_keyfile)
 
+        sftpd_peers = []
         if cfg.walg_store:
             sftpd_peers = [n for n in nodes if n.hostname in
                            [patt.ipv6_nri_split(x['host'])[1] for x in
