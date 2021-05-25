@@ -247,7 +247,7 @@ init() {
     touch /tmp/patroni_pip.stamp
     cat <<EOF | su - postgres
 PATH=$PATH:~/.local/bin
-pip3 -q install --user patroni[etcd]==${patroni_version}
+python3 -m pip -q install --user patroni[etcd]==${patroni_version}
 EOF
 
     test -f "${srcdir}/${pe_file}" || { echo "error ${pe_file}" >&2 ; exit 1 ; }

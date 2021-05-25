@@ -11,10 +11,10 @@ main: ip_takeover
 
 scapy:
 # install from pip if no system module
-	-$(shell $(PYTHON) -c "import scapy" || pip3 install --user scapy[basic])
+	-$(shell $(PYTHON) -c "import scapy" || $(PYTHON) -m pip install --user scapy[basic])
 
 scapy_root:
-	-$(shell sudo $(PYTHON) -c "import scapy" || sudo pip3 install --pre scapy[basic])
+	-$(shell sudo $(PYTHON) -c "import scapy" || sudo $(PYTHON) -m pip install --pre scapy[basic])
 
 ip_takeover.py: scapy
 
