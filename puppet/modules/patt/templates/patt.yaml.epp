@@ -35,6 +35,15 @@ postgres_parameters:
 <% } -%>
 postgres_release: <%=$patt::postgres_release%>
 
+network_postgres_clients:
+<% [$patt::network_allow_postgres_clients].flatten.each |$np| { -%>
+- <%= $np %>
+<% } -%>
+network_monitoring_clients:
+<% [$patt::network_allow_monitoring_clients].flatten.each |$nm| { -%>
+- <%= $nm %>
+<% } -%>
+
 walg_release: <%=$patt::walg_release%>
 walg_url: <%=$patt::walg_url%>
 walg_sha256: <%=$patt::walg_sha256%>

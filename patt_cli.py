@@ -48,6 +48,8 @@ class Config(object):
         self.postgres_peers = None
         self.postgres_release = None
         self.postgres_parameters = None
+        self.network_postgres_clients = None
+        self.network_monitoring_clients = None
         self.ssh_keyfile = None
         self.ssh_login = None
         self.pg_master_exec = None
@@ -219,6 +221,8 @@ if __name__ == "__main__":
             add_repo_ok = patt_syst.add_repo (repo_url=cfg.add_repo, nodes=etcd_peers)
             assert add_repo_ok, "add repo error"
 
+        postgres_clients = cfg.network_postgres_clients if cfg.network_postgres_clients else ["::0/0"]
+        monitoring_clients = cfg.network_monitoring_clients if cfg.network_monitoring_clients else ["::0/0"]
         floating_ip = cfg.floating_ip if cfg.floating_ip else []
         nftables_configure_ok = patt_syst.nftables_configure (
             cluster_name=cfg.cluster_name,
@@ -227,8 +231,8 @@ if __name__ == "__main__":
             patroni_peers=postgres_peers,
             etcd_peers=etcd_peers,
             haproxy_peers=haproxy_peers,
-            postgres_clients=["::0/0"],
-            monitoring_clients=["::0/0"],
+            postgres_clients=postgres_clients,
+            monitoring_clients=monitoring_clients,
             floating_ip=floating_ip)
         assert nftables_configure_ok, "nftables configure error"
 

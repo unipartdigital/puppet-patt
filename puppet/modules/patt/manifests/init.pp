@@ -58,6 +58,10 @@ class patt (
  # if used PGDATA disk space (in percent) > patt::gc_cron_target then
  #  run vacuum full (+analyze) otherwise run simple vacuumdb (+analyze)
  # see also 'config/postgres-gc.sh.tmpl'
+
+ Optional[Array[String]] $network_allow_postgres_clients = ['::0/0'],
+ Optional[Array[String]] $network_allow_monitoring_clients = ['::0/0'],
+ # nftables allowed network clients
 )
 {
 
@@ -193,6 +197,11 @@ notify {"is haproxy peer: ${is_haproxy}":
 #  # activate wal-g archiving
 #  - archive_mode = on
 #  - archive_command = /usr/local/bin/wal-g wal-push %p
+#
+# patt::network_allow_postgres_clients:
+#  - '::0/0'
+# patt::network_allow_monitoring_clients:
+#  - '::0/0'
 #
 # patt::pg_create_role:
 #   - {name: example_user, options: ["LOGIN", "PASSWORD ''md5fff64d4f930006fe343c924f6c32157e''"]}
