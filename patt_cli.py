@@ -326,6 +326,11 @@ if __name__ == "__main__":
                                                      walg_store=cfg.walg_store)
             assert walg_sh_json_ok, "sh json config error"
 
+
+            walg_s3_create_bucket_ok = patt_walg.walg_s3_create_bucket(nodes=postgres_peers,
+                                                                       walg_store=cfg.walg_store)
+            assert walg_s3_create_bucket_ok, "create bucket error"
+
             if sftpd_peers:
                 init_ok = patt_walg.walg_ssh_archiving_init(nodes=sftpd_peers)
                 sftpd_archiving = patt_walg.sftpd_peers_service(walg_store=cfg.walg_store,

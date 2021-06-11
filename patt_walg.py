@@ -332,3 +332,24 @@ def walg_aws_credentials(nodes, aws_credentials=None, error_on_file_not_found=Fa
             log_results (result)
             return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
         return True
+
+"""
+create the first s3 bucket defined in walg_store
+"""
+def walg_s3_create_bucket(nodes, walg_store):
+    patt.host_id(nodes)
+    comd="./dscripts/create_bucket.py"
+    s3_store = [s for s in  walg_store if 'method' in s and s['method'] == 's3']
+    if s3_store:
+        logger.debug ("s3_create_bucket: {}".format(s3_store))
+        endpoint=s3_store[0]['endpoint']
+        bucket=s3_store[0]['prefix']
+        profile=s3_store[0]['profile']
+        result = patt.exec_script (nodes=nodes, src="dscripts/d27.walg.sh",
+                                   payload=comd,
+                                   args=['s3_create_bucket'] + [os.path.basename (comd)] + [endpoint] +
+                                   [os.path.basename (bucket)] + [profile] + ['postgres'], sudo=True)
+        log_results (result)
+        return any (x.out == os.path.basename (bucket) for x in result if hasattr(x, 'out'))
+    else:
+        return True

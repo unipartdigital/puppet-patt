@@ -401,6 +401,23 @@ aws_credentials_dump () {
     }
 }
 
+s3_create_bucket () {
+    comd=$1
+    endpoint_url=$2
+    bucket=$3
+    aws_profile=$4
+    user_name=$5
+
+    chown "${user_name}" "${srcdir}"
+    chown "${user_name}" "${srcdir}/${comd}"
+
+    cat <<EOF | su - ${user_name}
+python3 -c "import boto3" || python3 -m pip install --user boto3
+python3 ${srcdir}/${comd} --endpoint_url ${endpoint_url} --bucket ${bucket} --aws_profile ${aws_profile}
+EOF
+
+}
+
 touch ${lock_file} 2> /dev/null || true
 case "${1:-''}" in
     # get wal-g version on postgres peer
@@ -473,6 +490,12 @@ case "${1:-''}" in
           aws_credentials_dump "$@"
         } 8< ${lock_file}
         ;;
+    's3_create_bucket')
+        shift 1
+        { flock -w 10 8 || exit 1
+          s3_create_bucket "$@"
+        } 8< ${lock_file}
+        ;;
     *)
         {
             cat <<EOF
@@ -486,6 +509,7 @@ usage:
  $0 s3_json
  $0 aws_credentials
  $0 aws_credentials_dump
+ $0 s3_create_bucket
 EOF
             exit 1
         } >&2

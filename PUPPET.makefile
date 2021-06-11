@@ -40,6 +40,7 @@ puppet-module:
 	install -m 644 dscripts/d30.patroni.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d40.haproxy.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d50.health.sh $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/create_bucket.py $(DESTDIR)/patt/files/patt/dscripts/
 
 	install -m 644 dscripts/haproxy_config.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/nft_config.py $(DESTDIR)/patt/files/patt/dscripts/
