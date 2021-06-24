@@ -111,7 +111,8 @@ postgresql:
     # archive on require a restart,
     # but archive_command: /bin/true make it a no operation and
     # may be overwrite later with the real command
-
+    stats_temp_directory: /var/cache/pg_stats_temp
+    # use systemd TemporaryFileSystem (tmpfs) for stats_temp
     # Fully qualified kerberos ticket file for the running user
     # same as KRB5CCNAME used by the GSS
 #   krb_server_keyfile: /var/spool/keytabs/postgres

@@ -79,7 +79,7 @@ def patroni_enable(postgres_version, patroni_version, nodes):
 
 def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_peers,
                       config_file_target, sysuser_pass, postgres_parameters,
-                      pg_hba_list=cert_pg_hba_list(), user=None):
+                      pg_hba_list=cert_pg_hba_list(), user=None, enable_pg_temp=False):
     tmpl=""
     with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as tmpl_file:
         if os.path.isfile(template_src):
@@ -95,6 +95,11 @@ def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_
                 for p in postgres_parameters:
                     key,val = p.split ('=')
                     tmpl['postgresql']['parameters'][key.strip()] = val.strip()
+                if enable_pg_temp:
+                    if 'temp_tablespaces' in tmpl['postgresql']['parameters']:
+                        pass
+                    else:
+                        tmpl['postgresql']['parameters']['temp_tablespaces'] = 'pgsql_temp'
             if pg_hba_list:
                 tmpl['postgresql']['pg_hba'] = pg_hba_list
             print(yaml.dump(tmpl, default_flow_style=False), file=tmpl_file)

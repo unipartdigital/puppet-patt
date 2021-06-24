@@ -40,6 +40,7 @@ class patt (
  Optional[String]        $vol_size_walg  = '2G',
  Optional[String]        $vol_size_etcd  = '2G',
  Optional[String]        $vol_size_pgsql = '2G',
+ Optional[String]        $vol_size_pgsql_temp = '0',
  # size may be increased between run but not shrinked
 
  Optional[String]        $install_dir='/usr/local/libexec/patt',

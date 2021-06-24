@@ -28,6 +28,7 @@ puppet-module:
 	install -m 644 config/sftpd_config $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/sftpd.service $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/monitoring-httpd.conf $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/pg_create_tablespace.tmpl $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d02.util.sh $(DESTDIR)/patt/files/patt/dscripts/

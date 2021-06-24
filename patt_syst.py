@@ -117,18 +117,23 @@ def nftables_configure(cluster_name, template_src, config_file_target,
 """
 setup the free disks on each nodes
 """
-def disk_init(nodes, vol_size, mnt=None, user=None):
+def disk_init(nodes, vol_size, mnt=None, user=None, mode=None):
     nodes = list ({n.hostname: n for n in nodes}.values())
     logger.debug ("disk init {}".format (nodes))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
     util_init(nodes)
+
+    opt = []
     if mnt:
-        result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
-                                   args=['-m'] + [mnt] + ['-s'] +  [vol_size], sudo=True)
-    elif user:
-        result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py",
-                                   args=['-u'] + [user] + ['-s'] + [vol_size], sudo=True)
+        opt = opt + ['--mount_point'] + [mnt]
+    if user:
+        opt = opt + ['--user_name'] + [user]
+    if mode:
+        opt = opt + ['--chmod'] + [mode]
+
+    result = patt.exec_script (nodes=nodes, src="./dscripts/data_vol.py", args=opt + ['-s'] + [vol_size],
+                               sudo=True)
     log_results (result)
     return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 

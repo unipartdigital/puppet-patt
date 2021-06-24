@@ -241,6 +241,27 @@ def postgres_create_database(postgres_peers, database_name, owner):
                      template_file="./config/pg_create_database.tmpl")
 
 """
+postgres tablespace
+"""
+def postgres_create_tablespace(postgres_peers,
+                               tablespace_name, location_path,
+                               role_name='PUBLIC',
+                               template_file="./config/pg_create_tablespace.tmpl"):
+    dictionary['role_name']=role_name
+    dictionary['tablespace_name']=tablespace_name
+    dictionary['tablespace_location']=location_path
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        with open (tmp_dir + '/' + 'pg_tablespace.script', "w") as cf:
+            with open(template_file, 'r') as t:
+                str=Template (t.read())
+                cf.write(str.substitute(dictionary))
+                cf.flush()
+                t.close()
+            postgres_exec(postgres_peers, cf.name)
+            cf.close()
+
+"""
 install postgres GC cron script
 """
 def postgres_gc_cron(nodes, vaccum_full_df_percent, target, postgres_version):

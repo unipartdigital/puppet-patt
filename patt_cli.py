@@ -30,6 +30,7 @@ class Config(object):
         self.cluster_name = None
         self.vol_size_etcd = None
         self.vol_size_pgsql = None
+        self.vol_size_pgsql_temp = None
         self.vol_size_walg = None
         self.etcd_peers = None
         self.floating_ip = None
@@ -260,6 +261,11 @@ if __name__ == "__main__":
                 postgres_peers, user='postgres', vol_size=cfg.vol_size_pgsql)
             assert vol_pgsql_ok, "vol pgsql error"
 
+        if postgres_peers and cfg.vol_size_pgsql_temp:
+            vol_pgsql_temp_ok = patt_syst.disk_init (
+                postgres_peers, mnt='/var/cache/postgres', vol_size=cfg.vol_size_pgsql_tmp)
+            assert vol_pgsql_temp_ok, "vol pgsql temp error"
+
         if sftpd_peers and cfg.vol_size_walg:
             vol_walg_ok = patt_syst.disk_init (
                 sftpd_peers, mnt="/var/lib/walg", vol_size=cfg.vol_size_walg)
@@ -402,6 +408,9 @@ if __name__ == "__main__":
                     s = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(64))
                     pass_dict[u] = s
 
+            enable_pg_temp = True if cfg.vol_size_pgsql_tmp else False
+            # FIXME:
+            # it may be required to re-run patroni_configure after temp_tablespace creation on bootstrap
             patroni_configure_ok=patt_patroni.patroni_configure(
                 postgres_version=cfg.postgres_release,
                 cluster_name=cfg.cluster_name,
@@ -413,7 +422,8 @@ if __name__ == "__main__":
                 sysuser_pass=pass_dict,
                 postgres_parameters=cfg.postgres_parameters,
                 pg_hba_list=patt_patroni.cert_pg_hba_list(
-                    db_user=cfg.create_database, key_db='name', key_user='owner')
+                    db_user=cfg.create_database, key_db='name', key_user='owner'),
+                enable_pg_temp=enable_pg_temp
             )
             assert patroni_configure_ok, "patroni configure error"
 
@@ -461,6 +471,15 @@ if __name__ == "__main__":
                 if cfg.create_database:
                     for i in cfg.create_database:
                         patt_postgres.postgres_create_database(postgres_leader, i['name'], i['owner'])
+
+                if cfg.vol_size_pgsql_temp:
+                    patt_postgres.postgres_create_tablespace(
+                        postgres_leader,
+                        tablespace_name='pgsql_temp',
+                        # hardcoded value (cf: patt_patroni.py)
+                        location_path='/var/cache/postgres',
+                        role_name='PUBLIC',
+                        template_file="./config/pg_create_tablespace.tmpl");
 
                 if cfg.pg_master_exec:
                     for s in cfg.pg_master_exec:

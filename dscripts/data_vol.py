@@ -21,6 +21,7 @@ import sys
 import pwd
 import argparse
 from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
+from stat import *
 
 def os_release ():
    os_release_dict = {}
@@ -280,12 +281,32 @@ def volume_data_mount_point (mnt, fs="xfs", manage_fstab=True, fstab_uuid=True, 
       raise
    return not any(x != 0 for x in result)
 
+def volume_data_mount_point_change (mnt, user=None, mode=None, stderr=sys.stderr):
+   try:
+      if user:
+         uid=pwd.getpwnam(user).pw_uid
+         gid=pwd.getpwnam(user).pw_gid
+         if os.stat(mnt).st_uid == uid and os.stat(mnt).st_gid == gid:
+            pass
+         else:
+            os.chown(mnt, uid, gid)
+         if mode:
+            assert all(n.isdigit() for n in mode)
+            req_mod = int("0o{}".format(mode), 8)
+            mnt_mode = oct(S_IMODE(os.stat(mnt).st_mode))
+            if oct(mnt_mod) != mode:
+               os.chmod(mnt, mode)
+   except:
+      raise
+   else:
+      return True
+
 """
 create vg and lv if necessary
 or extend lv if allowed
 """
 def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
-                      manage_fstab=True, fstab_uuid=True, stderr=sys.stderr):
+                      manage_fstab=True, fstab_uuid=True, owner=None, mode=None, stderr=sys.stderr):
    mnt = "{}".format (pathlib.Path(mnt).resolve())
    d = get_bdev()
    d_mnt = bdev_by_mnt(d, mnt)
@@ -318,6 +339,8 @@ def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
       # mount point
       r = volume_data_mount_point (mnt, fs=mkfs,  manage_fstab=manage_fstab, fstab_uuid=fstab_uuid)
       result.append(r)
+      # chown/chmod
+      r = volume_data_mount_point_change (mnt, user=owner, mode=mode)
    else:
       # extend
       r = volume_data_extend (mnt, created_pv=created_pv, extend_full=extend_full, lv_size=lv_size)
@@ -330,7 +353,7 @@ if __name__ == "__main__":
    parser.add_argument('-u','--user_name', help='use <user_name> home dir as mount point', required=False)
    parser.add_argument('-s','--volume_size', help='volume size like 1G, 2G, 1.4T', required=True)
    parser.add_argument('-f','--fs_type', help='file system to use ext4 or xfs', required=False, default="xfs")
-
+   parser.add_argument('-c','--chmod', help='mount point mode bits in octal notation like 755', required=False, default="755")
    parser.add_argument('--lock_dir', help='lock directory', required=False, default="/var/run/lock")
 
    # on/off
@@ -365,7 +388,7 @@ if __name__ == "__main__":
       assert s[idx:].lower() in ['g', 'gb', 't', 'tb', 'p', 'pb']
 
    mount_point = None
-   if args.user_name:
+   if not args.mount_point and args.user_name:
       try:
          mount_point = pwd.getpwnam(args.user_name).pw_dir
       except KeyError:
@@ -382,8 +405,8 @@ if __name__ == "__main__":
       mount_point = args.mount_point
 
    if mount_point:
-      assert mount_point[0] == '/', "mount point must be absolute"
-      assert mount_point[-1] != '/', "mount point must have no trailing '/'"
+      assert mount_point[0] == '/', "mount point {} must be absolute".format(mount_point)
+      assert mount_point[-1] != '/', "mount point {} must have no trailing '/'".format(mount_point)
 
       result = None
       try:
@@ -403,6 +426,7 @@ if __name__ == "__main__":
                                           extend_full=args.extend_full,
                                           mkfs=args.fs_type,
                                           manage_fstab=args.fstab, fstab_uuid=args.fstab_uuid,
+                                          owner=args.user_name, mode=args.chmod,
                                           stderr=stderr)
                assert result
             except AssertionError:
