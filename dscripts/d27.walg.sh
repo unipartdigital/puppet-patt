@@ -412,7 +412,10 @@ s3_create_bucket () {
     chown "${user_name}" "${srcdir}/${comd}"
 
     cat <<EOF | su - ${user_name}
-python3 -c "import boto3" || python3 -m pip install --user boto3
+python3 -c "import boto3" 2> /dev/null || python3 -m pip install --user boto3
+EOF
+
+    cat <<EOF | su - ${user_name}
 python3 ${srcdir}/${comd} --endpoint_url ${endpoint_url} --bucket ${bucket} --aws_profile ${aws_profile}
 EOF
 
