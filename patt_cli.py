@@ -253,17 +253,18 @@ if __name__ == "__main__":
 
         if etcd_peers and cfg.vol_size_etcd:
             vol_etcd_ok = patt_syst.disk_init (
-                etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd)
+                etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd, user=None, mode='711')
             assert vol_etcd_ok, "vol etcd error"
 
         if postgres_peers and cfg.vol_size_pgsql:
             vol_pgsql_ok = patt_syst.disk_init (
-                postgres_peers, user='postgres', vol_size=cfg.vol_size_pgsql)
+                postgres_peers, user='postgres', vol_size=cfg.vol_size_pgsql, mode='711')
             assert vol_pgsql_ok, "vol pgsql error"
 
         if postgres_peers and cfg.vol_size_pgsql_temp:
             vol_pgsql_temp_ok = patt_syst.disk_init (
-                postgres_peers, mnt='/var/cache/postgres', vol_size=cfg.vol_size_pgsql_tmp)
+                postgres_peers, mnt='/var/cache/postgres_temp', vol_size=cfg.vol_size_pgsql_temp,
+                user='postgres', mode='750')
             assert vol_pgsql_temp_ok, "vol pgsql temp error"
 
         if sftpd_peers and cfg.vol_size_walg:
@@ -408,7 +409,7 @@ if __name__ == "__main__":
                     s = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(64))
                     pass_dict[u] = s
 
-            enable_pg_temp = True if cfg.vol_size_pgsql_tmp else False
+            enable_pg_temp = True if cfg.vol_size_pgsql_temp else False
             # FIXME:
             # it may be required to re-run patroni_configure after temp_tablespace creation on bootstrap
             patroni_configure_ok=patt_patroni.patroni_configure(
@@ -477,7 +478,7 @@ if __name__ == "__main__":
                         postgres_leader,
                         tablespace_name='pgsql_temp',
                         # hardcoded value (cf: patt_patroni.py)
-                        location_path='/var/cache/postgres',
+                        location_path='/var/cache/postgres_temp',
                         role_name='PUBLIC',
                         template_file="./config/pg_create_tablespace.tmpl");
 
