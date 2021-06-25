@@ -88,7 +88,7 @@ After=network.target
 Type=simple
 User=postgres
 Group=postgres
-TemporaryFileSystem=/var/cache/pg_stats_temp:nodev,strictatime,mode=0750
+TemporaryFileSystem=/var/cache/pg_stats_temp:nodev,strictatime,mode=0750,uid=`id -u postgres`,gid=`id -g postgres`
 Environment=PGDATA=${postgres_home}/${postgres_version}/data/
 Environment=PATH=${postgres_bin}:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
 OOMScoreAdjust=-1000
