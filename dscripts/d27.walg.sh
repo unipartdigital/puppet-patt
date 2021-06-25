@@ -406,17 +406,23 @@ s3_create_bucket () {
     endpoint_url=$2
     bucket=$3
     aws_profile=$4
-    user_name=$5
+    aws_region=$5
+    aws_force_path=$6
+    user_name=$7
 
     chown "${user_name}" "${srcdir}"
     chown "${user_name}" "${srcdir}/${comd}"
 
-    cat <<EOF | su - ${user_name}
-python3 -c "import boto3" 2> /dev/null || python3 -m pip install --user boto3
+    cat <<EOF | su - ${user_name} > /dev/null
+python3 -c "import boto3" 2> /dev/null || python3 -m pip -q install --user boto3
 EOF
 
-    cat <<EOF | su - ${user_name}
-python3 ${srcdir}/${comd} --endpoint_url ${endpoint_url} --bucket ${bucket} --aws_profile ${aws_profile}
+    cat <<EOF | su - ${user_name} | tail -n 1
+python3 ${srcdir}/${comd} --endpoint_url ${endpoint_url} \
+ --bucket ${bucket} \
+ --aws_profile ${aws_profile} \
+ --aws_region ${aws_region} \
+ --aws_force_path ${aws_force_path}
 EOF
 
 }

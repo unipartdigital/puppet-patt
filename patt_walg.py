@@ -345,10 +345,17 @@ def walg_s3_create_bucket(nodes, walg_store):
         endpoint=s3_store[0]['endpoint']
         bucket=s3_store[0]['prefix']
         profile=s3_store[0]['profile']
+        region=s3_store[0]['region']
+        if 'force_path_style' in s3_store[0] and s3_store[0]['force_path_style'].strip().lower == "false":
+            force_path_style=False
+        else:
+            force_path_style=True
         result = patt.exec_script (nodes=nodes, src="dscripts/d27.walg.sh",
                                    payload=comd,
-                                   args=['s3_create_bucket'] + [os.path.basename (comd)] + [endpoint] +
-                                   [os.path.basename (bucket)] + [profile] + ['postgres'], sudo=True)
+                                   args=['s3_create_bucket'] + [os.path.basename (comd)] +
+                                   [endpoint] + [os.path.basename (bucket)] + [profile] + [region] +
+                                   [force_path_style] + ['postgres'],
+                                   sudo=True)
         log_results (result)
         return any (x.out == os.path.basename (bucket) for x in result if hasattr(x, 'out'))
     else:
