@@ -292,10 +292,10 @@ def volume_data_mount_point_change (mnt, user=None, mode=None, stderr=sys.stderr
             os.chown(mnt, uid, gid)
          if mode:
             assert all(n.isdigit() for n in mode)
-            req_mod = int("0o{}".format(mode), 8)
+            req_mode = int("0o{}".format(mode), 8)
             mnt_mode = oct(S_IMODE(os.stat(mnt).st_mode))
-            if oct(mnt_mod) != mode:
-               os.chmod(mnt, mode)
+            if oct(int(mnt_mode, 8)) != oct(req_mode):
+               os.chmod(mnt, req_mode)
    except:
       raise
    else:
