@@ -1,6 +1,11 @@
 # -*- mode: sh -*-
 
-cat <<EOF  | psql
-SELECT 'create tablespace $tablespace_name OWNER $role_name LOCATION ''$tablespace_location'' ' WHERE
-NOT EXISTS (SELECT FROM pg_tablespace WHERE spcname = '$tablespace_name')\gexec
+psql -a <<EOF
+SELECT ' create tablespace $tablespace_name LOCATION ''$tablespace_location'' ' WHERE
+NOT EXISTS (SELECT FROM pg_tablespace WHERE spcname = '$tablespace_name')
+\gexec
+EOF
+
+psql -a <<EOF
+grant CREATE on TABLESPACE $tablespace_name TO $role_name
 EOF
