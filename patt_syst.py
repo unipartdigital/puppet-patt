@@ -119,7 +119,7 @@ setup the free disks on each nodes
 """
 def disk_init(nodes, vol_size, mnt=None, user=None, mode=None):
     nodes = list ({n.hostname: n for n in nodes}.values())
-    logger.debug ("disk init {}".format (nodes))
+    logger.debug ("disk init {}".format ([n.hostname for n in nodes]))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
     util_init(nodes)
