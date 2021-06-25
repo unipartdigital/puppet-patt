@@ -211,6 +211,7 @@ def postgres_exec(postgres_peers, script_file):
                                 sudo=True,
                                 log_call=True)
     log_results (result)
+    return result
 
 def postgres_db_role(postgres_peers,
                      role_name, database_name, role_options=[],
@@ -228,7 +229,7 @@ def postgres_db_role(postgres_peers,
                 cf.write(str.substitute(dictionary))
                 cf.flush()
                 t.close()
-            postgres_exec(postgres_peers, cf.name)
+            result = postgres_exec(postgres_peers, cf.name)
             cf.close()
 
 def postgres_create_role(postgres_peers, role_name, role_options=[]):
@@ -247,6 +248,7 @@ def postgres_create_tablespace(postgres_peers,
                                tablespace_name, location_path,
                                role_name='PUBLIC',
                                template_file="./config/pg_create_tablespace.tmpl"):
+    dictionary={}
     dictionary['role_name']=role_name
     dictionary['tablespace_name']=tablespace_name
     dictionary['tablespace_location']=location_path
@@ -258,7 +260,7 @@ def postgres_create_tablespace(postgres_peers,
                 cf.write(str.substitute(dictionary))
                 cf.flush()
                 t.close()
-            postgres_exec(postgres_peers, cf.name)
+            result = postgres_exec(postgres_peers, cf.name)
             cf.close()
 
 """
