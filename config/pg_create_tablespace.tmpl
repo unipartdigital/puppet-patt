@@ -7,5 +7,7 @@ NOT EXISTS (SELECT FROM pg_tablespace WHERE spcname = '$tablespace_name')
 EOF
 
 psql -a <<EOF
-grant CREATE on TABLESPACE $tablespace_name TO $role_name
+SELECT ' grant CREATE on TABLESPACE $tablespace_name TO $role_name ' WHERE
+NOT EXISTS (select * from (select unnest(spcacl) as tblspacl from pg_tablespace where spcname = 'pgsql_temp') as foo where tblspacl = '$role_acl=C/postgres')
+\gexec
 EOF

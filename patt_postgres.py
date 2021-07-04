@@ -248,10 +248,13 @@ def postgres_create_tablespace(postgres_peers,
                                tablespace_name, location_path,
                                role_name='PUBLIC',
                                template_file="./config/pg_create_tablespace.tmpl"):
-    dictionary={}
-    dictionary['role_name']=role_name
-    dictionary['tablespace_name']=tablespace_name
-    dictionary['tablespace_location']=location_path
+
+    role_acl = "" if role_name.strip().lower() == "public" else role_name.strip()
+    dictionary = {}
+    dictionary['role_name'] = role_name
+    dictionary['role_acl'] = role_acl
+    dictionary['tablespace_name'] = tablespace_name
+    dictionary['tablespace_location'] = location_path
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         with open (tmp_dir + '/' + 'pg_tablespace.script', "w") as cf:
