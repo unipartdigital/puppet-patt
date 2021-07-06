@@ -30,6 +30,16 @@ from stringprep import (
     in_table_d2,
 )
 
+SERVER_ERROR_INVALID_ENCODING = "invalid-encoding"
+class ScramException(Exception):
+    def __init__(self, message, server_error=None):
+        super().__init__(message)
+        self.server_error = server_error
+
+    def __str__(self):
+        s_str = "" if self.server_error is None else f" {self.server_error}"
+        return super().__str__() + s_str
+
 def saslprep(source):
     # mapping stage
     #   - map non-ascii spaces to U+0020 (stringprep C.1.2)
@@ -164,6 +174,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-p','--password', help='role password', required=False, default='')
     parser.add_argument('-s','--salt', help='fixed salt string', required=False, default='')
+    parser.add_argument('-f','--file', help='read password from (first line of) text file', required=False, default='')
     args = parser.parse_args()
-    p = Pgauthid()
-    print (p.rolpassword (args.password, args.salt).decode('ascii'))
+    password=None
+    if args.file:
+        with open (args.file) as pf:
+            password=pf.readline().strip()
+    elif args.password:
+        password=args.password
+    try:
+        assert len(password) >= 14, "passwords should be at least 14 characters in length"
+    except TypeError:
+        parser.print_help()
+    else:
+        p = Pgauthid()
+        print (p.rolpassword (password, args.salt).decode('ascii'))

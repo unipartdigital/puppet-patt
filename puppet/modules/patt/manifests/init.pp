@@ -205,12 +205,13 @@ notify {"is haproxy peer: ${is_haproxy}":
 #  - '::0/0'
 #
 # patt::pg_create_role:
-#   - {name: example_user, options: ["LOGIN", "PASSWORD ''md5fff64d4f930006fe343c924f6c32157e''"]}
+#   - {name: example_user, options: ["LOGIN", "PASSWORD ''SCRAM-SHA-256$4096:1AUcFsTpygXKdif7BePuHg==$wKlf3/HEv+n6KQHCAxG17U963IImAJr5hMCxmO97BqM=:MOXFOHc1jgDcRhVZZgJaPzZrtqDPUnOdBGSf7ygLWEA=''"]}
+# # python3 misc/pg_auth-scram-helper.py -p SeCrEtPasSwOrD
+#
 # patt::pg_create_database:
 #   - {name: example_db, owner: example_user}
 #
 #
-# # echo -n "md5" | echo -n "SeCrEtPasSwOrDexample_user" | md5sum
 #
 # installer_ssh_id_pub: >
 #     ENC[PKCS7,MIIEbQYJKoZIhvcNAQcDoIIEXjCCBFoCAQAxggEhMIIBHQIBADAFMAACAQEw...]
