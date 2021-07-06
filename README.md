@@ -47,6 +47,8 @@ make patt-puppet.tar.xz
  patt::vol_size_walg: '16G'
  patt::vol_size_etcd: '2G'
  patt::vol_size_pgsql: '8G'
+ #patt::vol_size_pgsql_temp: 10G
+
  patt::gc_cron_df_pc: '80'
  patt::gc_cron_target: '/etc/cron.hourly/postgres-gc.sh'
  patt::pg_create_role:
@@ -129,12 +131,13 @@ add_repo:
 ssh_keyfile:
 ssh_login:
 create_role:
-- {name: example_user, options: [LOGIN, PASSWORD ''md5fff64d4f930006fe343c924f6c32157e'']}
+- {name: example_user, options: [LOGIN, PASSWORD ''SCRAM-SHA-256$4096:1AUcFsTpygXKdif7BePuHg==$wKlf3/HEv+n6KQHCAxG17U963IImAJr5hMCxmO97BqM=:MOXFOHc1jgDcRhVZZgJaPzZrtqDPUnOdBGSf7ygLWEA='']}
 create_database:
 - {name: example_db, owner: example_user}
 vol_size_walg: 16G
 vol_size_etcd: 2G
 vol_size_pgsql: 8G
+#vol_size_pgsql_temp: 10G
 gc_cron_df_pc: 80
 gc_cron_target: /etc/cron.hourly/postgres-gc.sh
 
