@@ -250,14 +250,14 @@ if __name__ == "__main__":
 
     recorder = subparsers.add_parser('recorder')
     recorder.add_argument('-x','--exclude_path', help='exclude mount point', action='append', required=False, default=[])
-    recorder.add_argument('-i', '--interval', help='min time between event recording', required=False)
+    recorder.add_argument('-i', '--interval', help='min time between event recording', required=False, type=float)
 
     player = subparsers.add_parser('player')
     player.add_argument('-l', '--list', help='list all recorded mount point', required=False, action="store_true")
     player.add_argument('-n', '--name', help='data for (mount point)', required=False)
     player.add_argument('--stamp_start', help='data after', required=False)
     player.add_argument('--stamp_stop',  help='data befor', required=False)
-    player.add_argument('--step', help='interpolation range ', required=False)
+    player.add_argument('-i', '--irange', help='interpolation range ', required=False)
 
     args = parser.parse_args()
 
@@ -284,4 +284,4 @@ if __name__ == "__main__":
             except AssertionError:
                 player.print_help()
             else:
-                [print (i) for i in ssp.statvfs_get_data(args.name, stamp_start=args.stamp_start, step=args.step, stamp_stop=args.stamp_stop)]
+                [print (str(i)[1:-1]) for i in ssp.statvfs_get_data(args.name, stamp_start=args.stamp_start, step=args.irange, stamp_stop=args.stamp_stop)]
