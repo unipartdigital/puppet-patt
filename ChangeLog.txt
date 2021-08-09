@@ -1,0 +1,476 @@
+447b27f87458be681ca0f1d0fc1b76a8d8ffaca4 cleanup log_results
+0379802550d502535a066db39e42f9a7e51cc5b8 fix heredoc
+745ded15567799d06de51140158124fde94621cf df_recorder.py 	modified:   PUPPET.makefile
+d9fec3518f2529044d30ebcae85d97e8ff520244 cleanup
+3faed47702ffcdc807127b2337985921dbbaba15 WIP df_recorder.py
+a2df82053779b8fcb86fd03e7118b375db4d8dd3 README.md
+aa4d09c5daaf0e7c6991a763fc16e23eb6c59358 read password from file
+12bda80199204088e8fc25f5bb89fee26eca3d8b SCRAM-SHA-256 helper script
+c2fc5d4de0b73fa0cb956d9af0721a7744a7bfed grant on TABLESPACE only if the acl don't exists
+7694fa6882b519ddefe2c69639dd24de425fbb2a workable temp tablespace
+d15a7fd7781a7a3b8f2cb8f2419e678debd673c6 fix chmod
+37b662a8a3610fcb0e47c17f2fb969d8bc18359e pg_create_tablespace
+1ef00441644e581629014f45e333410e388acf66 logger.debug show hostname
+d194c4571f8ae756aa2c1f08281a2e68548a11a1 postgres_exec return result
+1397b9351d19e6a8c02b5d85eaa165b828efd049 stats_temp_directory
+8ff1685cf8ed5e2ac72625437a36806f2e2d7aaf run on latest boto3 + fix s3 openstack proxy server
+aca82146453f56b9661723b9dbb4849d9b05e808 WIP temp_tablespaces
+327c5ccc48330125e8e4a31b80a96a8e1180ae8f fix: ensure that python can find boto3 on a fresh install 	modified:   dscripts/d27.walg.sh
+4d704499528d22e91c7117f72bd45de3e06cc268 s3_create_bucket
+643ea5b28c0d17a0ce17b0b7131c9f0eadf5398a optional sftpd_archiving
+fc1b7305cf23434a73ee97d665f848ca4eebf007 drive allowed network clients via puppet
+5f8cbfac461dd1cae2be47f6065c12491d4b8c9e remove all pip3 binary call
+0ab12455ab74ac53a2f5b5064585d4ca751a1364 fix default bootstrap via puppet on mixed OS vendor
+c8e4b36f8a14c4c87ffc309ece379c83c5f90c88 monitoring fix
+d26db584d78d1e23fdc108d485247e19b9001173 release candidate 1b1
+8634e87d52f708c52d483b9273242dbb3a4c0414 clean up + assertion
+6c53be16ac54eacaba59b5624dba64383c6e9f2a add the aws credentials into each postgres peer
+bc00ec1eeec89cc72486ae16d2cc2b75ba420baf monitoring: cache_home
+84f1bcdae57de775226b814301db7cce0da47658 fix typo
+8504dcb515a9d5a1e24171902e82e159c302a072 fix '--touch' option
+3e30d7d87562654a1bd0ecf02f0187c12a5d2437 puppet: data_vol
+c7f3b23d97fac8dd5495b2ff895ee8a3cd4c50cd wip floating ip nft rules + data_vol --fail
+b2644f4f7ddbac37c94c12726becadd49e2f46c7 add option '--fail'
+15e02cabc368c1cc5d218008a9707a101c36f687 simplify repo url handling
+de2696e8ec5e963395ad383616a98ffe5867d562 clean up
+26d57f936bfa4886b2ad6a631911dacb17ced672 cluster-health.wsgi
+e11e91d09d88f2b1f8dd32eba6ba2f47a48bd1a5 new option '--touch'
+3944938619644c1176a358e308e901ada4824db0 don't raise when all is down
+b998eb845d9cec8653224ee5d63efe01b43790c2 WIP low resources wsgi httpd config
+f0cd9c6dec77c24fc28128357a370546cb58c3ad --quiet cli option 'exit 0' if all ok
+b6cb459b9cc97d77a8e3c1a4c8cd2c062beb7cb1 monitoring cli
+658cf65872b4bbed0d719b01db73990214651385 replication_health check equality on arbitrary result number
+00b33e355f575786946f1e37fd4489f9e7c79f67 patroni replication_health
+262f3b1830fd01fef61dfeb11605f708a676f376 WIP simple monitoring (replication_health)
+b150a42e01fc437872853257931df25381961c09 WIP simple monitoring
+341890fa4ccdc38643344f6276ef270d794f29d6 WIP basic check
+26030a7a49bb4a2eb6bcf78a8b435f3ce2c5ec40 consistency
+f7f1112c6a77fbd510de816cc8ec594992eb7efc disable WALG_PREFETCH_DIR
+623c077e4f3db84faca401bfd9cded18dd6fa58d new option '--skip'
+07b210abc5902db2fb4626393ed18ac642917a35 fix patroni reload
+586ed55cf2363d29952a23e73f70559f109edd36 example activate wal-g archiving
+33fa72f757a7215ac1c62928c10b1b3730d36bd5 aws credentials on postgres peers
+2c63c138a6f9f3bfae481de8e16dd34ae8227e48 restrict config file
+3f2149ee760e1de75d56089c78fe97232376b2aa custom walg download url
+a36e7c0ef89e7cf595d387752fe2d0186d8529cd installer
+c12a532bf68dc05b32f67398765e1e9f704ddbb8 add walg_store puppet support
+bd7bc0d3aaa1e9ab0535166f0433cb56b8eba5d0 nftables allow sftpd only peers
+d59bf7f97e8683610e0de35e9e4ac2d986a69617 wal-g archiving
+8d4554f7858daae61e31c3da31d4039f9379bd99 modified:   dscripts/d30.patroni.sh
+e0874023892901bb3feea07eb0b1e34e31ba569b add /usr/local to PATH
+06ce0ffb7d0287a1f4936fca85196f0decb3578d archive_mode: on
+771e30fc5ac9595d65351443ce70bbd037ab1861 walg_store (s3)
+98a33cdd613a811f7efbf28de066188ad59d9091 fix + cli run improvement
+abcd720c6c29210a1d2822b9d548d57ce1b43be7 allow to upload ./pkg/wal-g.linux-amd64.tar.gz
+f4147e87780e6294a3d4f5b09b79a6e278727314 optional walg-ssh.json config
+88f008edda8ab8f8b055bde271f70a2250378ac1 generate a walg.json file from template (sftp mode)
+338b694694354c81577e08cd7226cf0de9ebe357 predefined key '$home' set on the current user home directory
+6a669dfafa80acdaaba891b574500225b490374f walg_ssh_destination_port + fix
+8b55261772c6db402a6f32f6ae5936bf0cd0a39f sftp subsystem template
+8d0a87eb45ce64474e3bc4f0cbecc6d5b72d0c67 sftp_archiving_port set
+e0950f5eb9133b4e1536779b85ba1d86822a2b1d os id specific dictionary
+2519b3ac37047aa12bde22d0735406f2a6442474 dedicated sftpd archiving service
+e62242bfdfafaadfeabde1cd0be5c5d415c35ff6 write or chmod only if necessary
+47d44569c722a24f78a8597b253d5a6c6db66005 allow literal IPv6 addresses enclosed in square brackets
+af3e18b998de766d09e89b1af9d4bce4291dca85 fix: walg_ssh_destination is not mandatory
+2bce91a23281ea9eedf626af59c6f932f8ee4b66 doc update
+176ea2ad304fb356e5c1166a9c9e88932aa18461 etcd: slightly increase the default values
+44a76d8c9602693e28516a9403055c2bb729e581 walg_archiving_add: retry loop
+6b9d7a2dbc59b96ffbf91a1e5b01eb8b53010e9e avoid unnecessary selinux call
+afe37415b763c0b078309cc05630a49a21f8660c etcd: assert ok_nodes
+caf372603c1821016f9afa66d44e009c1e11185a d27.walg.sh: explicit rsa host key
+f8558e8c431ef35812669e16b65866c54fc3dc0f fix: clean up lockfile on d25.floating_ip.sh
+fe6773a6d04228dc79527ec3ad8401df00906465 doc sample update
+c4588d07ad0b409ffdc9771008890a1481d841ba walg_ssh_destination
+97799584faa770c69414445be51ad65b80820046 fix: explicit dependency on 'packages' and 'install'
+f66b66def9da705eadc8ced36cb988957c910225 fix: ssh-keygen -q
+8e5d4b7ca5e67d340dcd28d193734153e7058e56 flock read
+ecf3726976a1c6aee5ad8e3f03adef877bdafe14 fix trap ERR
+206afa9767916f22710cfad8fff6d51cfedb80ee silent download
+6f9991c7a1f5587be8951d87ae760a126099a68d fix missing 'ensure  => file'
+4aceb6cfd9bbf34f8e44307c5033f8b1f7ffa803 initial wal-g patchset (install from github)
+e59cf70abfb8f4b4c621ab759c0828ec512f319e fix puppet packages
+a1de459df844d78c899cc190d2797b609467ba72 clean up dscript debian familly + fix
+b67ce7d509865ce2be5bcdf7e0f9cad0bf51b121 clean up + fix
+74dd6c49e2dd927b938cb17dea5699bf95429bca fix systemd mask on first install for etcd and haproxy
+bdfdc30504ae23c971e70daf128d50761b1c4050 improve postgres_get_cert loop
+44c51d97576c002edca582b5ed8cd1584c7895de assert pg_is_ready
+331c3b9a30bc5d0be9a35ea5e1d65d90e3fa7d54 cleanup
+c7ad1353e7daf0bc7f6261615a5b5de8b35e037f test or { block ; }
+162895e27e292c3b46deeb1f63709d3138f9b2fa ip_takeover.make (was missing from makefile)
+294cc4ad317ed56c850ca42b7d1cf657939a2eaf recheck is bad_members detected
+dba1704ecb598f12e9ba60e70098737f9540dfbe echo 'pg is ready' on success
+ebb711f50b56afda1292f68bbac4d3a94fea1ff1 reliability improvement
+b2172789a48454785d0da75ce9a22a4c1d789327 clean up logger message
+c8c330b4c490c0f81e2883e13d4698d7d0914d9e install ip_takeover and dep only if required (version mismatch)
+9fc5ecc9639472e5338fd65e6fcf663855e7192e ask binary rather than unconditional pkg manager call
+dc5745b9a7ba74ccdd84c947a4e00bea0ff7b0f1 don't lock if no process
+0f8de2ded4eacac4b8b92b2911679a2789f2b633 better etcd cluster init success rate on first puppet run
+159b3b0167e680398ee49fb0876cd9be9c5f8354 fix pick_init_node when running from puppet
+fa379fa3157b68597ef9397decc72a893198d2fb allow to init etcd cluster in mixed vendor environment
+bde525fc4bf6cb5d31b7b35fadf558a60ee4c9c9 etcd_sort_by_version
+4c4c129d6bd2dd7e8ae882bba37520dc39d09a69 more specific regexp
+f11c767de2dcf762a60c7a89fe3422d9eededdd8 add 'id' in Resp if available
+0443afadf2be32ad42a89cdd994965506999e0c0 fix makefile TAB
+2a1860f8205bc2accd29c05290b3a0afe1f53ef3 fix missing
+a7053a5fec108601c4fdfabcebc35690a49e9c48 install scapy[basic] from pip if no vendor module exist
+d81aae445ab023ed2bc696bab9561656ad9fd39d query etcd version
+a9fc621dee79f2c79556ebb57385542cc6a5a4e6 postgres-gc.sh vacuumdb timeout + fix
+72faa0e5913b2de0fdf95b9196ffc9db6f5b6c49 add ~/.bash_profile if not provided by vendor
+22808057be2bc002eb058a0deec9afe93332354f puppet redhat and debian familly support
+2ff03d17006327ff3a7ae88585b1e8d899f976c6 allow to run the paramiko target only
+b28e528babb6928322776e7f6169577544722dd3 centos pyton module based on python version
+189af14a8fc35c8aa4349b5ad9fecad28fc9ebea add init to ensure python cryptography is installed
+797ac9f391674ddca4087fb6a58230eb045569ab test ETCD_DATA_DIR
+8dcfdbb740dc09a0ee3e5b609019c91d50c9573a fix 'rhel' ID
+269f2804f10f83a63e65b68e6998f2c5e1b48cb9 fix paramiko version check
+ba362993d352aa0d6e8806812ef2c9656eb482af postgresql connection check
+504864fd85bd8aad3ae903b53bacea252c577bd9 new file:   dscripts/pg_wait_ready.sh
+c0884f8ccecb56b268ceb5d91c059616a9777f9c formatting
+bb3a04981b4bbeac88fbf85a7636484981427c4b don't let dpkg start services at first install
+9cdaa6be9d4d6aa220b5e3ee59db85a976894579 fix (run only on primary) + 'clusterdb -av' after 'vacuumdb --full'
+032a80a44b6cea52be300fe8adbd5243614c3d4a add debian and ubuntu support into dscripts
+2a3394b5c07431f8575a7684d09dec96c5634c6a destination target relative to <username>
+6572c67bbce2a25517bab935546dddd255298055 doc fix
+eccd7cc9636ebc3af0aa149588d87b326d84cd11 add dependencies packages before data_vol.py
+4014e76d014715a4930f2cc17ec9f73706afcf9b fix deploy outside nodes peers
+ea815ed6044d28f2d41961bc2a3400f8a9f71704 dscripts: use /etc/os-release
+e5d9e7d181edffee90b35505a948b12e196e8ce0 hack to deal with puppet agent  --environment
+b022e9cb3307c491185ee7bcfb1da281d68aa2fa handle already defined packages resources
+4bcddb83354082d8050db551e4dfa14a08076741 doc fix
+b0ac457949100518cfcafdf89f247a64f5c0cc63 doc update
+be846a3db21623a6f545f592f48ee67d1ca28f29 COPYING
+89b87f28f0435b27682b96061bb6416308741404 clean up and trim postgres-gc.sh.tmpl
+9e2a3c63f4f9aa4fb4643dbf78101eacf96a1eb9 enable swap file creation via puppet
+13c239284111aaabe4b26f69e81f600591981660 puppet swap file class
+d32032a7052b93e93f0ac4016004cb5958b157dd gc_cron settings via puppet
+81df23013d645992422f52dbc693ddae495c00f5 postgresql cron garbage collector script (vaccumdb)
+65c81efdf80285428e8d7cc709f2c61adec36452 simple template processor
+3c700cef9178150d2845d71272eef9c546e2c2b5 better deal with curl failed attempts
+bc38ed1309a048d90442b6675a7d3f4a6c6786e9 fix missing
+e58284b07845ea19ee3fbbf365c830d458197724  clean up
+339f383901aa5ee779fa3efba1b8c44519ec81b3 fix
+8d7cf900169580cbfa2bb0e0b4323d430b45a5ba pprint patroni_cluster_info
+5bd891f88abddf37fa484038d633d4e253ed0cc3 remove update option from pip3 patroni[etcd]
+4a0dcec590ddd0a15ed1b95feeb521f6489cdf1c fix ETCD_CONF
+759f494447aa2652fee262b1862e4d773869732b set patt_cli.py default lock dir to /dev/shm/
+208be9e4c440daf5e48f1c1ab5bbed63a8cd08bc fix
+6d19b23b04dc95c0568bb091029e4559b5d0ff59 clean up
+6756fba719ab754c5c1c0705a761a4ce5b9a4504 is (etcd|postgres) peer
+7c3e5e958437eabd404fede97b2be0422d680ed6 'all_ip' facter
+6646cfeaf06afc0ff3c6009d3c950309a079578f remove data directory on rewind failure
+3809aad6d7399cba6f0b528f47651c36273c8c0e qualified variable name
+7aca04201862b6a86e66daa48e17faca93def511 raz first node
+88e77d80e7513c1400de4deea5135cd9386dd1b4 systemctl enable etcd only if cluster healthy
+0c4e4f419522fe7632d02d4108adc6b533b7cc7a  let patt install etcd and postgres
+80f45ad81219750d56a59bc6873f196dfeccd144 puppet-branch
+05a3e82a225ef2c840883d2f9cc85ae840377b6b simple file lock
+34b5522408d88ae314b9efc6b33178f92c2ba102 simple file locking
+65f711f6ee0b75f41c205779e6c81ab389eda5d5 include data_vol.py pkg requirement
+4d832cb88361bbcf2cabf8a9529011fe1b00f9cc consistency
+c6072454285711798665daba04e6e9324f696c61 Merge branch 'fix' into main
+6271cec957e03088a86e901d75149432f3e8acb9 clean up + gitignore
+6bd9b06756df562f3abd6411ec851da4c1d206f6 fix missing newline at end of line
+273e061cba68374d0f182ec2c5647a583e149a04 fix volume_data_extend
+0bf095eaac9826f4247a8868afe96be13ae339ac Read Me
+ad60c802684e78306cd5ca4c221216c302e526e9 move data_vol creation into puppet
+9cc7a7cd495dc6be2f3988eb1633f5f3e24e1520 vol size required
+08030207d7c8edf62dad007d9149ce99f0726461 flush ruleset
+0095c7b01b684122a80a937802d532832c9e7b3a add hiera-helper-[ssl,ssh]-root.sh
+66c9713024bb3bb24285fd3685e7d0ea2762ff5e Timed Rotating Logger (day)
+1b5cdf54cdc5c9a05c8c379bfec07801a6915f1a fix
+f2ec605831f2ef03195dbd91b014b315ddaeaebf handle deployment from outside
+5205a55fb4a266c033f3d29bd7c4333f9c4bac91 standalone etcd node fix
+c3789fc2ad156056679ad43357199ffb05e511a7 helper script hiera-helper-ssl-root.sh
+82e12f7d636156f2f9b08498c597f64f4a1890ac postgres root (CA) in hiera
+38712cc6deca6cb9e3bf1171da1b3abd3736c7f2 helper script hiera-helper-ssh-id.sh
+40e2343fa661f283219981e9c639d30cc34e04ef installer ssh id in hiera
+26ceece8b7d5ed7503238c00b98ffc2b3b67bfb4 document puppet entry point
+c6c88c6620d0b1726d170807050e8aea2ba43ffa etcd from copr.fedorainfracloud.org/coprs/unipartdigital/pkgs/repo/epel-8
+594baf462faf1f30266668f197fe37e3eae90819  query get_members from the running node
+71e0dadd41a76c696720e0245cda168a30e68d54  bootstrap a different postgres version
+daca3acb20d847a7ea4a8cabb78506a7da536f21 puppet data_vol
+b3a06651a46ed94b72c1d6aaad1567944cda91a0 fix
+a274face1f4f78558e2c07f3aae089a5e0d8c30b handle .repo file
+5f961cc7fe1d48f207b96074970d1cbeed5097f5 switch to data_vol.py
+f18e2f77e2ef107adc9e86f77fd0aa3ec00d08a6 check luks device
+20658f589cc02a34034bb99af0d3085733cf6ea1 WIP patroni data vol
+dfb34c12880d055aea8d65fd7f4af78f9c05c002 	new file:   dscripts/data_vol.py
+a992bb28a779059a87dd437e0563053642b51b87 WIP puppet postgres user cert auth
+55c8decb609e7667aa371c907ea97c640841496a gen ssl user cert
+592505dc9e63bf3c6c1bb884e8de39c0cddc1ff0 optional cert auth based on db/user from cfg.create_database
+6d071d0d6d74728710bd627378375b11315eb1f5 basic tuned postgresql profile
+45205a8180867981e44aa22af0e72c303992efe5 dnf_module_disable_postgresql
+973a414aaab0f7d646971112320dfad135c8e3b9 optional: pg_create_role pg_create_db
+c0e2773fea24c3bb60ba13d507052e6c2c25e469 create role/db hiera example
+19cb4d27a443762457f2d86013131f1b1c5a7448 package rename pgcrt -> patt
+740a09fb09bceff5a0fc2506d728237aa10327a1 puppet interface create role/db
+8c5051fe861f1716d71bdddbd93e6a70469511c5 fix
+4fcbfe1a45a11e3ee08f557004467db64cc0cfc8 pg_master_exec
+df6d00f0daa292318072e99a595779e773c9c2e4 ensure owner and mode
+8b66aa3e9c14f5bf812da363266db45361f720b0 git ignore ssl-cert and ssh-keys
+a8a79d6874bfe29f8ae8fe01ff59656bfb79ef02 create parent dir if needed
+cb43c59ff04417bb0b335d5dc16d66aed2720c46 standalone installer (no puppet) gen CA
+1fb0260b372f32860bdcb8a9d06a2d28e7002f08 provision to allow ca distribution in standalone mode
+1d5931e64d5f642a97f65ca8f79f8405662a2b49 distribute the ssl CA cert and key on each nodes
+2754c3a7d5060e6f7727b656b0556e7be9e9530c run puppet ssl ca cert creation
+6bc71fabf229f9dca2e577018d2b801b7c1c5b85 helper class Source
+0916df1ff2b7dfbec52e5ec64bc95d2833615984 fix + more readable code
+d6312c508aca6f766065bd75fb733f5f5e4dadc2 ensure CN ca cert != CN server cert
+aa559770361eed88261a00ff4fda6376c4b71ce2 fix dependency create/check order
+5629811e01c9dd9d55d6127a4ce82c11ef96fbdc exit 1 on modulus mismatch
+f16cac78cf4b94e7c574ff083366f4c9c97b52f8 postgres root CA puppet integration
+d4605a636c55f346e676bf6d306c4480585f5b2e enable ssl if not set or explicitly disabled (and if possible)
+2c2c9aed90fa03652a90c857c21c8e8d2b43eaeb ssl cert create
+30f6d9d0323c9ba2f6793b5ab20e4a12dcf4aa2b self signed chain test + fix
+4dd999d60eccf7f722dcbea0d640b936e3091530 fix
+77c2de513f021119f046954e15c9ceaa7b9d5d39 add DNS & IP extension only if not CA
+987bc00c14213b897a81657256481981fd6673f2 allow to override cert path
+cd264fc57eccb4f33aeb1fab6a6d96becbd78041 gitignore cert and key
+eab6deb22e38ef28ab2d1013568f249976d72207 self signed CA
+c085fbb4d63f45b355ac1863a7a3647dfc51eafb WIP a simple self-signed ssl
+a4f735cb7f8158ffead07737171e776c1c5d141c fix
+6d87083575a05ed1c0942d279c0b4b69a3790b4c patroni.yaml write only on change
+41a98b82ffbb86f0165c25babc0be420d523d810 default no postgres_parameters
+3498fe73964b40aaeb9f15e300b654677cac1600 postgresql parameters
+b5a38cd61fb20134e3e911484c127442a32b5fb3 WIP pass arbitrary paramters to postgresql.conf via puppet
+586db993e9d534e61117951612f1db1f613b727d cleanup
+57ac3a988dc962ff4fc3aa5fc53ca7c0a1b27df3 help + puppet tar archive
+16bfb8cfae0e8e8212358aa0ee2bea94d2e19216 explicite log dir dependancy
+a2fdb8e60fad6867a00178df0a933b0d17365f44 simple makefile to create the puppet module tree
+b27cee41406975e7881efb30c7be0bd75d42c80c ensure file /home/pgcrt/.ssh/config
+e7fb22d65063d54b2cc2446ee978b20d1afadc95 note on modules/pgcrt/ssh-keys directory permission
+2f53a9e80eb46a9a97f2611f3aae99b22525c1e8 hiera example
+97258c39cc978d816ac74eb98ecbaa4b7e8fd947 explicite dependancy on user 'pgcrt'
+8f13a2ae0a6044aefc10d98a970046455c13d373 documentation update
+b7acc57f54d710e94cd95ae5119b4c9d6fdf46f8 sent the cluster report into the log file too
+3b44ccc193500615dde04f1c092510f3fbf34851 cleanup temp files and directory
+012a1cb5cb1012e3761c4ccc59f68649f5c75a0a clean up created file
+2c3b73d56ad627730c5aa71ea645a6fdbe4855e4 clean up
+a34a8126142bdbf9c0961f7634fc936e954caaa4 lockfile cleanup
+3d7ccee21dff055a9b9db05d2d100f94befdb3fe lock_file cleanup on exit
+cc223304514ef0a34d7a3dbfabebf8bfee7aabdb default lock dir in /tmp rather that /var/lock
+58088fb2db70049efebf380d432dcf1f7a04ba6b python script locking
+d9772e3e38a10fa55a221017f1ea4420bf99f48a shell script locks
+ce4ae14607b97e66f2525e768235af2a9cece78e powertools + epel + pgdg
+ed6215fbe78e8fde1459f7ea5f9d4c7f4a4c68d1 base packages
+99f6d0c5d0a729c3308de563eb16a8adf75c8618 service + logdir
+97c449668329f49523ff549785dbd9294732cf9e dummy ~/.ssh/config
+48b0646fee9c9cafbbea7d0c4c28c83f14676df8 relative directories from pgcrt_cli.py
+a092b7d813ccc0590e2fd5d7050c54f69b66776d use generate to share sshkeys cluster wide
+9cf5bc901837ab779cab1f578f8467bc91a023c9 puppet site.pp example
+5441538a5c501309f3bea712836710a7f80ffac1 WIP puppet module
+17cd8ff39d791adcb51369cc872157977e4891a4 tree cleanup
+6800fdd663d1ac32821d55ab8261d780de7e97ea load yaml config as generated by yaml_dump option
+ad40c60978900ec66f7c408c5321d7bb0f9361bd yaml_dump option
+301bc7d4f120f19cc5fed80b0ed0c8754b166039 add subparser {yaml, cli}
+b387afe55c1ead90c575669b878c9a390a26a985 prep for yaml file config
+e73d4e4c18f2fe530e691622257b7a7b3f21edf8 collect 'replication', 'superuser', 'rewind' passwords from the leader
+9bc939707a88a66fd1929368e0d8e925cf786d19 random passowrd bootstrap
+a3abb3aeb191a5666f426921832dccb6c79ef746 add paramiko version >= 2.7 dependancy
+0a150af9f158560857116a46a089487ce7152d5f Merge branch 'ip_aliases' into testing-c8
+1cef90ae4d0a6a341fcb0189f1bfbe7005470299 ip_aliases
+7532f230f16d8bf2607b1fa38d2611e3966ff594 ip_aliases
+5decf73eec954f4bbd8507ea842a2fcba7e2d9d1 patroni 1.6.5
+2c8829139727c891f2e7f8b67f7c44280afea901 restart patroni on pip update
+78909a1cd232978e4f80961f46bcf2312c369ae5 skip_if_unavailable
+02556ef6d0281cb2c0311c414e1bff3debb21c48 fix add etcd repo from the cli
+f0952976122d16dbb6985fd397d40df33b87d86e PowerTools
+42b6f016dfa6d60d230cd987c55bb84d8097bf7c dnf config-manager
+df918f54c7466507726b9ffe79e35efa8a14b732 clt test
+3ff413226ee09bfc9024a98ae2be90d16c2cbefe fix add_repo
+4714a48745dceee5a5ab469f5009ec2c001398d6 pip3 makefile helper
+7cea64053f0f3ef7a27d1f60ba6211c29ee5223d reduce default requirement
+c4f15fd19639bb2b37aa6349d262e058d8bc34bd conditional block device mapping
+b9351e9ff015ff5432d7517db1642ab156dbd685 VIP root_volume
+4b6c75e28a77326d15af8d757276af09e9ba6a92 optional etcd_volume and data_volume
+d5f6f0917ab34fdbcb63fc794169f8723438c40e disable firewalld
+6a94c5bd921b41e02336ca75619b0f4abf04865b SElinux patroni http 8008
+19c52832236373304dfc13e50b282c1747197689 patroni 1.6.4
+de40bf351bffdebd680fed92a4a1223b0b157440 machine-id
+9ccf927dcc076fd02b99e82510e3443e80435efb fix
+bdc4ff6d7f6b23b60d7593c3a2e536bb5ec8bb02 fix epel-release
+0a6f4c7b9bcb4e736edab6edbcbcb70bffcbc441 selinux
+b344a9c816c0ac6439072c672d67921c094251ad centos 8 fix
+1041fa7ae74511e462ea486ae4db7d6a171d42df add repo url
+52af42afc45b7f14f9c8e97596df6686bb0c2145 machine-id
+6ef96db3c1ecd922dc7a4cd38104e36271872f9f initial commit add repo url
+d7873007f1df055dbf8a5ca64bf61bf057cf6011 clean up
+2a5c254b95356f29faf609f56b2b49528b4898eb handle centos 8 major
+820b63dfec98cebd2caa5b1384508c2cd775e816 back in working order (remove rtt)
+f34693113cab52713dadf66a949b253fdab91895 fix re raise on error
+e0f332e08c02811f4ed1db390f52decee4229f8d clean up
+712072776046af8e131511feb9b1288bac662171 error handling
+76584731637af327ec8089b65b15ff5e357bfea1 callback + synchronous mode
+0613893b5af2fe196902f2ac83a0477e21a6f340 fix
+9dc3624fbc4e8b94137b8cece7288f017bf164da ICMPv6NDOptDstLLAddr
+5088ced2abee26968ad79368751c27c12b1b421c WIP pg_blackhole
+ec8ffbd6497208c01b9b42354306f6e918d839a8 add ip_takeover into the deployment process
+5a7e1dd597ee6dc6edf023ed16ddd43f3794876e preferred_lft 0
+c988c2e59ad7a178d4f8b1c324826cf06e108481 na logging
+fd789eb3d0472a6f0b6a48b2d5fb92bba9f2ced7 network advertissement on ip take over
+be10930f3459be9c2f02b50121dd41339aaa885c ip_takeover
+31e66a4ecace9a812a2edbc2d3c387e3eae592f3 floating ip
+cf4cc9a85614e97368dd19b393bc09fe3e976f0b ipv6 only
+fcfca055f24ce57701f9fb81df13f8affd2df1df fix
+306b428ad25ffe7cb1a6d1104f79d06e63daef07 Merge branch 'rdep' into vip
+6fb3ff376e223836f28bd960bdd2161865d6b6f5 syntax
+f1a96b6a8b1e3f71fae734783a55bb213a86acdf documentation + chmod +x
+b0468c4ac3e0fedaf746c725522a8118f56500be fix assertion check
+cc0a64980b6af3a0574e2a2718b7d6b3f22ef3d9 add unbind vip from servers
+35e082a2756a8c69de5aa4550f11cec4d059a12f add a bind to server function
+c0a5529553bbea74b04ca4da588363689ca7302a WIP example code to create a floating IPv6 on openstack
+17407c59010f8175cf6f2dfa1ccf06c6a2b7e189 openstack ports (MAC/IP) handler
+4ec74c7b13a9984f80b1b3ed2e9e482ada7904e3 WIP retry the whole process
+b49936624d7239b8b86d0041fdc7b4902cd2b6a9 fix don't raise exception on empty list
+ecc5f8b99b3799b95c093a8283c7e8605cc25da4 fix
+5f0673f6e6aa54c2abdd878b79366406df25cdcb extra etcd peers
+76664809d8009eeebc49257a428679eb95891e0c patchset 3/3 split data_node etcd_nodes
+183ff0a56f07d56177883a8430faa211a3a7d3e6 fix
+ac792e19c8fe607fdbabb2ddfb9e20e9a87d3be5 fix
+a4b9b113543fb67a365bf8279848715e1b92acea clean up + fortify
+3f93e9944b1ea3c43235a82dadc4e6e50d4d99ac fix
+258e6f70c53c7ac8fa0c1b3680cc0302d6efa902 WIP volume_gc into the main deployment.
+fe77414a4dd840df302d0e78a09b5d9f5c630e0f WIP orphan volume
+0e6c6719b2b2ac381fcde1a0aa46da1a998e9181 WIP cli volume garbage collect
+712fc5182fc6a811d650b0bf3713307d1ecf76d7 simple cli to list kept and can be delete attachment/volume
+3c27e3f59c3ebb61e18ad1dac976417d2f30dde3 check_volumes_attached + WIP garbage collection
+9dd859a4571987865a685d3a8b3bbcd7aceb4fcc pgcrt_syst.disk_init require now cluster_name as first parameter.
+114d9edff61192bcaf39cbbaa5902822ab3c2f5e label with a subset of cluster name + fix
+a6345e38fa876c385c330bff1ba1b8653058ff84 be more gentle with openstack
+ee9a9ffda0e038ad4a2a8929a622a607b29cdce2 use kwargs.pop
+67403be77648df57a2847c4d313b07faa8be300f clean up and fix
+cceb551eb06e713b2c2b3ab3061f2a8e4f2f2d8d WIP postgres cluster node creation
+6fda43e63bd506ee06ed5416ec4455cf7c5df7f8 allow a strict matching for the ressource name or id
+d38504af8d32a520f72e71dcd8f92dbb9d1de165 enable pgcrt_syst.disk_init
+68badc19392373d4007b9ad92cf6f6581eb2651b cleanup and fix
+66d70444f841c2be8c41ff745c594e44868ab032 mkfs + mount
+47510b7be9b444ab24e3d14ab2605cc5d9e95be0 define disk_init into pgcrt_syst.py
+c2ee6e5900e52d52edda96cbb4fe31a66a6910dd give nftables it's own namespace
+05334ab1f0bfc36e184564856b867c840d1e7ba8 d02.syst.sh
+062737e659d14a137b1ae48b6da07da6a35c16ac WIP etcd data volumes
+2b8010d075e42822a4b5a3e56551657006ca876c fix dscript
+3a5200c4315aa0d016a88e9d7d13e60c14242140 WIP integration of pgcrt_cli.py within pgcrt_cluster.py
+5a1da0beed03f17a96e673ad263d400745aa302f allow to specify a ssh keyfile
+4f7a5720d8360ac7b575f44962970cfaa8d98fd6 data volume default to ephemeral-lvm
+2ce828a25f4be927b351c4a6719d1f969cfe7c62 record only 'valid ip'
+f0b095f9cb50e29a2393cd3a5e6344cf55e119e0 clean up
+6ff1d840128acc675738fcc9e3eae76bc057fb54 list volumes in verbose mode
+41f441cfc00bb37e9b9e913b346a84fa8df8c277 add server list/get operation
+417c5da5fb7e1cf856db1c720fc3750c326dc982 return ip of (ready to go) nodes
+5b41191d9cbea3a0af994f2043dbca3eb53d2127 volume attachment + fix
+d8771a488bb953bbf5e1899678751863e189c8ac fix volume creation
+577d13ad6bc902a3dc1568095eed0ba20acf877e WIP volume create
+abcb3dbe6255763901f5c95cbc7f69d5dc9c9431 get_volume
+cbd6eb8864aeefd327a0fd32b3829204019a7a90 WIP openstack nodes create/delete
+596fdc7cbadccb7f85f240a74df23fb6d524eed9 clean up
+5e6cdc83cf049af4ea843171527caf5a0c4b1aca keep track of the direct cause of RetryError
+2ec082e718791da7a3568ca182476c423aa49170 use rdec for servers deletion
+b54d80e54360643b0b28733fe13eb0e857689bc9 retry count logging
+b5950cf90c23e00003d42dc53a95d1f1836753aa generic retry decorator
+76ef8b6feabe1cfc3f19da5c1b45d1aa033548bd clean up
+e0c84b814847ad9f1794c38218c33b06f5c0c950 add_security_group_to_server
+eda7b289e3128bfb0042fbed18ac033976298e5a fix node creation index
+45a10750af59e44ae3a1ddfbc7b255e49a931f34 use services_helper pkg
+36c68c18ca440065dc33834e73ec243222f92d8a security group list/lookup
+f71f7392c566bdfe0d981a12fc1051fa8d42b71f openstack service helper
+715e5dec490515e0d994163bce3b969c163959e1 list volume types
+0ca6185c60bbdd45480b205626d76565d2a3aa20 cmp-02.py VMs as cluster entity example
+f76cfb642edfbf45eb74d6a7e75bdfb777d1916d improve the output
+9f4dde28c13472f408aaa30511cc0a21a9f8f9e9 show network and keypair list without the --verbose flag
+18e5f50d6175d43bf959139dbb4a98102a43f495 more useful dump objects
+52aec6efada7eb6d80f4ed1ae9bd4522ed3d54a1 simple openstack compute list cli
+9e5050c8bc6554713a0273252df950489c8f1092 simple bash wrapper
+fce607912de011b227481a76b9a158657cbe412b logging
+def117ccdcda856e8ee2616b1a0dc8e689430972 fix
+1bf735d367db9929f66c29cc84c109955d9e2137 allow concurrent run from multiples host
+b5f9d3a1535911b9e072d0876213c2329d050f31 WIP write results in db
+82faa90bbfe068e4116175f3d69fb7aed0d9f778 refactoring
+a0a5db6d3654407901a7a07c5c50a7f68f9f3cd7 psy-01 allow concurrent run
+8b570f71082a8906a976f068403f3a21ae5b28a9 clean up
+37e04ae5a5be09ddcd88989bff7aef8ff4d5cd85 clean up
+3913180bebf83b5da59ab10cc7b7fa6999daa7df haproxy get_id fix
+726367b660eb6af060f786a41782362ed9e915f1 nftables idempotent
+1e2c9ea2439058f11f29848ca218a22d1e91c55d WIP postgres ha firewall
+09796fc8f9396d228c7720f6e58e3d406b309263 fix interval flags + set name size
+7f497d4b12bab230bc9171a0a88ee1dd82f2ed56 WIP nftables
+d08112c35f581733fbd5e0f63870d356f25a1b60 add some safe default
+242f2fcbf0a5c5342dbfd2325b5b8afa3039ee39 rules fix
+628c2782f56b659cc5bfa4ae6e4a5d66f0d0b391 Initial commit nft firewall for postgres ha
+c343820840995bd7a4a33ba3c0afc0f22406a555 set restapi connect
+3e92f14659e9e3c794ad5423c8d04962bb9a1a4e watchdog fix
+df966a1b90ccc0e0d6e460b0ab69a8943e79d26c user friendly cli interface
+fb525eb18ef03130e40a7e0afc6a8139de768681 peers status health
+0e4c76211d860a8098104217bc7b7123adf2dc9a logger
+635ed2bf570de597061a4d95e84f46dbab110d56 fix systemctl enable --now
+bdf7ae7161ba2a751255aab2920bf1a4df3c3588 complete rewrite to serialize the cluster maintenance
+ec1511963151dcdf3f52939309240327cb428a47 code clean up
+50bcab20760f57afbd4f6ab47a22169ead847deb fix ssh key_filename + cli peer
+2cb722e277f4938369ffdb5fb85b5b0708758e29 softdog container skip
+6f13abac68f31c6f5a4df420cc362c61127dac7e watchdog + loglevel
+06cd5488bd685c657e3471b7f27ce1c5b6ee21cc clt psy-01.py doc
+4a38d16bafd2ea9b46b4979a20f8e3c1c9367f28 syntax
+6dae2a514cc748177ca2c84ada14c490c03c95c1 basic usage
+3310cce60ac07d0307bff8066c7827112cda7be1 fix
+2e212a0c1355910dbc340ec3bac4544346484814 return processing time
+d7f0740e510f82f5bb073c6c291317dc0af94f0e fix + improvement
+75732d37eab5ba3b60b703d34e976ccea3ed569a  simple client to demo insert with retry
+9503a086a7da561a05fa337b8a03bfbfc4be3a23 patroni.yaml ['etcd']['hosts']
+590b6f94de374c88aab86afe57e17fa4c9331c77 ip addr show no address if the interface is down
+ab3aaea4a848c5c2d3bc71a9743b659eed18159a SELinux
+f5ca24a533fa9fe5dc160699c80cd7857c7ab40e start and enable postgres patroni systemd service
+eeb96527fa8105489234b012205e8f69408effeb parse ~/.ssh/config
+e8d21cf5f2e99f037f6c664be99e0ce5e909541c pg_hba.conf replication entries must be explicite
+34b4eb436a50117b1872091dc0d70b4e50ed59ec ssh login name
+c0dbe5f149e32fb60952f6eee0aae3c0a1b83fd9 parse ssh uri for 'login' '@' 'host'
+7c82000caff315e638d707573942344e8e7abab0 enable systemd haproxy.service
+d83d05c149a6a0cbce0c0a3a929eda25163f9715 enable haproxy cli support
+d2ed48d1da912cd5a836692ef3f061e99da77fe4 add haproxy support
+bc79edd1b639e40e447720f9a332a86887b3fa8a refactor
+898dfec1a6060ad2f9f7e395c968f7dd3fd68ad9 improve the default
+a83dedf00edf890130e6d9083274e244d79e5e97 restapi global ipv6
+4122b8772e944282845de846310a4909b0f548bf secure
+113f03429a9ae1a08929c6f7915f57ac047a78de .pgsql_profile
+d0d8c70858cce1df7cc73985393d974aa297a150 use one of the provided postgres peer ip 2/2
+2d458c067013d58f99fea2f76cf7450ccf61db58 use one of the provided postgres peer ip
+53fc6febc51032df7a95571b6c2d96cbb079165c patroni demo deployment
+9daf9c68b290ef88ea20dfe1cd409e91dd6a9955 patroni configuration via a local yaml template file
+8a996b9bede5386aebc1958c285205ce5de4d69f python36-PyYAML from vendor repo rather than pip
+a091298f295db0e19a43395ca48f057b85ea9bf7 payload + self ip
+b9cda4b939d7b13e6e369530fb33c3752fb49953 helper script
+8fd79e0633d1b1fca20a7069165faf0a7891990e cleanup
+f7c0f8f280f7e545d6ffef9deda089974539d134 vendor specific patroni systemd service file
+ad81ebc15364e87b7be988b49b2bc24df78ff777 base patroni install
+67c7e4695e8179654dc7035187dc24c42b9d44d8 add postgres packages installation
+51eae2aa38862350dcb2a4ba816d5f78f49dcf32 fix
+55c63255453ba00b5f77b3c9f09722481cf451cf centos/rel postgres pkg install
+368062e5f18e0984c6dfa3a02063a25f303d0315 allow member permanent remove
+e81024c12faeea8020fb5c91026c7d3945d86d81 wip cluster shrink
+6748725d72e2ead0071a6984f198f3d010659580 fix  unbounded variable fix  more meaningful message
+77b8c8cd9c9c029d5a8c14c574215a8a99bfd469 store each member id into etcd
+a9ebf5de0cf0c5907b8cc4a9586a3aebb574ec4b fix stderr log
+57aae70e8b51e8b0da53761aeb43cfd5b7c08432 new config layout
+e9f53f33698e71f967e7ec820ea8b4e2939558e3 clean up  formating
+5d956a13408814fc8c39e3324c32fb4ee6c0a3f2 clean up  exception message to stderr
+c5b5ab7baef21fbcc98b4db9cd73af6cd859bd7e cleanup  exception message in stderr
+5caf088d39645446df4ed5a535bcabc67a8811e3 enable peer-auto-tls
+84b55b8a6b3c0c82b2e48ed5ce54f43aa6c3b280 working etcd cluster deployment
+8363a94a6ed39f6dc590bf929009da8816b11595 etcd init  rework the initial cluster config  minimal and easier to extend.
+3fc17a9cb4f4eaafb913b4665a597bbc2aeeb958 future provision  real case should distinguish between  etcd peers and postgres only peers
+429827912fa5c4a30376190b621eb6507fa05ba3 use a python class to hold the result attribut
+64c206d486bbfe81b2effe8926856045ba4c4326 fix unbound variable on array  work arround fix for bash < 4.4  bash version above don't need the fix
+e6440d1f127e5af12a49d348dfbcd645450a14fc wip  raise  'TypeError("can't pickle _thread.lock objects")'  seems like due to pickle complex object (dict, list) can't be returned  solution could be :  - define an object class to store exec return  - use json string representation
+fa6c4394d646bf6d3c7dcede269a2bfd5ad6f744 sed fix
+888e3b5048d0b39e193ec6e7a6921238b6fd1c6f clean up
+355897199114e082ac3622f79701174d865f104a wip machine/host id
+4b6fb1873319892b2533e93ad9243903864df128 wip etcd bootstrap
+7e403be98e4eb15df196998f9531c7c0a0291094 inital commit for etcd deployment
+d485e4682a8e363c36c08220dc82bc9974885a51 Merge branch 'mp'
+9a077df21196d633f88c28c33477f9d16d6c6ee5 clean up  map_async don't permit to return a partial result  in case of exception.  Should be re implemented using a Queue.  We don't relay on the result order anyway.
+92b2efb77b64f83e8de6acaa413372fc1ae014c6 async_map timeout on exception
+aab3267abf9ce4715f9027727a1388f175b1d732 Merge branch 'mp'
+b54227a632a24f574c217df2ca717469ba3f78c2 simple multiprocessing pool
+6d19db744e473d0d9c9ffb070b90dd991a76e2cf simple cli  serial version
+f717282f01c27a36b7833bf417bd2aef949243fb exec command
+afdc9670a406966996688c0f2c9f20078d8824df Update 'README.md'
+419ee674ab23c76a67af88438f5a2d61c0847af1  Initial commit
