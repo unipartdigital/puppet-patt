@@ -6,6 +6,17 @@ import logging
 
 logger = logging.getLogger('patt')
 
+def log_results(logger, result, hide_stdout=False):
+    logger = logging.getLogger(logger)
+    for r in result:
+        logger.debug ("hostname: {}".format(r.hostname))
+        if hide_stdout:
+            logger.debug ("stdout: ****")
+        elif r.out:
+            logger.debug ("stdout: {}".format (r.out))
+        if r.error:
+            logger.error ("stderr: {}".format (r.error))
+
 try:
     import ssh_client
 except ModuleNotFoundError:

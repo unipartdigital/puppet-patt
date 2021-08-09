@@ -7,6 +7,9 @@ import time
 
 logger = logging.getLogger('patt_etcd')
 
+def log_results(result, hide_stdout=False):
+    patt.log_results(logger='patt_etcd', result=result, hide_stdout=hide_stdout)
+
 class Error(Exception):
     """Base class for exceptions in this module."""
     pass
@@ -20,20 +23,6 @@ class EtcdError(Error):
     def __init__(self, expression=None, message=None):
         self.expression = expression
         self.message = message
-
-def log_results(result):
-    error_count=0
-    for r in result:
-        logger.debug ("hostname: {}".format(r.hostname))
-        logger.debug ("stdout: {}".format (r.out))
-        if r.error is None:
-            pass
-        elif r.error.strip().startswith("Error: Nothing to do"):
-            pass
-        else:
-            error_count += 1
-            logger.error ("stderr: {}".format (r.error))
-    return error_count
 
 def cluster_health(nodes):
     result = patt.exec_script (nodes=nodes, src="./dscripts/d10.etcd.sh",

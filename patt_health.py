@@ -12,19 +12,7 @@ import time
 logger = logging.getLogger('patt_health')
 
 def log_results(result, hide_stdout=False):
-    error_count=0
-    for r in result:
-        logger.debug ("hostname: {}".format(r.hostname))
-        if not hide_stdout:
-            logger.debug ("stdout: {}".format (r.out))
-        if r.error is None:
-            pass
-        elif r.error.strip().startswith("Error: Nothing to do"):
-            pass
-        else:
-            error_count += 1
-            logger.error ("stderr: {}".format (r.error))
-    return error_count
+    patt.log_results(logger='patt_health', result=result, hide_stdout=hide_stdout)
 
 """
 install httpd wsgi packages and dep on each postgres nodes

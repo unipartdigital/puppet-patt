@@ -6,19 +6,8 @@ import logging
 
 logger = logging.getLogger('patt_haproxy')
 
-def log_results(result):
-    error_count=0
-    for r in result:
-        logger.debug ("hostname: {}".format(r.hostname))
-        logger.debug ("stdout: {}".format (r.out))
-        if r.error is None:
-            pass
-        elif r.error.strip().startswith("Error: Nothing to do"):
-            pass
-        else:
-            error_count += 1
-            logger.error ("stderr: {}".format (r.error))
-    return error_count
+def log_results(result, hide_stdout=False):
+    patt.log_results(logger='patt_haproxy', result=result, hide_stdout=hide_stdout)
 
 """
 install haproxy packages and dep on each nodes

@@ -11,6 +11,8 @@ import yaml
 
 logger = logging.getLogger('patt_patroni')
 
+def log_results(result, hide_stdout=False):
+    patt.log_results(logger='patt_patroni', result=result, hide_stdout=hide_stdout)
 
 """
 take a list of {'database': '', 'user': ''}
@@ -32,19 +34,6 @@ def cert_pg_hba_list (db_user=[], key_db='database', key_user='user'):
         result.append ("hostssl  {}          {}    0.0.0.0/0 cert".format (i[key_db], i[key_user]))
     return result + default_pg_hba_list
 
-def log_results(result):
-    error_count=0
-    for r in result:
-        logger.debug ("hostname: {}".format(r.hostname))
-        logger.debug ("stdout: {}".format (r.out))
-        if r.error is None:
-            pass
-        elif r.error.strip().startswith("Error: Nothing to do"):
-            pass
-        else:
-            error_count += 1
-            logger.error ("stderr: {}".format (r.error))
-    return error_count
 
 """
 install patroni packages and dep on each nodes

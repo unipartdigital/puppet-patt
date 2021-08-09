@@ -6,12 +6,9 @@ import logging
 
 logger = logging.getLogger('patt_syst')
 
-def log_results(result):
-    for r in result:
-        logger.debug ("hostname: {}".format(r.hostname))
-        logger.debug ("stdout: {}".format (r.out))
-        if hasattr(r,'error') and r.error:
-            logger.error ("stderr: {}".format (r.error))
+def log_results(result, hide_stdout=False):
+    patt.log_results(logger='patt_syst', result=result, hide_stdout=hide_stdout)
+
 
 """
 install util system packages and dep on each nodes
