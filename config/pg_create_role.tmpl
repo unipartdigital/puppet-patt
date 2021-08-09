@@ -1,4 +1,4 @@
-cat <<EOF  | psql
+cat <<'EOF'  | psql
 SELECT 'CREATE ROLE $role_name $role_options' WHERE NOT EXISTS
 (SELECT FROM pg_roles WHERE rolname = '$role_name')\gexec
 EOF
