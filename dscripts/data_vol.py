@@ -163,7 +163,11 @@ def volume_data_extend (mnt, created_pv=[], extend_full=False, lv_size="1G", std
          else:
             lv_extend_cmd = subprocess.run(["/sbin/lvextend", "-r", "-L", lv_size, "/dev/{}/{}".format(vg,lv)],
                                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-         result.append(lv_extend_cmd.returncode)
+         error_fail = False if lv_extend_cmd.stderr.decode().lower().find ("not larger than existing size") >= 0 else True
+         # make error 'New size given not larger than existing size' not fatal
+         # this is already the case for lvm >= 2.03.11
+         if error_fail:
+            result.append(lv_extend_cmd.returncode)
          if lv_extend_cmd.returncode == 0:
             print (lv_extend_cmd.stdout.decode(), flush=True)
          else:
@@ -341,6 +345,7 @@ def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
       result.append(r)
       # chown/chmod
       r = volume_data_mount_point_change (mnt, user=owner, mode=mode)
+      result.append(r)
    else:
       # extend
       r = volume_data_extend (mnt, created_pv=created_pv, extend_full=extend_full, lv_size=lv_size)
