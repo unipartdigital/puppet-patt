@@ -1,3 +1,4 @@
+6e08a2ac3b298ca6596cf7ce2f5d755e6299b2d2 fix remove hardcoded puppet module dir
 447b27f87458be681ca0f1d0fc1b76a8d8ffaca4 cleanup log_results
 0379802550d502535a066db39e42f9a7e51cc5b8 fix heredoc
 745ded15567799d06de51140158124fde94621cf df_recorder.py 	modified:   PUPPET.makefile
