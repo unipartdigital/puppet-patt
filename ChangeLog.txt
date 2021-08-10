@@ -1,3 +1,4 @@
+293d71e6694034d149d618d3ccd4f565ac229a0e lvm <  2.03.11 lvextend fix
 9001483bb887fb2f50a5caa3768629d3ec28f711 fix add_repo
 6e08a2ac3b298ca6596cf7ce2f5d755e6299b2d2 fix remove hardcoded puppet module dir
 447b27f87458be681ca0f1d0fc1b76a8d8ffaca4 cleanup log_results
