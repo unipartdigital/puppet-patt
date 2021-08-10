@@ -36,7 +36,7 @@ add_repo () {
         'rhel' | 'centos' | 'fedora')
             for r in ${repo_url[*]}; do
                 test "x$r" == "x" && continue
-                repo_name=$(basename ${r})
+                repo_name=$(basename ${r} .repo)
                 tmp_file=`mktemp`
                 curl -f -k ${r} -o ${tmp_file} || {
                     rm -f ${tmp_file}
