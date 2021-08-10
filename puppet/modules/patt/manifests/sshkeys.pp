@@ -1,9 +1,11 @@
 class patt::sshkeys(
- $base_dir="/etc/puppetlabs/code/environments/production/modules/patt/ssh-keys",
- $key_dir="/dev/shm/patt",
+ $base_dir = join([module_directory('patt'), 'ssh-keys'], '/'),
+ $key_dir  = "/dev/shm/patt",
  # don't store keys across reboot
 )
 {
+
+notify {"set patt::sshkeys::base_dir : ${base_dir}":}
 
 $is_any_empty = reduce([$patt::installer_ssh_id_pub, $patt::installer_ssh_id_priv], false) |$a, $b| {
     $a or ($b == '')
