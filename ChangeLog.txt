@@ -1,3 +1,4 @@
+ddfb10376bd002a4428d4ec17f99987acaebd149 fix standalone sftpd
 064563dfae7f478e7277b960e90eb276de4c7f1d fix if cluster name don't match NAME_REGEX
 81d738a258e58c1e3d53dae33eb23933df833aee reverse commit c94bcdd444870656967efa7694819871e828c96a
 c94bcdd444870656967efa7694819871e828c96a fix if cluster name don't match NAME_REGEX
