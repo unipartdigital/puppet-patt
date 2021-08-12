@@ -14,6 +14,7 @@ logger = logging.getLogger('patt_walg')
 def log_results(result, hide_stdout=False):
     patt.log_results(logger='patt_walg', result=result, hide_stdout=hide_stdout)
 
+valid_cluster_char="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 """
 install postgres packages and dep on each nodes
@@ -57,6 +58,10 @@ def walg_ssh_archiving_init(nodes):
 gen a walg ssh key on each peer and return all the public key (on success)
 """
 def walg_ssh_gen(cluster_name, nodes, postgres_user='postgres'):
+    cluster_name="".join(
+        ['-' if i in [j for j in cluster_name if j not in valid_cluster_char + '-']
+         else i for i in cluster_name])
+    assert cluster_name[0] in valid_cluster_char
     logger.info ("processing {}".format ([n.hostname for n in nodes]))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
@@ -72,6 +77,10 @@ def walg_ssh_gen(cluster_name, nodes, postgres_user='postgres'):
 gen an initial known_hosts or check if valid
 """
 def walg_ssh_known_hosts(cluster_name, nodes, archiving_server, archiving_server_port=22):
+    cluster_name="".join(
+        ['-' if i in [j for j in cluster_name if j not in valid_cluster_char + '-']
+         else i for i in cluster_name])
+    assert cluster_name[0] in valid_cluster_char
     logger.info ("processing {}".format ([n.hostname for n in nodes]))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
@@ -87,6 +96,10 @@ def walg_ssh_known_hosts(cluster_name, nodes, archiving_server, archiving_server
 add the public keys into the archive server
 """
 def walg_authorize_keys(cluster_name, nodes, keys=[]):
+    cluster_name="".join(
+        ['-' if i in [j for j in cluster_name if j not in valid_cluster_char + '-']
+         else i for i in cluster_name])
+    assert cluster_name[0] in valid_cluster_char
     patt.host_id(nodes)
     # patt.check_dup_id (nodes)
     with tempfile.NamedTemporaryFile(mode='w+', encoding='ascii') as tmpl_file:
@@ -143,6 +156,10 @@ def walg_archiving_standalone_sftpd(cluster_name, nodes, listen_addr="::0", list
 preapare the archive server for chroot sftp
 """
 def walg_archiving_add(cluster_name, nodes, port):
+    cluster_name="".join(
+        ['-' if i in [j for j in cluster_name if j not in valid_cluster_char + '-']
+         else i for i in cluster_name])
+    assert cluster_name[0] in valid_cluster_char
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
     if not port == 22:
@@ -208,6 +225,10 @@ def walg_s3_json(postgres_version, cluster_name, nodes, walg_store):
 sh json config
 """
 def walg_sh_json(postgres_version, cluster_name, nodes, walg_store):
+    cluster_name="".join(
+        ['-' if i in [j for j in cluster_name if j not in valid_cluster_char + '-']
+         else i for i in cluster_name])
+    assert cluster_name[0] in valid_cluster_char
     logger.info ("processing {}".format ([n.hostname for n in nodes]))
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
