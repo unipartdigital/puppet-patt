@@ -35,7 +35,7 @@ class patt (
  Optional[String]        $ssh_keyfile = '',
  Optional[String]        $ssh_login = '',
  Optional[Array[Struct[{name => String, options => Optional[Array[String]]}]]] $pg_create_role = [],
- Optional[Array[Struct[{name => String, owner => String}]]] $pg_create_database = [],
+ Optional[Array[Struct[{name => String, owner => String, cert => Optional[Variant[Enum['true', 'false'], Boolean]] }]]] $pg_create_database = [],
 
  Optional[String]        $vol_size_walg  = '2G',
  Optional[String]        $vol_size_etcd  = '2G',
@@ -210,7 +210,9 @@ notify {"is haproxy peer: ${is_haproxy}":
 #
 # patt::pg_create_database:
 #   - {name: example_db, owner: example_user}
-#
+# patt::pg_create_database:
+#   - {name: example_db, owner: example_user, cert: true}
+# set pg_hba.conf for cert authentication (requires a valid client certificate)
 #
 #
 # installer_ssh_id_pub: >

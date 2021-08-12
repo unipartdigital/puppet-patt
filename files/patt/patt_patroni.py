@@ -17,7 +17,7 @@ def log_results(result, hide_stdout=False):
 """
 take a list of {'database': '', 'user': ''}
 """
-def cert_pg_hba_list (db_user=[], key_db='database', key_user='user'):
+def cert_pg_hba_list (db_user=[], key_db='database', key_user='user', key_cert='cert'):
     default_pg_hba_list = [
         'local    all         all                   ident',
         'host     all         all         ::/0      md5',
@@ -28,8 +28,11 @@ def cert_pg_hba_list (db_user=[], key_db='database', key_user='user'):
     result = ["# TYPE   DATABASE   USER   ADDRESS   METHOD"]
     db_user = db_user if db_user else []
     for i in db_user:
-        if (key_db or key_user) not in i: continue
+        if key_db not in i: continue
+        if key_user not in i: continue
+        if key_cert not in i: continue
         if not i[key_db] or not i[key_user]: continue
+        if not (i[key_cert] == "true" or i[key_cert] == True): continue
         result.append ("hostssl  {}          {}    ::/0      cert".format (i[key_db], i[key_user]))
         result.append ("hostssl  {}          {}    0.0.0.0/0 cert".format (i[key_db], i[key_user]))
     return result + default_pg_hba_list
