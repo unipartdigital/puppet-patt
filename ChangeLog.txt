@@ -1,3 +1,4 @@
+161ec23d5a4d4a82df50dd4bca7e6423c2cea69a download wal-g >= v1.0
 08fa73945d96ba7e23a758cfca5205bc7b4124da container name validation
 293d71e6694034d149d618d3ccd4f565ac229a0e lvm <  2.03.11 lvextend fix
 9001483bb887fb2f50a5caa3768629d3ec28f711 fix add_repo

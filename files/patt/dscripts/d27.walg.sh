@@ -68,9 +68,15 @@ init () {
         else
             tar xvf ${walg_pkg}
         fi
-        chmod 755 wal-g
+        internal_walg=`tar tf ${walg_pkg}`
+        test -f ./${internal_walg} && {
+            test ! -f wal-g && {
+                mv ./${internal_walg} ./wal-g
+            }
+        }
+        chmod 755 ./wal-g
         test "`./wal-g --version | awk '{print $3}'`" == "${walg_release}" && {
-            sudo install -o root -g root -m 755 wal-g ${prefix}/bin/wal-g
+            sudo install -o root -g root -m 755 ./wal-g ${prefix}/bin/wal-g
         }
         rm -f ${srcdir}/wal-g ${srcdir}/${walg_pkg}
     } > /dev/null
