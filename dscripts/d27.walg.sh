@@ -129,6 +129,7 @@ EOF
 
 ssh_archive_user_add () {
     user_name=${1}
+    user_name=`echo ${user_name} | tr '\.' '-'`
     archive_base_dir=${2}
     initial_login_group=${3:-"walg"}
     test -d "${archive_base_dir}" || mkdir -p -m 711 "${archive_base_dir}"
@@ -253,9 +254,10 @@ ssh_authorize_keys () {
     keys_file="${2}"
     group="walg"
     archive_base_dir=/var/lib/walg
+    user_name=`echo ${cluster_name} | tr '\.' '-'`
     test -d ${archive_base_dir}/${cluster_name}/.ssh/ || {
         mkdir -p -m 700 ${archive_base_dir}/${cluster_name}/.ssh/
-        chown ${cluster_name}.${group} ${archive_base_dir}/${cluster_name}/.ssh/
+        chown ${user_name}.${group} ${archive_base_dir}/${cluster_name}/.ssh/
     }
     test -s "${srcdir}/${keys_file}" || { echo "error: ${srcdir}/${keys_file}" ; exit 1 ; }
     if [ -f "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys" ]; then
@@ -265,7 +267,7 @@ ssh_authorize_keys () {
     else
         cat "${srcdir}/${keys_file}" > "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
     fi
-    chown "${cluster_name}" "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
+    chown "${user_name}" "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
     chmod 600 "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
 }
 
