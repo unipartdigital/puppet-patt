@@ -112,7 +112,7 @@ ssh_archive_keygen() {
     test `stat -c "%U.%G" ${home}/.ssh/` == "${user_name}.${group}" || \
         chown "${user_name}.${group}" ${home}/.ssh/
     test -f ${home}/.ssh/walg_rsa.pub || {
-        cat <<EOF | su - ${user_name}
+        cat <<EOF | su ${user_name}
 /usr/bin/ssh-keygen -q -t rsa -b 4096 -f ~/.ssh/walg_rsa -N "" -C "walg_${cluster_name}_`hostname -f`"
 EOF
     }
@@ -215,6 +215,7 @@ sftpd_configure () {
                 fi
             }
             systemctl -q is-enabled ${sftpd_service} || systemctl enable --now ${sftpd_service}
+            systemctl -q is-active ${sftpd_service} || systemctl restart ${sftpd_service}
             ;;
         'disable')
             systemctl disable --now ${sftpd_service}
