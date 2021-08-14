@@ -1,0 +1,18 @@
+diff --git a/config/postgres-ipv6.yaml b/config/postgres-ipv6.yaml
+index e0ff033..93c4bd2 100644
+--- a/config/postgres-ipv6.yaml
++++ b/config/postgres-ipv6.yaml
+@@ -87,6 +87,13 @@ bootstrap:
+         - createdb
+ 
+ postgresql:
++  create_replica_methods:
++    - rm_temp_tablespace
++    - basebackup
++  rm_temp_tablespace:
++    command: '/bin/bash -c "rm -rf /var/cache/postgres_temp/* && exit 1"'
++    no_params: True
++    # allow to build replica even is temp tablespace is set. exit 1 force the run of the next method
+   listen: ":::5432"
+   connect_address: "[::1]"
+   data_dir: /var/lib/pgsql/11/data
