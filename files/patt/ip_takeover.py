@@ -20,7 +20,7 @@ import scapy.all as sca
 
 logger = logging.getLogger(__name__)
 
-ip_takeover_version = "0.91"
+ip_takeover_version = "0.92"
 
 def blackhole_add (ipv6=[], table="postgres_patroni"):
     try:
