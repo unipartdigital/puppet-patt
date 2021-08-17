@@ -12,6 +12,8 @@ import subprocess
 from datetime import datetime
 from datetime import timedelta
 import time
+from threading import Lock
+import locale
 
 logger = logging.getLogger('backup_walg')
 
@@ -20,11 +22,22 @@ class Config(object):
         self.backup_cleanup_keep_days = 0
         self.backup_cleanup_keep_hours = 0
         self.backup_cleanup_keep_seconds = 0
+        self.backup_cleanup_dry_run = True
         self.backup_full_push_days = 0
         self.backup_full_push_hours = 0
         self.backup_full_push_seconds = 0
         self.backup_log_level = logging.INFO
         self.backup_log_file = None
+        self.backup_keep_away_schedule = [
+            {'Mon': ['08:00-20:00']},
+            {'Tue': ['08:00-20:00']},
+            {'Wed': ['08:00-20:00']},
+            {'Thu': ['08:00-20:00']},
+            {'Fri': ['08:00-20:00']},
+            {'Sat': []},
+            {'Sun': []}
+        ]
+
     """
     basic equality
     """
@@ -164,12 +177,66 @@ class BackupWalg(object):
         else:
             logger.info("cleanup < {} end".format(up_to.strftime('%Y-%m-%dT%H:%M:%S.%fZ')))
 
+"""
+ return abbreviated weekday name (e.g., Sun) using the 'C' LC_TIME
+"""
+def week_day(time):
+    with Lock():
+        try:
+            lc_time = locale.setlocale(locale.LC_TIME)
+            locale.setlocale(locale.LC_TIME, "C")
+            return time.strftime("%a")
+        finally:
+            locale.setlocale(locale.LC_TIME, lc_time)
+
+"""
+ return the remaing seconds before leaving the keep away (if in keep away schedule)
+ return False otherwise
+"""
+def is_keep_away_schedule (keep_away_schedule=[]):
+    now = datetime.utcnow()
+    now_day_name = week_day(now)
+    today_kas = [val for sublist in [d[k] for d in keep_away_schedule for k,v in d.items() if
+     k.lower() == week_day(now).lower()] for val in sublist]
+    r = [(l,s,h) for l,s,h in [i.rpartition('-') for i in today_kas if '-' in i and ':' in i]]
+    for i in r:
+        try:
+            lh, s, lm = i[0].rpartition(':')
+            hh, s, hm = i[2].rpartition(':')
+            lh = int (lh)
+            lm = int (lm)
+            hh = int (hh)
+            hm = int (hm)
+            assert not (hh == 0 and hm == 0), "day last is 23:59"
+            assert (lh < 24 and lm < 60), "{} < 24 and {} < 60".format (hh, hm)
+            assert (hh < 24 and hm < 60), "{} < 24 and {} < 60".format (hh, hm)
+            assert lh <= hh, "range check error ({} < {})".format (lh, hh)
+        except:
+            logger.error ("is_keep_away_schedule",exc_info=True)
+            continue
+        else:
+            l = timedelta(days=0, hours=lh, seconds=lm * 60)
+            h = timedelta(days=0, hours=hh, seconds=hm * 60)
+            n = timedelta(days=0, hours=now.hour, minutes=now.minute, seconds=now.second)
+
+            logger.debug ("is_keep_away_schedule ({} < {}) and ({} < {}) -> {}".format(
+                l, n, n, h, (l < n) == True and (n < h) == True))
+            if (l < n) == True and (n < h) == True:
+                logger.debug("l {}".format(l))
+                logger.debug("n {}".format(n))
+                logger.debug("h {}".format(h))
+                return (h - n).total_seconds()
+    return False
+
 def backup_schedule (cleanup_keep_days=0,
                      cleanup_keep_hours=0,
                      cleanup_keep_seconds=600,
+                     cleanup_dry_run=True,
                      fbackup_push_days=0,
                      fbackup_push_hours=0.1,
-                     fbackup_push_seconds=60):
+                     fbackup_push_seconds=60,
+                     keep_away_schedule=[]):
+
     bwg = BackupWalg()
     sleep_counter = 2
     while True:
@@ -177,11 +244,16 @@ def backup_schedule (cleanup_keep_days=0,
             bwg.backup_local_full()
             bwg.backup_state()
         else:
+            k = is_keep_away_schedule(keep_away_schedule)
+            if k:
+                logger.info("keep_away_schedule: sleep {} seconds".format(k))
+                time.sleep(k/2)
+                continue
             bwg.backup_cleanup_keep (
                 days=cleanup_keep_days,
                 hours=cleanup_keep_hours,
                 seconds=cleanup_keep_seconds,
-                dry_run=False
+                dry_run=cleanup_dry_run
             )
             last_backup_time = datetime.strptime(bwg.last_backup.start_time, bwg.last_backup.date_fmt)
             now = datetime.utcnow()
@@ -239,6 +311,8 @@ if __name__ == "__main__":
     backup_schedule (cleanup_keep_days=cfg.backup_cleanup_keep_days,
                      cleanup_keep_hours=cfg.backup_cleanup_keep_hours,
                      cleanup_keep_seconds=cfg.backup_cleanup_keep_seconds,
+                     cleanup_dry_run=cfg.backup_cleanup_dry_run,
                      fbackup_push_days=cfg.backup_full_push_days,
                      fbackup_push_hours=cfg.backup_full_push_hours,
-                     fbackup_push_seconds=cfg.backup_full_push_seconds)
+                     fbackup_push_seconds=cfg.backup_full_push_seconds,
+                     keep_away_schedule=cfg.backup_keep_away_schedule)
