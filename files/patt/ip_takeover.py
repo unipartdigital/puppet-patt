@@ -230,7 +230,7 @@ class IPTakeOver(object):
     def ip_unlock (self):
         blackhole_del (i[0] for i in self.floating_ip)
 
-    def wait_master_rw (timeout=60):
+    def wait_master_rw (self, timeout=60):
         try:
             for i in range (timeout * 2):
                 if is_postgres_read_write:
