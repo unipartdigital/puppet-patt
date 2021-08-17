@@ -298,11 +298,11 @@ if __name__ == "__main__":
 
         progress_bar (6, 14)
 
-        patt_patroni.floating_ip_init(nodes=postgres_peers, cfg.ip_takeover_version)
+        patt_patroni.floating_ip_init(nodes=postgres_peers, ip_takeover_version=cfg.ip_takeover_version)
 
         progress_bar (7, 14)
 
-        patt_patroni.floating_ip_build(nodes=postgres_peers, cfg.ip_takeover_version)
+        patt_patroni.floating_ip_build(nodes=postgres_peers, ip_takeover_version=cfg.ip_takeover_version)
 
         progress_bar (8, 14)
 
