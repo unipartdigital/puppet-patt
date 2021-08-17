@@ -156,7 +156,7 @@ class PatroniService(ClusterService):
 
     def _to_attr (self, e = {}):
         info = PatroniService.Info()
-        if e is None: return
+        if e in (None, ''): return
         for k in e.keys():
             setattr(info, k, e[k])
         return info
@@ -229,7 +229,7 @@ class PatroniService(ClusterService):
         t0=time.mktime(time.gmtime(0))
         def time_or_zero(stamp):
             if stamp:
-                return time.mktime(time.strptime(stamp, "%Y-%m-%d %H:%M:%S.%f %Z"))
+                return time.mktime(time.strptime(stamp, "%Y-%m-%d %H:%M:%S.%f%z"))
             return t0
 
         return [(mxlog - n[0],
@@ -331,7 +331,7 @@ class PatroniService(ClusterService):
             try:
                 rstamp = time.mktime(time.gmtime(0))
                 if rdlt[2]:
-                    rstamp = time.mktime(time.strptime(rdlt[2], "%Y-%m-%d %H:%M:%S.%f %Z"))
+                    rstamp = time.mktime(time.strptime(rdlt[2], "%Y-%m-%d %H:%M:%S.%f%z"))
                 cur = db3.cursor()
                 cur.execute(
                     "select id, received, replayed, rstamp from replication_log order by id desc limit 1;")
