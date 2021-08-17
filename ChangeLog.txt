@@ -1,4 +1,6 @@
-ddfb10376bd002a4428d4ec17f99987acaebd149 fix standalone sftpd
+ae77ecf0c1b80d93dc2e3411de7b2bba4e647b1e loglevel + fix
+1fa0910e1015877b1e890786be608160965c3dd1 temp_tablespaces create replica
+c661a4dbae32fc7fac1c657cacaadf4dfacb0053 fix standalone sftpd
 064563dfae7f478e7277b960e90eb276de4c7f1d fix if cluster name don't match NAME_REGEX
 81d738a258e58c1e3d53dae33eb23933df833aee reverse commit c94bcdd444870656967efa7694819871e828c96a
 c94bcdd444870656967efa7694819871e828c96a fix if cluster name don't match NAME_REGEX

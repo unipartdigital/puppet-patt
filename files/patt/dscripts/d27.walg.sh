@@ -214,7 +214,7 @@ sftpd_configure () {
                     systemctl restart ${sftpd_service}
                 fi
             }
-            systemctl -q is-enabled  systemctl enable --now ${sftpd_service}
+            systemctl -q is-enabled ${sftpd_service} || systemctl enable --now ${sftpd_service}
             systemctl -q is-active ${sftpd_service} || systemctl restart ${sftpd_service}
             ;;
         'disable')
