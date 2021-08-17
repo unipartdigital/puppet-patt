@@ -36,6 +36,7 @@ class Config(object):
         self.floating_ip = None
         self.haproxy_peers = None
         self.haproxy_template_file = None
+        self.ip_takeover_version="0.92"
         self.log_file = None
         self.loglevel = None
         self.lock_dir = None
@@ -297,11 +298,11 @@ if __name__ == "__main__":
 
         progress_bar (6, 14)
 
-        patt_patroni.floating_ip_init(nodes=postgres_peers)
+        patt_patroni.floating_ip_init(nodes=postgres_peers, ip_takeover_version=cfg.ip_takeover_version)
 
         progress_bar (7, 14)
 
-        patt_patroni.floating_ip_build(nodes=postgres_peers)
+        patt_patroni.floating_ip_build(nodes=postgres_peers, ip_takeover_version=cfg.ip_takeover_version)
 
         progress_bar (8, 14)
 

@@ -111,7 +111,7 @@ def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_
         log_results (result)
         return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
-def floating_ip_init(nodes, ip_takeover_version="0.9"):
+def floating_ip_init(nodes, ip_takeover_version="0.92"):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
 
@@ -119,7 +119,7 @@ def floating_ip_init(nodes, ip_takeover_version="0.9"):
                                 args=['init'] + [ip_takeover_version], sudo=True, timeout=1440)
     log_results (result)
 
-def floating_ip_build(nodes, ip_takeover_version="0.9"):
+def floating_ip_build(nodes, ip_takeover_version="0.92"):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
 
