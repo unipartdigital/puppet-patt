@@ -20,13 +20,13 @@ import scapy.all as sca
 
 logger = logging.getLogger(__name__)
 
-ip_takeover_version = "0.9"
+ip_takeover_version = "0.91"
 
 def blackhole_add (ipv6=[], table="postgres_patroni"):
     try:
         ipv6_str = ", ".join (ipv6)
         cmd_list = ["nft", "add",  "element", "ip6", table, "pg_blackhole", '{', ipv6_str, '}']
-        logger.warning ("pg_blackhole: {}".format (cmd_list))
+        logger.debug ("pg_blackhole: {}".format (cmd_list))
         cmd = subprocess.run (cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
         if cmd.returncode == 0:
             pass
@@ -39,7 +39,7 @@ def blackhole_del (ipv6=[], table="postgres_patroni"):
     try:
         ipv6_str = ", ".join (ipv6)
         cmd_list = ["nft", "delete",  "element", "ip6", table, "pg_blackhole", '{', ipv6_str, '}']
-        logger.warning ("pg_blackhole: {}".format (cmd_list))
+        logger.debug ("pg_blackhole: {}".format (cmd_list))
         cmd = subprocess.run (cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
         if cmd.returncode == 0:
             pass
@@ -51,10 +51,10 @@ def blackhole_del (ipv6=[], table="postgres_patroni"):
 def blackhole_list (table="postgres_patroni", set="pg_blackhole"):
     cmd_list = ["nft", "list", "set", "ip6", table, set]
     try:
-        logger.warning ("pg_blackhole: {}".format (cmd_list))
+        logger.debug ("pg_blackhole: {}".format (cmd_list))
         cmd = subprocess.run (cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
         if cmd.returncode == 0:
-            logger.warning ("{}".format (cmd.stdout))
+            logger.debug ("{}".format (cmd.stdout))
         else:
             logger.error ("{}".format (cmd.stderr))
     except Exception as e:
@@ -104,9 +104,9 @@ def neighbour_advertisement (addr, iface):
         adv = sca.IPv6(src=lla, dst="ff02::1")/sca.ICMPv6ND_NA(R=0, S=0, O=1, tgt=addr)
         opt = sca.ICMPv6NDOptDstLLAddr (lladdr=sca.get_if_hwaddr(iface))
         adv.add_payload(opt)
-        logger.warning ("neighbour_advertisement packet {}".format (adv.show()))
+        logger.debug ("neighbour_advertisement packet {}".format (adv.show()))
         sca.send (adv, iface=iface)
-        logger.warning ("neighbour_advertisement packet send {}".format (adv.show()))
+        logger.debug ("neighbour_advertisement packet send {}".format (adv.show()))
     except Exception as e:
         logger.error (e)
 
@@ -115,7 +115,7 @@ class Iproute2Error (Exception):
         self.message = message
 
 def iproute2 (objects=None, command=[], options=['-6', '-br']):
-    logger.warning ("{}".format (["/sbin/ip"] + options + [objects] + command))
+    logger.debug ("{}".format (["/sbin/ip"] + options + [objects] + command))
     cmd = subprocess.run(["/sbin/ip"] + options + [objects] + command,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
     if cmd.returncode == 0:
@@ -230,7 +230,7 @@ class IPTakeOver(object):
     def ip_unlock (self):
         blackhole_del (i[0] for i in self.floating_ip)
 
-    def wait_master_rw (timeout=60):
+    def wait_master_rw (self, timeout=60):
         try:
             for i in range (timeout * 2):
                 if is_postgres_read_write:
@@ -248,7 +248,7 @@ class IPTakeOver(object):
             self.ip_lock()
             self.ip_del()
         elif role == "master":
-            self.wait_master_rw
+            self.wait_master_rw()
             self.ip_unlock()
             self.ip_add()
         blackhole_list()
@@ -261,7 +261,7 @@ class IPTakeOver(object):
             self.ip_lock()
             self.ip_del()
         elif role == "master":
-            self.wait_master_rw
+            self.wait_master_rw()
             self.ip_unlock()
         blackhole_list()
 
@@ -276,7 +276,7 @@ class IPTakeOver(object):
             self.ip_del()
         elif role == "master":
             self.ip_add()
-            self.wait_master_rw
+            self.wait_master_rw()
             self.ip_unlock()
 
     def on_start (self, role):
@@ -285,12 +285,12 @@ class IPTakeOver(object):
         blackhole_list()
         if role == "replica":
             self.ip_lock()
-            self.ip_del
+            self.ip_del()
         elif role == "master":
-            self.wait_master_rw
+            self.wait_master_rw()
             self.ip_unlock()
             self.ip_add()
-        blackhole_list
+        blackhole_list()
 
     def on_stop (self, role):
     # run this script when the postgres stops.
@@ -300,7 +300,7 @@ class IPTakeOver(object):
         blackhole_list()
 
 def main():
-    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=logging.WARNING)
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=logging.INFO)
 
     if len(sys.argv) == 4 and sys.argv[1] in (
             'on_reload', 'on_restart', 'on_role_change', 'on_start', 'on_stop'):
