@@ -95,3 +95,20 @@ vol_size_pgsql: <%=$patt::vol_size_pgsql%>
 vol_size_pgsql_temp: <%=$patt::vol_size_pgsql_temp%>
 gc_cron_df_pc: <%=$patt::gc_cron_df_pc%>
 gc_cron_target: <%=$patt::gc_cron_target%>
+
+backup_cleanup_dry_run: <%=$patt::backup_cleanup_dry_run%>
+backup_cleanup_keep_days: <%=$patt::backup_cleanup_keep_days%>
+backup_cleanup_keep_hours: <%=$patt::backup_cleanup_keep_hours%>
+backup_cleanup_keep_seconds: <%=$patt::backup_cleanup_keep_seconds%>
+backup_full_push_days: <%=$patt::backup_full_push_days%>
+backup_full_push_hours: <%=$patt::backup_full_push_hours%>
+backup_full_push_seconds: <%=$patt::backup_full_push_seconds%>
+backup_log_file: <%=$patt::backup_log_file%>
+backup_log_level: <%=$patt::backup_log_level%>
+backup_keep_away_schedule:
+<%- [$patt::backup_keep_away_schedule].flatten.each |$k| { -%>
+<%- [$k['schedule']].flatten.each |$l| { -%>
+  - <%=$k['day']%>:
+    - <%=$l%>
+<%- } -%>
+<%- } -%>

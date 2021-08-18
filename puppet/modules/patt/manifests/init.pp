@@ -63,6 +63,26 @@ class patt (
  Optional[Array[String]] $network_allow_postgres_clients = ['::0/0'],
  Optional[Array[String]] $network_allow_monitoring_clients = ['::0/0'],
  # nftables allowed network clients
+
+ Optional[Boolean]        $backup_cleanup_dry_run = true,
+ Optional[Integer]        $backup_cleanup_keep_days = 0,
+ Optional[Integer]        $backup_cleanup_keep_hours = 0,
+ Optional[Integer]        $backup_cleanup_keep_seconds = 0,
+ Optional[Integer]        $backup_full_push_days = 0,
+ Optional[Integer]        $backup_full_push_hours = 0,
+ Optional[Integer]        $backup_full_push_seconds = 0,
+ Optional[String]         $backup_log_file = '',
+ Optional[Integer]        $backup_log_level = 20,
+ Optional[Array[Struct[{day => Enum['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        schedule => Optional[Array[String]]}]]] $backup_keep_away_schedule =
+                        [{day => 'Mon', schedule => ['08:00-20:00']},
+                         {day => 'Tue', schedule => ['08:00-20:00']},
+                         {day => 'Wed', schedule => ['08:00-20:00']},
+                         {day => 'Thu', schedule => ['08:00-20:00']},
+                         {day => 'Fri', schedule => ['08:00-20:00']},
+                         {day => 'Sat', schedule => []},
+                         {day => 'Sun', schedule => []}],
+
 )
 {
 
