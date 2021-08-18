@@ -29,6 +29,7 @@ puppet-module:
 	install -m 644 config/sftpd.service $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/monitoring-httpd.conf $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/pg_create_tablespace.tmpl $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/backup_walg.service $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d02.util.sh $(DESTDIR)/patt/files/patt/dscripts/
@@ -42,6 +43,7 @@ puppet-module:
 	install -m 644 dscripts/d40.haproxy.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d50.health.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/create_bucket.py $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/backup_walg.py $(DESTDIR)/patt/files/patt/dscripts/
 
 	install -m 644 dscripts/haproxy_config.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/nft_config.py $(DESTDIR)/patt/files/patt/dscripts/

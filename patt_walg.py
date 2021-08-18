@@ -370,3 +370,39 @@ def walg_s3_create_bucket(nodes, walg_store):
         return any (x.out == os.path.basename (bucket) for x in result if hasattr(x, 'out'))
     else:
         return True
+
+
+"""
+configure the systemd schedule backup service (named after the postgres version)
+"""
+def walg_backup_service_setup(nodes, postgres_version,
+                              tmpl="./config/backup_walg.service"):
+    logger.info ("walg_s3_backup_service processing {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    comd="./dscripts/tmpl2file.py"
+    pg_data_rhl_fam="/var/lib/pgsql/{}/data".format(postgres_version)
+    pg_data_deb_fam="/var/lib/postgresql/{}/data".format(postgres_version)
+    systemd_service="{}-{}.service".format(os.path.basename (tmpl).rpartition('.')[0], postgres_version)
+    result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
+                               payload=tmpl,
+                               args=['-t'] + [os.path.basename (tmpl)] +
+                               ['-o'] + ["/etc/systemd/system/{}".format (systemd_service)] +
+                               ['--dictionary_key_val'] +
+                               ["backup_walg={}".format(
+                                   "/usr/local/libexec/patt/dscripts/backup_walg.py")] +
+                               ['--dictionary_key_val'] +
+                               ["cluster_config={}".format("/usr/local/etc/cluster_config.yaml")] +
+                               ['--dictionary-rhel'] +
+                               ["pg_data={}".format(pg_data_rhl_fam)] +
+                               ['--dictionary-fedora'] +
+                               ["pg_data={}".format(pg_data_rhl_fam)] +
+                               ['--dictionary-centos'] +
+                               ["pg_data={}".format(pg_data_rhl_fam)] +
+                               ['--dictionary-debian'] +
+                               ["pg_data={}".format(pg_data_deb_fam)] +
+                               ['--dictionary-ubuntu'] +
+                               ["pg_data={}".format(pg_data_deb_fam)] +
+                               ['--chmod'] + ['644'],
+                               sudo=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])

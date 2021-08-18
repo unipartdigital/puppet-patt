@@ -339,6 +339,12 @@ if __name__ == "__main__":
                                                                        walg_store=cfg.walg_store)
             assert walg_s3_create_bucket_ok, "create bucket error"
 
+            # systemd backup service setup
+            walg_backup_service_setup_ok = patt_walg.walg_backup_service_setup(
+                postgres_version=cfg.postgres_release,
+                nodes=postgres_peers)
+            assert walg_backup_service_setup_ok, "walg backup service setup error"
+
             if sftpd_peers:
                 init_ok = patt_walg.walg_ssh_archiving_init(nodes=sftpd_peers)
                 sftpd_archiving = patt_walg.sftpd_peers_service(walg_store=cfg.walg_store,

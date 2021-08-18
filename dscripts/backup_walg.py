@@ -14,6 +14,7 @@ from datetime import timedelta
 import time
 from threading import Lock
 import locale
+import hashlib
 
 logger = logging.getLogger('backup_walg')
 
@@ -65,6 +66,18 @@ class Config(object):
         print (result.replace("!!python/object", "#!!python/object"))
         sys.exit(0)
 
+"""
+return (md5sum, file_path) or (None, None) on error
+"""
+def file_md5sum(file_path):
+    try:
+        with open(file_path, 'r') as f:
+            file_hexdigest=hashlib.md5(f.read().encode('utf-8')).hexdigest()
+    except:
+        return (None, None)
+    else:
+        return (file_hexdigest, file_path)
+
 class BackupInfo(object):
     pass
 
@@ -82,6 +95,7 @@ class BackupWalg(object):
         self.date_fmt = [] #'%Y-%m-%dT%H:%M:%S.%fZ'
         self.last_backup = None
         self.last_backup_check_time = None
+        self.files_md5 = None
         try:
             self.backup_state()
         except:
@@ -235,7 +249,8 @@ def backup_schedule (cleanup_keep_days=0,
                      fbackup_push_days=0,
                      fbackup_push_hours=0.1,
                      fbackup_push_seconds=60,
-                     keep_away_schedule=[]):
+                     keep_away_schedule=[],
+                     files_watch=[]):
 
     bwg = BackupWalg()
     sleep_counter = 2
@@ -244,6 +259,14 @@ def backup_schedule (cleanup_keep_days=0,
             bwg.backup_local_full()
             bwg.backup_state()
         else:
+            if not bwg.files_md5:
+                bwg.files_md5 = [file_md5sum(i) for i in files_watch]
+            tmp_md5sum = [file_md5sum(i) for i in files_watch]
+            for f5 in bwg.files_md5:
+                if f5 not in tmp_md5sum:
+                    logger.info ("files_watch: {} changed".format(f5))
+                    raise BackupWalgError("files_watch: {} changed".format(f5))
+
             k = is_keep_away_schedule(keep_away_schedule)
             if k:
                 logger.info("keep_away_schedule: sleep {} seconds".format(k))
@@ -315,4 +338,5 @@ if __name__ == "__main__":
                      fbackup_push_days=cfg.backup_full_push_days,
                      fbackup_push_hours=cfg.backup_full_push_hours,
                      fbackup_push_seconds=cfg.backup_full_push_seconds,
-                     keep_away_schedule=cfg.backup_keep_away_schedule)
+                     keep_away_schedule=cfg.backup_keep_away_schedule,
+                     files_watch=[args.yaml_config_file])
