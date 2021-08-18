@@ -1,0 +1,22 @@
+[Unit]
+Description=PostgreSQL Backup wal-g Driver
+After=network-online.target syslog.service
+Wants=network-online.target syslog.service
+
+[Service]
+Type=exec
+User=postgres
+Group=postgres
+CacheDirectory=walg
+
+Environment=PGDATA=${pg_data}
+Environment=PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
+
+OOMScoreAdjust=-500
+
+ExecStart=/usr/bin/python3 ${backup_walg} -f ${cluster_config}
+Restart=always
+RestartSec=360
+
+[Install]
+WantedBy=multi-user.target

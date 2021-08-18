@@ -1,6 +1,13 @@
+303f5b6ff7a07d49f452ed12df3b047633203c73 wal-g puppet fix + config sample
+2007c31201e93d32c3fc95873029a984dbfe16b3 backup option from hiera (puppet)
+94e048336cfef1fa678a5fb4d8df102096f737f7 is_postgres_read_write
+f8b83a11ad26266af934ddf10f7d00b419f659d7 backup_walg.service (systemd service)
+76d542d01a9549712a88cb82d3500167943a7e8c Merge branch 'main' into bkp
 41dac11f5b23e3d73752ab7c04c9ecf6455f40d8 fix patt_monitoring
 c2db708143c5dddda6c139e93febd56c2999498a ip_takeover_version
 dd0300e3bf49109b0a5d36132eec8afdfb9227ba loglevel + fix
+45625392ce60a9c5b1b852e45bf40106698c030a config backup: keep away schedule, dry run
+cbe162ccdc8cf50bc38ddfb85a8c70b75eedb069 dscripts/backup_walg.py
 1fa0910e1015877b1e890786be608160965c3dd1 temp_tablespaces create replica
 c661a4dbae32fc7fac1c657cacaadf4dfacb0053 fix standalone sftpd
 064563dfae7f478e7277b960e90eb276de4c7f1d fix if cluster name don't match NAME_REGEX

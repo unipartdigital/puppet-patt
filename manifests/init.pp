@@ -63,6 +63,26 @@ class patt (
  Optional[Array[String]] $network_allow_postgres_clients = ['::0/0'],
  Optional[Array[String]] $network_allow_monitoring_clients = ['::0/0'],
  # nftables allowed network clients
+
+ Optional[Boolean]        $backup_cleanup_dry_run = true,
+ Optional[Integer]        $backup_cleanup_keep_days = 0,
+ Optional[Integer]        $backup_cleanup_keep_hours = 0,
+ Optional[Integer]        $backup_cleanup_keep_seconds = 0,
+ Optional[Integer]        $backup_full_push_days = 0,
+ Optional[Integer]        $backup_full_push_hours = 0,
+ Optional[Integer]        $backup_full_push_seconds = 0,
+ Optional[String]         $backup_log_file = '',
+ Optional[Integer]        $backup_log_level = 20,
+ Optional[Array[Struct[{day => Enum['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        schedule => Optional[Array[String]]}]]] $backup_keep_away_schedule =
+                        [{day => 'Mon', schedule => ['08:00-20:00']},
+                         {day => 'Tue', schedule => ['08:00-20:00']},
+                         {day => 'Wed', schedule => ['08:00-20:00']},
+                         {day => 'Thu', schedule => ['08:00-20:00']},
+                         {day => 'Fri', schedule => ['08:00-20:00']},
+                         {day => 'Sat', schedule => []},
+                         {day => 'Sun', schedule => []}],
+
 )
 {
 
@@ -215,13 +235,38 @@ notify {"is haproxy peer: ${is_haproxy}":
 # set pg_hba.conf for cert authentication (requires a valid client certificate)
 #
 #
-# installer_ssh_id_pub: >
+# patt::installer_ssh_id_pub: >
 #     ENC[PKCS7,MIIEbQYJKoZIhvcNAQcDoIIEXjCCBFoCAQAxggEhMIIBHQIBADAFMAACAQEw...]
 #
-# installer_ssh_id_priv: ENC[PKCS7,MIIOvQYJKo...]
+# patt::installer_ssh_id_priv: ENC[PKCS7,MIIOvQYJKo...]
 #
-# pg_root_crt: ENC[PKCS7,MIIJjQYS7,MDFosJKLjn...]
+# patt::pg_root_crt: ENC[PKCS7,MIIJjQYS7,MDFosJKLjn...]
 #
-# pg_root_key: ENC[PKCS7,MIIOHQYJKoZIhvcNAQcD...]
+# patt::pg_root_key: ENC[PKCS7,MIIOHQYJKoZIhvcNAQcD...]
 #
+# wal-g backup setting sample:
+# patt::backup_cleanup_dry_run: true
+# patt::backup_cleanup_keep_days: 30
+# patt::backup_cleanup_keep_hours: 0
+# patt::backup_cleanup_keep_seconds: 0
+# patt::backup_full_push_days: 0
+# patt::backup_full_push_hours: 12
+# patt::backup_full_push_seconds: 0
+# patt::backup_log_file: ''
+# patt::backup_log_level: 20
+# patt::backup_keep_away_schedule:
+#         - day: 'Mon'
+#           schedule:
+#                   - 08:00-12:00
+#                   - 14:00-20:00
+#         - day: 'Tue'
+#           schedule:
+#                   - 08:00-20:00
+#         - day: 'Sat'
+#           schedule: ['']
+#         - day: 'Sun'
+#           schedule: ['']
+#
+# warning for any day not set the default will apply
+# Mon-Fri: [08:00-20:00] and Sat-Sun: ['']
 #
