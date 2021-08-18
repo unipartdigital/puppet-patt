@@ -15,6 +15,7 @@ import time
 from threading import Lock
 import locale
 import hashlib
+import psycopg2
 
 logger = logging.getLogger('backup_walg')
 
@@ -86,6 +87,22 @@ class BackupWalgError(Exception):
         self.message = message
     def __str__(self):
         return self.message
+
+def is_postgres_read_write():
+    conn = psycopg2.connect("dbname=postgres")
+    try:
+        cur = conn.cursor()
+        cur.execute("SHOW transaction_read_only;")
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+    except:
+        raise
+    else:
+        if type (result) == tuple:
+            return result[0] == 'off'
+    finally:
+        conn.close()
 
 class BackupWalg(object):
     def __init__(self, command="/usr/local/bin/wal-g"):
@@ -255,6 +272,10 @@ def backup_schedule (cleanup_keep_days=0,
     bwg = BackupWalg()
     sleep_counter = 2
     while True:
+        if not is_postgres_read_write():
+            logger.warning ("attempt to backup a read only db")
+            time.sleep(360)
+            continue
         if not bwg.last_backup:
             bwg.backup_local_full()
             bwg.backup_state()
