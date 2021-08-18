@@ -235,13 +235,38 @@ notify {"is haproxy peer: ${is_haproxy}":
 # set pg_hba.conf for cert authentication (requires a valid client certificate)
 #
 #
-# installer_ssh_id_pub: >
+# patt::installer_ssh_id_pub: >
 #     ENC[PKCS7,MIIEbQYJKoZIhvcNAQcDoIIEXjCCBFoCAQAxggEhMIIBHQIBADAFMAACAQEw...]
 #
-# installer_ssh_id_priv: ENC[PKCS7,MIIOvQYJKo...]
+# patt::installer_ssh_id_priv: ENC[PKCS7,MIIOvQYJKo...]
 #
-# pg_root_crt: ENC[PKCS7,MIIJjQYS7,MDFosJKLjn...]
+# patt::pg_root_crt: ENC[PKCS7,MIIJjQYS7,MDFosJKLjn...]
 #
-# pg_root_key: ENC[PKCS7,MIIOHQYJKoZIhvcNAQcD...]
+# patt::pg_root_key: ENC[PKCS7,MIIOHQYJKoZIhvcNAQcD...]
 #
+# wal-g backup setting sample:
+# patt::backup_cleanup_dry_run: true
+# patt::backup_cleanup_keep_days: 30
+# patt::backup_cleanup_keep_hours: 0
+# patt::backup_cleanup_keep_seconds: 0
+# patt::backup_full_push_days: 0
+# patt::backup_full_push_hours: 12
+# patt::backup_full_push_seconds: 0
+# patt::backup_log_file: ''
+# patt::backup_log_level: 20
+# patt::backup_keep_away_schedule:
+#         - day: 'Mon'
+#           schedule:
+#                   - 08:00-12:00
+#                   - 14:00-20:00
+#         - day: 'Tue'
+#           schedule:
+#                   - 08:00-20:00
+#         - day: 'Sat'
+#           schedule: ['']
+#         - day: 'Sun'
+#           schedule: ['']
+#
+# warning for any day not set the default will apply
+# Mon-Fri: [08:00-20:00] and Sat-Sun: ['']
 #

@@ -107,8 +107,8 @@ backup_log_file: <%=$patt::backup_log_file%>
 backup_log_level: <%=$patt::backup_log_level%>
 backup_keep_away_schedule:
 <%- [$patt::backup_keep_away_schedule].flatten.each |$k| { -%>
-<%- [$k['schedule']].flatten.each |$l| { -%>
   - <%=$k['day']%>:
+<%- [$k['schedule']].flatten.each |$l| { -%>
     - <%=$l%>
 <%- } -%>
 <%- } -%>
