@@ -31,6 +31,7 @@ class Config(object):
         self.vol_size_etcd = None
         self.vol_size_pgsql = None
         self.vol_size_pgsql_temp = None
+        self.vol_size_pgsql_safe = None
         self.vol_size_walg = None
         self.etcd_peers = None
         self.floating_ip = None
@@ -267,6 +268,13 @@ if __name__ == "__main__":
                 postgres_peers, mnt='/var/cache/postgres_temp', vol_size=cfg.vol_size_pgsql_temp,
                 user='postgres', mode='750')
             assert vol_pgsql_temp_ok, "vol pgsql temp error"
+
+        if postgres_peers and cfg.vol_size_pgsql_safe:
+            vol_pgsql_safe_ok = patt_syst.disk_init (
+                postgres_peers, mnt='/var/lib/pg_safe', vol_size=cfg.vol_size_pgsql_safe,
+                user='postgres', mode='700')
+            assert vol_pgsql_safe_ok, "vol pgsql safe error"
+        # may be used temporarily or for good to store pg dump
 
         if sftpd_peers and cfg.vol_size_walg:
             vol_walg_ok = patt_syst.disk_init (

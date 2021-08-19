@@ -41,6 +41,7 @@ class patt (
  Optional[String]        $vol_size_etcd  = '2G',
  Optional[String]        $vol_size_pgsql = '2G',
  Optional[String]        $vol_size_pgsql_temp = '0',
+ Optional[String]        $vol_size_pgsql_safe = '0',
  # size may be increased between run but not shrinked
 
  Optional[String]        $install_dir='/usr/local/libexec/patt',
@@ -211,6 +212,8 @@ notify {"is haproxy peer: ${is_haproxy}":
 # patt::ssh_login: ''
 # patt::vol_size_etcd: '2G'
 # patt::vol_size_pgsql: '8G'
+# patt::vol_size_pgsql_temp = '0',
+# patt::vol_size_pgsql_safe = '0',
 # patt::gc_cron_df_pc: '80'
 # patt::gc_cron_target: '/etc/cron.hourly/postgres-gc.sh'
 #

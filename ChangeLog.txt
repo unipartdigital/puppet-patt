@@ -1,3 +1,5 @@
+c86898ed6e3bca8751f1a50b52c0b248d5a77c45 remove --verify option
+a97fe54a7ea2ddf74af708bf8b8b02bdf90a0a55 patt::vol_size_pgsql_safe option
 bbcb1708641a3a097f626d26b71d74c28f16eeb1 walg_backup_service_command enable
 303f5b6ff7a07d49f452ed12df3b047633203c73 wal-g puppet fix + config sample
 2007c31201e93d32c3fc95873029a984dbfe16b3 backup option from hiera (puppet)

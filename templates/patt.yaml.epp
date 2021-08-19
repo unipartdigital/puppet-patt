@@ -93,6 +93,7 @@ vol_size_walg: <%=$patt::vol_size_walg%>
 vol_size_etcd: <%=$patt::vol_size_etcd%>
 vol_size_pgsql: <%=$patt::vol_size_pgsql%>
 vol_size_pgsql_temp: <%=$patt::vol_size_pgsql_temp%>
+vol_size_pgsql_safe: <%=$patt::vol_size_pgsql_safe%>
 gc_cron_df_pc: <%=$patt::gc_cron_df_pc%>
 gc_cron_target: <%=$patt::gc_cron_target%>
 
