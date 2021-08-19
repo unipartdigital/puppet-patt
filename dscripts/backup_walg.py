@@ -17,6 +17,11 @@ import locale
 import hashlib
 import psycopg2
 
+"""
+ wrapper arround wal-g tool, allow to take full backup of a local postgres db at regular interval.
+ can be used as a systemd simple service cf: config/backup_walg.service
+"""
+
 logger = logging.getLogger('backup_walg')
 
 class Config(object):
@@ -183,7 +188,7 @@ class BackupWalg(object):
     def backup_local_full(self, db_directory=None):
         db_directory = db_directory if db_directory else os.getenv('PGDATA', default='')
         assert db_directory, "backup_local_full db_directory not set"
-        r = self._walg_cmd(['backup-push', db_directory, '--full', '--verify'])
+        r = self._walg_cmd(['backup-push', db_directory, '--full'])
         try:
             assert r[2] == 0, "Error: backup_local_full"
         except AssertionError as e:
