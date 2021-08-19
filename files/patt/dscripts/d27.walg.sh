@@ -434,6 +434,39 @@ EOF
 
 }
 
+backup_walg_service () {
+    command=$1
+    postgres_version=$2
+    backup_walg=$3
+
+    test -f /etc/systemd/system/backup_walg-${postgres_version}.service || {
+        echo "systemd file not found: /etc/systemd/system/backup_walg-${postgres_version}.service" 1>&2
+        exit 1
+    }
+    test -f $srcdir/backup_walg.py && {
+        test -f ${backup_walg} || {
+            mkdir -m 755 -p `dirname ${backup_walg}`
+            install -v -m 644 $srcdir/backup_walg.py `dirname ${backup_walg}`
+        }
+    }
+
+    case "${command}" in
+        'enable')
+            /usr/bin/systemctl enable backup_walg-${postgres_version}.service
+            /usr/bin/systemctl -q is-active backup_walg-${postgres_version}.service || {
+                /usr/bin/systemctl --no-block start backup_walg-${postgres_version}.service
+            }
+            ;;
+        'disable')
+            /usr/bin/systemctl enable backup_walg-${postgres_version}.service
+            ;;
+        *)
+            echo "${command} not implemented" 1>&2
+            exit 1
+            ;;
+    esac
+}
+
 touch ${lock_file} 2> /dev/null || true
 case "${1:-''}" in
     # get wal-g version on postgres peer
@@ -512,6 +545,12 @@ case "${1:-''}" in
           s3_create_bucket "$@"
         } 8< ${lock_file}
         ;;
+    'backup_walg_service')
+        shift 1
+        { flock -w 10 8 || exit 1
+          backup_walg_service "$@"
+        } 8< ${lock_file}
+        ;;
     *)
         {
             cat <<EOF
@@ -526,6 +565,7 @@ usage:
  $0 aws_credentials
  $0 aws_credentials_dump
  $0 s3_create_bucket
+ $0 backup_walg_service enable <postgres_version> | disable <postgres_version>
 EOF
             exit 1
         } >&2

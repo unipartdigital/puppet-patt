@@ -406,3 +406,14 @@ def walg_backup_service_setup(nodes, postgres_version,
                                sudo=True)
     log_results (result)
     return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+def walg_backup_service_command(nodes, command, postgres_version):
+    logger.info ("walg_s3_backup_service processing {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d27.walg.sh",
+                               payload="dscripts/backup_walg.py",
+                               args=['backup_walg_service'] + [command] + [postgres_version] +
+                               ["/usr/local/libexec/patt/dscripts/backup_walg.py"],
+                               sudo=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])

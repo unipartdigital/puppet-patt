@@ -1,3 +1,4 @@
+bbcb1708641a3a097f626d26b71d74c28f16eeb1 walg_backup_service_command enable
 303f5b6ff7a07d49f452ed12df3b047633203c73 wal-g puppet fix + config sample
 2007c31201e93d32c3fc95873029a984dbfe16b3 backup option from hiera (puppet)
 94e048336cfef1fa678a5fb4d8df102096f737f7 is_postgres_read_write

@@ -498,6 +498,13 @@ if __name__ == "__main__":
                                                target=cfg.gc_cron_target,
                                                postgres_version=cfg.postgres_release)
 
+                if cfg.walg_store and postgres_peers:
+                    walg_backup_service_command_ok = patt_walg.walg_backup_service_command(
+                        nodes=postgres_peers,
+                        command='enable',
+                        postgres_version=cfg.postgres_release)
+                    assert walg_backup_service_command_ok, "enable backup_service_command error"
+
             print ("\nEtcd Cluster\n{}".format(etcd_report))
             logger.info ("Etcd Cluster {}".format(etcd_report))
             if cfg.patroni_template_file:
