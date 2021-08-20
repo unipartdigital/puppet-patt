@@ -1,3 +1,5 @@
+886f8c3a9cbb5b3518884f168a54d11b8e73e21c add self to files_watch
+9c309a01f5dcfe04a38dbc144596011825324a8d remove absolute module dir
 c86898ed6e3bca8751f1a50b52c0b248d5a77c45 remove --verify option
 a97fe54a7ea2ddf74af708bf8b8b02bdf90a0a55 patt::vol_size_pgsql_safe option
 bbcb1708641a3a097f626d26b71d74c28f16eeb1 walg_backup_service_command enable

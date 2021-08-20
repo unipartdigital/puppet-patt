@@ -365,4 +365,4 @@ if __name__ == "__main__":
                      fbackup_push_hours=cfg.backup_full_push_hours,
                      fbackup_push_seconds=cfg.backup_full_push_seconds,
                      keep_away_schedule=cfg.backup_keep_away_schedule,
-                     files_watch=[args.yaml_config_file])
+                     files_watch=[args.yaml_config_file, os.path.abspath(__file__)])
