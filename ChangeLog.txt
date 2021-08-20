@@ -1,3 +1,4 @@
+c3baed17d81ce64b1e259db6497eb069b3d7da30 public_key_authentication_retry=5
 886f8c3a9cbb5b3518884f168a54d11b8e73e21c add self to files_watch
 9c309a01f5dcfe04a38dbc144596011825324a8d remove absolute module dir
 c86898ed6e3bca8751f1a50b52c0b248d5a77c45 remove --verify option

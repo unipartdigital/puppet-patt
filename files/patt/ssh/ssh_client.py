@@ -21,7 +21,7 @@ import sys
 import traceback
 from paramiko.py3compat import input
 import logging
-
+import time
 import paramiko
 
 try:
@@ -92,7 +92,7 @@ class ssh_client:
         if self.keyfile and not os.path.exists(self.keyfile):
             self.keyfile = None
 
-    def open(self, timeout=None):
+    def open(self, timeout=None, public_key_authentication_retry=5):
         if self.client:
             if self.client._transport is not None:
                 return
@@ -107,8 +107,16 @@ class ssh_client:
             logger.info ("Connecting:{}@{} :{}".format(self.username, self.hostname, self.port))
 
             if not self.UseGSSAPI and not self.DoGSSAPIKeyExchange:
-                self.client.connect(self.hostname, self.port, self.username, self.password, timeout=timeout,
-                                    key_filename=self.keyfile)
+                for i in range(public_key_authentication_retry):
+                    try:
+                        self.client.connect(self.hostname, self.port, self.username, self.password,
+                                            timeout=timeout,
+                                            key_filename=self.keyfile)
+                    except:
+                        time.sleep(1)
+                        continue
+                    else:
+                        break
             else:
                 try:
                     self.client.connect(
