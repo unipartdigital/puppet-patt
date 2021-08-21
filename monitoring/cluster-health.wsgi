@@ -62,6 +62,8 @@ def application(environ, start_response):
 
     xhtml = Xhtml()
     head = xhtml.create_element ("head", Class="")
+    xhtml.append(head)
+
     style = xhtml.create_element ("style", Class="")
     xhtml.append_text (style,
 """
@@ -79,9 +81,12 @@ li.patroni_ok::before{content: '\\2600'; display: inline-block; width: 1em; marg
 li.patroni_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
 """)
     xhtml.append_child (head, style)
-    xhtml.append(head)
+
+    body = xhtml.create_element ("body", Class="")
+    xhtml.append (body)
+
     div_table = xhtml.create_element ("div", Class="div_table")
-    xhtml.append (div_table)
+    xhtml.append_child (body, div_table)
 
     service_status=[]
 
