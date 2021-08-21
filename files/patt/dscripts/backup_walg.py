@@ -234,7 +234,7 @@ def is_keep_away_schedule (keep_away_schedule=[]):
     now_day_name = week_day(now)
     today_kas = [val for sublist in [d[k] for d in keep_away_schedule for k,v in d.items() if
      k.lower() == week_day(now).lower()] for val in sublist]
-    r = [(l,s,h) for l,s,h in [i.rpartition('-') for i in today_kas if '-' in i and ':' in i]]
+    r = [(l,s,h) for l,s,h in [i.rpartition('-') for i in today_kas if i and '-' in i and ':' in i]]
     for i in r:
         try:
             lh, s, lm = i[0].rpartition(':')
