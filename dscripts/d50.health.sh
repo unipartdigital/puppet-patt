@@ -85,9 +85,10 @@ configure () {
     comd=${2:-"tmpl2file.py"}
     tmpl=${3:-"monitoring-httpd.conf"}
     monitoring=${4:-"patt_monitoring.py"}
-    wsgi_file=${5:-"cluster-health.wsgi"}
-    pe_file=${6-:"cluster_health.te"}
-    wsgi_user=${7:-$cluster_health_user}
+    wsgi_file1=${5:-"cluster-health.wsgi"}
+    wsgi_file2=${6:-"cluster-health-mini.wsgi"}
+    pe_file=${7-:"cluster_health.te"}
+    wsgi_user=${8:-$cluster_health_user}
     test "$(getent passwd  ${wsgi_user} | cut -d: -f1)" == "${wsgi_user}" || {
         useradd --home-dir "/home/${wsgi_user}" --user-group  \
                 --comment "cluster health user" \
@@ -174,8 +175,12 @@ EOF
             --chmod 644 \
             --touch /var/tmp/$(basename $0 .sh).reload
 
-    python3 ${srcdir}/${comd} -t ${srcdir}/${wsgi_file} \
-            -o /usr/local/share/patt/monitoring/wsgi/${wsgi_file} \
+    python3 ${srcdir}/${comd} -t ${srcdir}/${wsgi_file1} \
+            -o /usr/local/share/patt/monitoring/wsgi/${wsgi_file1} \
+            --chmod 644 \
+            --touch /var/tmp/$(basename $0 .sh).reload
+    python3 ${srcdir}/${comd} -t ${srcdir}/${wsgi_file2} \
+            -o /usr/local/share/patt/monitoring/wsgi/${wsgi_file2} \
             --chmod 644 \
             --touch /var/tmp/$(basename $0 .sh).reload
 

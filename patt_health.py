@@ -41,6 +41,7 @@ def health_configure(nodes):
              'config/monitoring-httpd.conf',
              'monitoring/patt_monitoring.py',
              'monitoring/cluster-health.wsgi',
+             'monitoring/cluster-health-mini.wsgi',
              'config/cluster_health.te']
     result = patt.exec_script (nodes=nodes, src="./dscripts/d50.health.sh", payload=payload,
                                args=['configure'] +
@@ -49,7 +50,8 @@ def health_configure(nodes):
                                [os.path.basename(payload[1])] +
                                [os.path.basename(payload[2])] +
                                [os.path.basename(payload[3])] +
-                               [os.path.basename(payload[4])],
+                               [os.path.basename(payload[4])] +
+                               [os.path.basename(payload[5])],
                                sudo=True)
     log_results (result)
     return all(x == False for x in [bool(n.error) for n in result])
