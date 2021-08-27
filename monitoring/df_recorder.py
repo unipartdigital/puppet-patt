@@ -2,6 +2,11 @@ import time
 import sqlite3
 import os
 import logging
+import datetime
+from datetime import timedelta
+import subprocess
+import tempfile
+
 logging.basicConfig()
 logger = logging.getLogger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
@@ -15,6 +20,7 @@ logger.setLevel(logging.DEBUG)
 
  player
   dump the data stored by the recorder for a specified mount point
+  plot the data stored by the recorder for a specified mount point
 """
 
 class PersistenceSQL3(object):
@@ -100,6 +106,7 @@ class SystemService(object):
 
     def __init__(self, database="{}".format(f"{_default_db_path()}"), exclude_path=[], mode='recorder'):
         self.database=database
+        self.last_db_cleanup = datetime.datetime.now(datetime.timezone.utc)
         if mode == 'recorder':
             self.local_mounts = SystemService.local_mounts(exclude_path=exclude_path)
             self.statvfs()
@@ -107,10 +114,58 @@ class SystemService(object):
         else:
             self.fs = []
 
+    """
+    param:
+    max_keep_sample = 15000, numer of row to keep should not be too high or max_db_size may have no effect.
+    max_db_size=1024, when dbsize > max_db_size in KB, cleanup (delete + vacuum) each hour
+    """
+    def db_cleanup (self, max_keep_sample=15000, max_db_size=1024, cleanup_interval=timedelta(hours=1)):
+        if datetime.datetime.now(datetime.timezone.utc) - self.last_db_cleanup < cleanup_interval: return
+        if os.path.exists(self.database):
+            db_size = os.stat(os.path.abspath(self.database)).st_size
+            if int(db_size / 1024) < int(max_db_size): return
+
+        with PersistenceSQL3(database=self.database) as db3:
+            db3.row_factory = sqlite3.Row
+            try:
+                logger.debug ("db_cleanup")
+                cur = db3.cursor()
+                cur.execute("""
+                SELECT name, count (*) as cnt from stat_vfs
+                GROUP BY name
+                HAVING cnt >= ?
+                ORDER BY cnt DESC;""",
+                            [max_keep_sample])
+                r = cur.fetchall()
+                if len(r) < 1: return
+                for e in r:
+                    logger.info ("db_cleanup: {}".format([i for i in e]))
+                    cur.execute("""
+                    DELETE from stat_vfs where id in
+                    (SELECT id from stat_vfs where name = ? order by id DESC LIMIT
+                    (SELECT (SELECT count (*) from stat_vfs where name = ?) - ?)
+                    );
+                    """,
+                                (e["name"], e["name"], max_keep_sample))
+            except:
+                raise
+            else:
+                db3.commit()
+                self.last_db_cleanup = datetime.datetime.now(datetime.timezone.utc)
+
+        with PersistenceSQL3(database=self.database) as db3:
+            try:
+                db3.isolation_level = None
+                db3.execute('VACUUM')
+                db3.isolation_level = ''
+            except:
+                raise
+
     def statvfs_upsert (self):
         with PersistenceSQL3(database=self.database) as db3:
             db3.row_factory = sqlite3.Row
             # db3.set_trace_callback(logger.debug)
+            self.db_cleanup()
             try:
                 cur = db3.cursor()
                 self.statvfs ()
@@ -144,7 +199,18 @@ class SystemService(object):
                 logger.error (e)
                 raise
             else:
-                db3.commit()
+                retry = 3
+                count = 0
+                for i in range(retry):
+                    count += 1
+                    try:
+                        db3.commit()
+                    except sqlite3.OperationalError:
+                        if count == retry: raise
+                        time.sleep(0.1)
+                        continue
+                    else:
+                        break
 
     def statvfs_list_mnt (self):
         with PersistenceSQL3(database=self.database) as db3:
@@ -165,7 +231,7 @@ class SystemService(object):
 
     """
     """
-    def statvfs_get_data (self, name, stamp_start=None, step=None, stamp_stop=None):
+    def statvfs_get_data (self, name, stamp_start=None, step=None, stamp_stop=None, smooth=False):
         #assert name in [n.path for n in self.fs]
         with PersistenceSQL3(database=self.database) as db3:
             db3.row_factory = sqlite3.Row
@@ -201,6 +267,8 @@ class SystemService(object):
                     stamp_stop = [c for c in cur][0][0]
                     logger.debug ("statvfs_get_data max_stamp = {}".format(stamp_stop))
                     assert int(stamp_stop)
+            if stamp_start < 0:
+                stamp_start = stamp_stop + stamp_start
 
             if not step:
                 try:
@@ -220,26 +288,69 @@ class SystemService(object):
                     step = step if step else 3
             try:
                 cur = db3.cursor()
-                cur.execute("""
-                select id, stamp, fs_total, fs_avail, inode_total, inode_avail from stat_vfs,
-                (with recursive stamps(stamp) as (
-                   values(?)
-                   union all
-                   select stamp + ?
-                   from stamps
-                   where stamp < ?
-                 )
-                 select stamp from stamps
-                ) where stat_vfs.name = ? and
-                stamp >= stat_vfs.begin_stamp and
-                stamp <= stat_vfs.renew_stamp;
-                """, (stamp_start, step, stamp_stop, name))
+                # moving avg
+                if smooth:
+                    cur.execute("""
+                    select id, stamp, fs_total,
+                    avg (fs_avail) OVER (order by id ROWS BETWEEN ? PRECEDING AND CURRENT ROW),
+                    inode_total,
+                    avg (inode_avail) OVER (order by id ROWS BETWEEN ? PRECEDING AND CURRENT ROW)
+                    from stat_vfs,
+                    (with recursive stamps(stamp) as (
+                    values(?)
+                    union all
+                    select stamp + ?
+                    from stamps
+                    where stamp < ?
+                    )
+                    select stamp from stamps
+                    ) where stat_vfs.name = ? and
+                    stamp >= stat_vfs.begin_stamp and
+                    stamp <= stat_vfs.renew_stamp;
+                    """, (smooth, smooth, stamp_start, step, stamp_stop, name))
+                # raw
+                else:
+                    cur.execute("""
+                    select id, stamp, fs_total, fs_avail, inode_total, inode_avail from stat_vfs,
+                    (with recursive stamps(stamp) as (
+                    values(?)
+                    union all
+                    select stamp + ?
+                    from stamps
+                    where stamp < ?
+                    )
+                    select stamp from stamps
+                    ) where stat_vfs.name = ? and
+                    stamp >= stat_vfs.begin_stamp and
+                    stamp <= stat_vfs.renew_stamp;
+                    """, (stamp_start, step, stamp_stop, name))
             except Exception as e:
                 logger.error (e)
                 raise
             else:
                 for c in cur:
                     yield [r for r in c]
+
+class GnuPlot(object):
+    def __init__(self, gnuplot="/usr/bin/gnuplot"):
+        self.gnuplot = subprocess.Popen(args=[gnuplot], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def send (self, input):
+        if not isinstance(input, list):
+            input = [input]
+        for i in input:
+            self.gnuplot.stdin.write(i.encode("utf-8") + "\n".encode("utf-8"))
+            self.gnuplot.stdin.flush()
+            logger.debug(i.encode("utf-8") + "\n".encode("utf-8"))
+
+    def close (self):
+        try:
+            err = self.send("quit")
+            time.sleep (0.3)
+            self.gnuplot.terminate()
+        except:
+            self.gnuplot.kill()
+            raise
 
 if __name__ == "__main__":
 
@@ -249,15 +360,25 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest='mode')
 
     recorder = subparsers.add_parser('recorder')
-    recorder.add_argument('-x','--exclude_path', help='exclude mount point', action='append', required=False, default=[])
-    recorder.add_argument('-i', '--interval', help='min time between event recording', required=False, type=float)
+    recorder.add_argument('-x','--exclude_path', help='exclude mount point', action='append',
+                          required=False, default=[])
+    recorder.add_argument('-i', '--interval', help='min time between event recording',
+                          required=False, type=float)
 
     player = subparsers.add_parser('player')
-    player.add_argument('-l', '--list', help='list all recorded mount point', required=False, action="store_true")
+    player.add_argument('-f', '--file', help='use specified db file', required=False)
+    player.add_argument('-l', '--list', help='list all recorded mount point',
+                        required=False, action="store_true")
     player.add_argument('-n', '--name', help='data for (mount point)', required=False)
-    player.add_argument('--stamp_start', help='data after', required=False)
-    player.add_argument('--stamp_stop',  help='data befor', required=False)
-    player.add_argument('-i', '--irange', help='interpolation range ', required=False)
+    player.add_argument('--stamp_start',
+                        help='data after, a negative value n, mean n til last recorded value',
+                        required=False, type=float)
+    player.add_argument('--stamp_stop',  help='data before', required=False, type=float)
+    player.add_argument('-i', '--irange', help='interpolation range (ms)', required=False, type=int)
+    player.add_argument('-s', '--smooth', help='apply n points window avg  (7 looks good)',
+                        required=False, type=int)
+
+    player.add_argument('-p', '--plot', help='plot', required=False, action='store_true', default=None)
 
     args = parser.parse_args()
 
@@ -275,7 +396,10 @@ if __name__ == "__main__":
             time.sleep(interval)
     elif args.mode == 'player':
         name =  args.name
-        ssp = SystemService(mode='player')
+        if args.file:
+            ssp = SystemService(database=args.file, mode='player')
+        else:
+            ssp = SystemService(mode='player')
         if args.list:
             [print (m) for m in ssp.statvfs_list_mnt()]
         else:
@@ -284,4 +408,37 @@ if __name__ == "__main__":
             except AssertionError:
                 player.print_help()
             else:
-                [print (str(i)[1:-1]) for i in ssp.statvfs_get_data(args.name, stamp_start=args.stamp_start, step=args.irange, stamp_stop=args.stamp_stop)]
+                stamp_start=args.stamp_start
+                step=args.irange
+                assert step is None or step > 0
+                stamp_stop=args.stamp_stop
+                smooth=args.smooth
+                assert smooth is None or smooth >= 0
+                if args.plot is None:
+                    [print (str(i)[1:-1]) for i in ssp.statvfs_get_data(
+                        args.name, stamp_start=stamp_start, step=step, stamp_stop=stamp_stop,
+                        smooth=smooth)]
+                else:
+                    with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as data_file:
+                        p = GnuPlot()
+                        p.send ("set xtics rotate")
+                        p.send (["set xdata time",
+                                 'set timefmt "%s"',
+                                 'set format x "%Y-%m-%d %H:%M:%S"'])
+                        [print (str(i)[1:-1], file=data_file) for i in ssp.statvfs_get_data(
+                        args.name, stamp_start=stamp_start, step=step, stamp_stop=stamp_stop,
+                            smooth=smooth)]
+                        data_file.flush()
+                        p.send ("""
+plot '{}' using 2:(($3 - $4) / $3 * 100)  title '{} % fs used' with boxes""".format(data_file.name, name))
+                        while True:
+                            try:
+                                print ("'q' + 'enter' to quit")
+                                quit = input()
+                                assert quit == 'q'
+                            except AssertionError:
+                                p.send ("replot")
+                                continue
+                            else:
+                                break
+                        p.close()
