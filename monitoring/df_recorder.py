@@ -61,8 +61,11 @@ class SystemService(object):
 
 
     """
+    PRAGMA journal_mode=WAL;
+    PRAGMA schema.journal_size_limit=6815744; (6.5MB)
+    https://www.sqlite.org/wal.html
     """
-    def db_create (self):
+    def db_create (self, journal_mode="WAL"):
         with PersistenceSQL3(database=self.database) as db3:
             db3.row_factory = sqlite3.Row
             try:
@@ -78,7 +81,15 @@ class SystemService(object):
                  begin_stamp integer,
                  renew_stamp integer
                 );
+
                 """)
+                if journal_mode.upper() == "WAL":
+                    cur.execute("""
+                    PRAGMA journal_mode=WAL;
+                    """)
+                    cur.execute("""
+                    PRAGMA journal_size_limit=6815744;
+                    """)
                 cur.execute(
                     "select count (id) from stat_vfs;")
                 r = cur.fetchone()
@@ -150,7 +161,19 @@ class SystemService(object):
             except:
                 raise
             else:
-                db3.commit()
+                retry = 1200
+                count = 0
+                for i in range(retry):
+                    count += 1
+                    try:
+                        db3.commit()
+                    except sqlite3.OperationalError:
+                        if count % 10 == 0: logger.debug("retry: {}/{}".format(count, retry))
+                        if count == retry: raise
+                        time.sleep(0.1)
+                        continue
+                    else:
+                        break
                 self.last_db_cleanup = datetime.datetime.now(datetime.timezone.utc)
 
         with PersistenceSQL3(database=self.database) as db3:
@@ -199,13 +222,14 @@ class SystemService(object):
                 logger.error (e)
                 raise
             else:
-                retry = 3
+                retry = 1200
                 count = 0
                 for i in range(retry):
                     count += 1
                     try:
                         db3.commit()
                     except sqlite3.OperationalError:
+                        if count % 10 == 0: logger.debug("retry: {}/{}".format(count, retry))
                         if count == retry: raise
                         time.sleep(0.1)
                         continue
