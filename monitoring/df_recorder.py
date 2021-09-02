@@ -2,12 +2,10 @@ import time
 import sqlite3
 import os
 import logging
-import datetime
+from datetime import datetime, timezone
 from datetime import timedelta
-import subprocess
-import tempfile
+from contextlib import nullcontext
 
-logging.basicConfig()
 logger = logging.getLogger(os.path.basename(__file__))
 logger.setLevel(logging.DEBUG)
 # logger.setLevel(logging.INFO)
@@ -89,6 +87,7 @@ class SystemService(object):
                     use_journal_mode_wal = sqlite3_maj >= 3 and sqlite3_min > 7
                 except:
                     use_journal_mode_wal = None
+                logger.debug("db_create: use_journal_mode_wal == {}".format( use_journal_mode_wal))
                 if use_journal_mode_wal:
                     cur.execute("""
                     PRAGMA journal_mode=WAL;
@@ -96,6 +95,9 @@ class SystemService(object):
                     cur.execute("""
                     PRAGMA journal_size_limit=6815744;
                     """)
+                for row in db3.execute("SELECT journal_mode from PRAGMA_journal_mode;"):
+                    logger.info("db_create: journal_mode {}".format (row[0]))
+
                 cur.execute(
                     "select count (id) from stat_vfs;")
                 r = cur.fetchone()
@@ -123,7 +125,7 @@ class SystemService(object):
 
     def __init__(self, database="{}".format(f"{_default_db_path()}"), exclude_path=[], mode='recorder'):
         self.database=database
-        self.last_db_cleanup = datetime.datetime.now(datetime.timezone.utc)
+        self.last_db_cleanup = datetime.now(timezone.utc)
         if mode == 'recorder':
             self.local_mounts = SystemService.local_mounts(exclude_path=exclude_path)
             self.statvfs()
@@ -137,7 +139,7 @@ class SystemService(object):
     max_db_size=1024, when dbsize > max_db_size in KB, cleanup (delete + vacuum) each hour
     """
     def db_cleanup (self, max_keep_sample=15000, max_db_size=1024, cleanup_interval=timedelta(hours=1)):
-        if datetime.datetime.now(datetime.timezone.utc) - self.last_db_cleanup < cleanup_interval: return
+        if datetime.now(timezone.utc) - self.last_db_cleanup < cleanup_interval: return
         if os.path.exists(self.database):
             db_size = os.stat(os.path.abspath(self.database)).st_size
             if int(db_size / 1024) < int(max_db_size): return
@@ -180,7 +182,7 @@ class SystemService(object):
                         continue
                     else:
                         break
-                self.last_db_cleanup = datetime.datetime.now(datetime.timezone.utc)
+                self.last_db_cleanup = datetime.now(datetime.timezone.utc)
 
         with PersistenceSQL3(database=self.database) as db3:
             try:
@@ -190,9 +192,14 @@ class SystemService(object):
             except:
                 raise
 
-    def statvfs_upsert (self):
-        with PersistenceSQL3(database=self.database) as db3:
-            db3.row_factory = sqlite3.Row
+    def statvfs_upsert (self, db_connection=None):
+        if db_connection is None:
+            cm = PersistenceSQL3(database=self.database)
+        else:
+            cm = nullcontext(db_connection)
+        # logger.debug ("{}".format(cm))
+        with cm as db3:
+            # db3.row_factory = sqlite3.Row
             # db3.set_trace_callback(logger.debug)
             self.db_cleanup()
             try:
@@ -379,7 +386,8 @@ class SystemService(object):
 
 class GnuPlot(object):
     def __init__(self, gnuplot="/usr/bin/gnuplot"):
-        self.gnuplot = subprocess.Popen(args=[gnuplot], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        from subprocess import Popen, PIPE
+        self.gnuplot = Popen(args=[gnuplot], stdin=PIPE, stderr=PIPE)
 
     def send (self, input):
         if not isinstance(input, list):
@@ -399,6 +407,12 @@ class GnuPlot(object):
             raise
 
 if __name__ == "__main__":
+
+    log_handlers=[logging.StreamHandler()]
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(levelname)s: %(asctime)s:%(message)s',
+                        datefmt='%Y/%m/%d %H:%M:%S',
+                        handlers=log_handlers)
 
     import argparse
 
@@ -437,9 +451,11 @@ if __name__ == "__main__":
         ss = SystemService(exclude_path=args.exclude_path)
         interval = args.interval if args.interval else 0.3
         assert float(interval)
-        while True:
-            ss.statvfs_upsert()
-            time.sleep(interval)
+
+        with PersistenceSQL3(database=ss.database) as db3:
+            while True:
+                ss.statvfs_upsert(db3)
+                time.sleep(interval)
     elif args.mode == 'player':
         name =  args.name
         if args.file:
@@ -465,7 +481,8 @@ if __name__ == "__main__":
                         args.name, stamp_start=stamp_start, step=step, stamp_stop=stamp_stop,
                         smooth=smooth)]
                 else:
-                    with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as data_file:
+                    from tempfile import NamedTemporaryFile
+                    with NamedTemporaryFile(mode='w+', encoding='utf-8') as data_file:
                         p = GnuPlot()
                         p.send ("set xtics rotate")
                         p.send (["set xdata time",
