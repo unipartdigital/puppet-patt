@@ -232,6 +232,7 @@ class SystemService(object):
     """
     """
     def statvfs_get_data (self, name, stamp_start=None, step=None, stamp_stop=None, smooth=False):
+        dt_format = "%Y-%m-%dT%H:%M:%S%Z"
         #assert name in [n.path for n in self.fs]
         with PersistenceSQL3(database=self.database) as db3:
             db3.row_factory = sqlite3.Row
@@ -253,6 +254,12 @@ class SystemService(object):
                     stamp_start = [c for c in cur][0][0]
                     logger.debug ("statvfs_get_data min_stamp = {}".format(stamp_start))
                     assert int(stamp_start)
+            else:
+                try:
+                    stamp_start = int(float(stamp_start))
+                except ValueError:
+                    stamp_start = time.mktime(time.strptime(stamp_start, dt_format))
+                assert int(float(stamp_start))
 
             if not stamp_stop:
                 try:
@@ -267,8 +274,17 @@ class SystemService(object):
                     stamp_stop = [c for c in cur][0][0]
                     logger.debug ("statvfs_get_data max_stamp = {}".format(stamp_stop))
                     assert int(stamp_stop)
+            else:
+                try:
+                    stamp_stop = int(float(stamp_stop))
+                except ValueError:
+                    stamp_stop = time.mktime(time.strptime(stamp_stop, dt_format))
+                assert int(float(stamp_stop))
+
             if stamp_start < 0:
                 stamp_start = stamp_stop + stamp_start
+
+            assert stamp_start < stamp_stop
 
             if not step:
                 try:
@@ -372,8 +388,8 @@ if __name__ == "__main__":
     player.add_argument('-n', '--name', help='data for (mount point)', required=False)
     player.add_argument('--stamp_start',
                         help='data after, a negative value n, mean n til last recorded value',
-                        required=False, type=float)
-    player.add_argument('--stamp_stop',  help='data before', required=False, type=float)
+                        required=False)
+    player.add_argument('--stamp_stop',  help='data before', required=False)
     player.add_argument('-i', '--irange', help='interpolation range (ms)', required=False, type=int)
     player.add_argument('-s', '--smooth', help='apply n points window avg  (7 looks good)',
                         required=False, type=int)
@@ -424,11 +440,14 @@ if __name__ == "__main__":
                         p.send ("set xtics rotate")
                         p.send (["set xdata time",
                                  'set timefmt "%s"',
-                                 'set format x "%Y-%m-%d %H:%M:%S"'])
+                                 'set format x "%Y-%m-%dT%H:%M:%SUTC"'])
                         [print (str(i)[1:-1], file=data_file) for i in ssp.statvfs_get_data(
                         args.name, stamp_start=stamp_start, step=step, stamp_stop=stamp_stop,
                             smooth=smooth)]
                         data_file.flush()
+                        if os.stat(data_file.name).st_size == 0:
+                            p.close()
+                            raise ValueError ('no data')
                         p.send ("""
 plot '{}' using 2:(($3 - $4) / $3 * 100)  title '{} % fs used' with boxes""".format(data_file.name, name))
                         while True:
