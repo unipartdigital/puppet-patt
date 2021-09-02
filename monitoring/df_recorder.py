@@ -65,7 +65,7 @@ class SystemService(object):
     PRAGMA schema.journal_size_limit=6815744; (6.5MB)
     https://www.sqlite.org/wal.html
     """
-    def db_create (self, journal_mode="WAL"):
+    def db_create (self):
         with PersistenceSQL3(database=self.database) as db3:
             db3.row_factory = sqlite3.Row
             try:
@@ -83,7 +83,13 @@ class SystemService(object):
                 );
 
                 """)
-                if journal_mode.upper() == "WAL":
+                try:
+                    sqlite3_maj = int(sqlite3.sqlite_version.split('.')[0])
+                    sqlite3_min = int(sqlite3.sqlite_version.split('.')[1])
+                    use_journal_mode_wal = sqlite3_maj >= 3 and sqlite3_min > 7
+                except:
+                    use_journal_mode_wal = None
+                if use_journal_mode_wal:
                     cur.execute("""
                     PRAGMA journal_mode=WAL;
                     """)
