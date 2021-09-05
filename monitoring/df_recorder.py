@@ -496,7 +496,25 @@ if __name__ == "__main__":
                             p.close()
                             raise ValueError ('no data')
                         p.send ("""
-plot '{}' using 2:(($3 - $4) / $3 * 100)  title '{} % fs used' with boxes""".format(data_file.name, name))
+# define axis
+# remove border on top and right and set color to gray
+set style line 11 lc rgb '#808080' lt 1
+set border 3 back ls 11
+set tics nomirror
+# define grid
+set style line 12 lc rgb '#808080' lt 0 lw 1
+set grid back ls 12
+
+# color definitions
+set style line 1 lc rgb '#8b1a0e' pt 1 ps 1 lt 1 lw 2 # --- red
+set style line 2 lc rgb '#5e9c36' pt 9 ps 1 lt 1 lw 2 # --- green
+set key bottom right Left
+set yrange[0:130]
+
+plot "{0}" using 2:(($3 - $4) * 100 / $3) with lines title '% space use' ls 1, \
+""    using 2:(($5 - $6) * 100 / $5) with lines title '% inodes use' ls 2,     \
+
+""".format(data_file.name, name))
                         while True:
                             try:
                                 print ("'q' + 'enter' to quit")
