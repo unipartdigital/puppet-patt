@@ -81,6 +81,7 @@ class SystemService(object):
                 );
 
                 """)
+                cur.execute("create index if not exists stat_vfs_name_idx on stat_vfs(name);")
                 try:
                     sqlite3_maj = int(sqlite3.sqlite_version.split('.')[0])
                     sqlite3_min = int(sqlite3.sqlite_version.split('.')[1])
