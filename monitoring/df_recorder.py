@@ -399,7 +399,7 @@ class GnuPlot(object):
         for i in input:
             self.gnuplot.stdin.write(i.encode("utf-8") + "\n".encode("utf-8"))
             self.gnuplot.stdin.flush()
-            logger.debug(i.encode("utf-8") + "\n".encode("utf-8"))
+            logger.debug(i)
 
     def close (self):
         try:
