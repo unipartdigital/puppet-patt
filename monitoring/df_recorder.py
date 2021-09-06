@@ -145,6 +145,7 @@ class SystemService(object):
             if int(db_size / 1024) < int(max_db_size): return
 
         with PersistenceSQL3(database=self.database) as db3:
+            # db3.set_trace_callback(logger.debug)
             db3.row_factory = sqlite3.Row
             try:
                 logger.debug ("db_cleanup")
@@ -156,7 +157,9 @@ class SystemService(object):
                 ORDER BY cnt DESC;""",
                             [max_keep_sample])
                 r = cur.fetchall()
-                if len(r) < 1: return
+                if not r:
+                    self.last_db_cleanup = datetime.now(timezone.utc)
+                    return
                 for e in r:
                     logger.info ("db_cleanup: {}".format([i for i in e]))
                     cur.execute("""
@@ -182,7 +185,7 @@ class SystemService(object):
                         continue
                     else:
                         break
-                self.last_db_cleanup = datetime.now(datetime.timezone.utc)
+                self.last_db_cleanup = datetime.now(timezone.utc)
 
         with PersistenceSQL3(database=self.database) as db3:
             try:
@@ -399,8 +402,7 @@ class GnuPlot(object):
 
     def close (self):
         try:
-            err = self.send("quit")
-            time.sleep (0.3)
+            r = self.gnuplot.communicate("quit".encode("utf-8") + "\n".encode("utf-8"))
             self.gnuplot.terminate()
         except:
             self.gnuplot.kill()
