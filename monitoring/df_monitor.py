@@ -147,14 +147,16 @@ set style line 2 lc rgb '#5e9c36' pt 9 ps 1 lt 1 lw 2 # --- green
 set key bottom right Left
 
 set terminal canvas standalone mousing
-set output '/tmp/output.html'
+#set output '/tmp/output.html'
+set encoding utf8
+set termoption enhanced
 
 set yrange[0:130]
 plot "{0}" using 2:(($3 - $4) * 100 / $3) with lines title '% space use' ls 1, \
 ""    using 2:(($5 - $6) * 100 / $5) with lines title '% inodes use' ls 2,     \
 "{1}" using 2:($4>500?$5:-1) ev 3 with points pt 14 lc rgb "blue" title 'free >500MB', \
-"" using 2:($4<=500?$5:-1)  ev 1 with points pt 3 lc rgb "red" title 'free <500MB', \
-"" using 2:($4<500?$5+5*$6-30:-1):4 ev 1 with labels center offset 0,0 tc rgb "red" notitle,  \
+"" using 2:($4<=500?$5:-1)  ev 1 with points pt 3 lc rgb "red" title 'free ≤500MB', \
+"" using 2:($4<=500?$5+5*$6-30:-1):4 ev 1 with labels center offset 0,0 tc rgb "red" notitle,  \
 "" using 2:($4>500?$5-5*$6+10:-1):4 ev 3 with labels center offset 0,0 tc rgb "blue" notitle,  \
 #""    using 2:5  lc rgb "black" with impulses title ''
             """.format(data_file.name, max_data_file.name))
