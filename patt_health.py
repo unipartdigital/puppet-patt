@@ -39,10 +39,17 @@ def health_configure(nodes):
 
     payload=['dscripts/tmpl2file.py',
              'config/monitoring-httpd.conf',
+             'config/df-recorder.service',
              'monitoring/patt_monitoring.py',
+             'monitoring/df_recorder.py',
              'monitoring/cluster-health.wsgi',
              'monitoring/cluster-health-mini.wsgi',
-             'config/cluster_health.te']
+             'monitoring/df_monitor.py',
+             'config/cluster_health.te',
+             'config/monitoring-httpd-00.conf.apt',
+             'config/monitoring-httpd-00.conf.dnf'
+             ]
+
     result = patt.exec_script (nodes=nodes, src="./dscripts/d50.health.sh", payload=payload,
                                args=['configure'] +
                                ['patt_health'] +
@@ -51,7 +58,10 @@ def health_configure(nodes):
                                [os.path.basename(payload[2])] +
                                [os.path.basename(payload[3])] +
                                [os.path.basename(payload[4])] +
-                               [os.path.basename(payload[5])],
+                               [os.path.basename(payload[5])] +
+                               [os.path.basename(payload[6])] +
+                               [os.path.basename(payload[7])] +
+                               [os.path.basename(payload[8])],
                                sudo=True)
     log_results (result)
     return all(x == False for x in [bool(n.error) for n in result])

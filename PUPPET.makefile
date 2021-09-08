@@ -28,8 +28,12 @@ puppet-module:
 	install -m 644 config/sftpd_config $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/sftpd.service $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/monitoring-httpd.conf $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/monitoring-httpd-00.conf.apt $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/monitoring-httpd-00.conf.dnf $(DESTDIR)/patt/files/patt/config
+
 	install -m 644 config/pg_create_tablespace.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/backup_walg.service $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/df-recorder.service $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d02.util.sh $(DESTDIR)/patt/files/patt/dscripts/
@@ -63,6 +67,8 @@ puppet-module:
 	install -m 755 monitoring/cluster-health.wsgi $(DESTDIR)/patt/files/patt/monitoring/
 	install -m 755 monitoring/cluster-health-mini.wsgi $(DESTDIR)/patt/files/patt/monitoring/
 	install -m 644 monitoring/df_recorder.py $(DESTDIR)/patt/files/patt/monitoring/
+	install -m 644 monitoring/df_monitor.py $(DESTDIR)/patt/files/patt/monitoring/
+
 	install -m 644 ip_takeover.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 ip_takeover.make $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt.py $(DESTDIR)/patt/files/patt/.

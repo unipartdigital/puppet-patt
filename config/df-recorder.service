@@ -1,0 +1,21 @@
+[Unit]
+Description=file system disk space usage logger
+After=syslog.service
+Wants=syslog.service
+
+[Service]
+Type=exec
+User=$user
+Group=$group
+
+Environment=
+Environment=PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
+
+ExecStart=/usr/bin/python3 $df_recorder recorder -i 0.3
+#ExecStart=/usr/bin/python3 $df_recorder recorder -i 0.3 -x /exclude/1 -x /exclude/2
+
+Restart=always
+RestartSec=360
+
+[Install]
+WantedBy=multi-user.target

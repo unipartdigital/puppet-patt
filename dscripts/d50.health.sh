@@ -64,6 +64,7 @@ init () {
                 dnf -q -y install python${py_ver}-mod_wsgi httpd
                 systemctl mask httpd.service
             }
+            { /usr/bin/gnuplot --version || dnf -q -y install gnuplot ; }
             ;;
         'debian' | 'ubuntu')
             { test -x /usr/sbin/apache2 && test -f /usr/lib/apache2/modules/mod_wsgi.so ; } || {
@@ -72,6 +73,7 @@ init () {
                 rm -f /etc/systemd/system/apache2.service
                 systemctl mask apache2.service
             }
+            { /usr/bin/gnuplot --version || apt-get -qq -y install gnuplot-nox ; }
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
@@ -83,12 +85,16 @@ init () {
 configure () {
     httpd_instance=${1:-"patt_health"}
     comd=${2:-"tmpl2file.py"}
-    tmpl=${3:-"monitoring-httpd.conf"}
-    monitoring=${4:-"patt_monitoring.py"}
-    wsgi_file1=${5:-"cluster-health.wsgi"}
-    wsgi_file2=${6:-"cluster-health-mini.wsgi"}
-    pe_file=${7-:"cluster_health.te"}
-    wsgi_user=${8:-$cluster_health_user}
+    tmpl1=${3:-"monitoring-httpd.conf"}
+    tmpl2=${4:-"df-recorder.service"}
+    monitoring1=${5:-"patt_monitoring.py"}
+    monitoring2=${6:-"df_recorder.py"}
+    wsgi_file1=${7:-"cluster-health.wsgi"}
+    wsgi_file2=${8:-"cluster-health-mini.wsgi"}
+    wsgi_file3=${9:-"df_monitor.py"}
+    pe_file=${10-:"cluster_health.te"}
+    wsgi_user=${11:-$cluster_health_user}
+
     test "$(getent passwd  ${wsgi_user} | cut -d: -f1)" == "${wsgi_user}" || {
         useradd --home-dir "/home/${wsgi_user}" --user-group  \
                 --comment "cluster health user" \
@@ -107,7 +113,8 @@ configure () {
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
             test -d /etc/httpd/conf/conf.minimal.d || mkdir -p /etc/httpd/conf/conf.minimal.d
-            python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o /etc/httpd/conf/${httpd_instance}.conf \
+            share_gnuplot_js=`find /usr/share/gnuplot/*/js -maxdepth 1 -type d`
+            python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl1} -o /etc/httpd/conf/${httpd_instance}.conf \
                     --dictionary_key_val "defaultruntimedir=/run/httpd/instance-\${HTTPD_INSTANCE}"  \
                     --dictionary_key_val "pidfile=/run/httpd/instance-\${HTTPD_INSTANCE}.pid"        \
                     --dictionary_key_val "user=apache"                                               \
@@ -117,20 +124,13 @@ configure () {
                     --dictionary_key_val "mimemagicfile=conf/magic"                                  \
                     --dictionary_key_val "apache_cfg_dir=conf/conf.minimal.d"                        \
                     --dictionary_key_val "wsgi_user=${wsgi_user}"                                    \
+                    --dictionary_key_val "share_gnuplot_js=${share_gnuplot_js}"                      \
                     --chmod 644                                                                      \
-                    --touch /var/tmp/$(basename $0 .sh).reload
-            test -f /etc/httpd/conf/conf.minimal.d/00.conf || {
-                cat <<EOF > /etc/httpd/conf/conf.minimal.d/00.conf
-LoadModule mpm_event_module modules/mod_mpm_event.so
-LoadModule systemd_module modules/mod_systemd.so
-LoadModule log_config_module modules/mod_log_config.so
-LoadModule mime_module modules/mod_mime.so
-LoadModule dir_module modules/mod_dir.so
-LoadModule authz_core_module modules/mod_authz_core.so
-LoadModule unixd_module modules/mod_unixd.so
-LoadModule wsgi_module modules/mod_wsgi_python3.so
-EOF
-            }
+                    --touch /var/tmp/$(basename $0 .sh)-httpd.reload
+            python3 ${srcdir}/${comd} -t ${srcdir}/monitoring-httpd-00.conf.dnf \
+                    -o /etc/httpd/conf/conf.minimal.d/00.conf                   \
+                    --chmod 644                                                 \
+                    --touch /var/tmp/$(basename $0 .sh)-httpd.reload
             ;;
         'debian' | 'ubuntu')
             test -d /etc/apache2-${httpd_instance} || mkdir -p /etc/apache2-${httpd_instance}
@@ -142,7 +142,8 @@ EOF
                 test -f envvars || cat ../apache2/envvars > envvars
                 test -f magic || ln -sf ../apache2/magic magic
             }
-            python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o /etc/apache2-${httpd_instance}/apache2.conf \
+            share_gnuplot_js=`find /usr/share/gnuplot/*/js -maxdepth 1 -type d`
+            python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl1} -o /etc/apache2-${httpd_instance}/apache2.conf \
                     --dictionary_key_val "defaultruntimedir=\${APACHE_RUN_DIR}"                           \
                     --dictionary_key_val "pidfile=\${APACHE_PID_FILE}"                                    \
                     --dictionary_key_val "user=\${APACHE_RUN_USER}"                                       \
@@ -152,17 +153,13 @@ EOF
                     --dictionary_key_val "mimemagicfile=magic"                                            \
                     --dictionary_key_val "apache_cfg_dir=conf.minimal.d"                                  \
                     --dictionary_key_val "wsgi_user=${wsgi_user}"                                         \
+                    --dictionary_key_val "share_gnuplot_js=${share_gnuplot_js}"                           \
                     --chmod 644                                                                           \
-                    --touch /var/tmp/$(basename $0 .sh).reload
-            test -f /etc/apache2-${httpd_instance}/conf.minimal.d/00.conf || {
-                cat <<EOF > /etc/apache2-${httpd_instance}/conf.minimal.d/00.conf
-LoadModule mpm_event_module /usr/lib/apache2/modules/mod_mpm_event.so
-LoadModule mime_module /usr/lib/apache2/modules/mod_mime.so
-LoadModule dir_module /usr/lib/apache2/modules/mod_dir.so
-LoadModule authz_core_module /usr/lib/apache2/modules/mod_authz_core.so
-LoadModule wsgi_module /usr/lib/apache2/modules/mod_wsgi.so
-EOF
-            }
+                    --touch /var/tmp/$(basename $0 .sh)-httpd.reload
+            python3 ${srcdir}/${comd} -t ${srcdir}/monitoring-httpd-00.conf.apt \
+                    -o /etc/apache2-${httpd_instance}/conf.minimal.d/00.conf    \
+                    --chmod 644                                                 \
+                    --touch /var/tmp/$(basename $0 .sh)-httpd.reload
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
@@ -170,19 +167,29 @@ EOF
             ;;
     esac
     test -d /usr/local/share/patt/monitoring/wsgi/ || mkdir -p /usr/local/share/patt/monitoring/wsgi/
-    python3 ${srcdir}/${comd} -t ${srcdir}/${monitoring} \
-            -o /usr/local/share/patt/monitoring/${monitoring} \
-            --chmod 644 \
-            --touch /var/tmp/$(basename $0 .sh).reload
 
-    python3 ${srcdir}/${comd} -t ${srcdir}/${wsgi_file1} \
-            -o /usr/local/share/patt/monitoring/wsgi/${wsgi_file1} \
-            --chmod 644 \
-            --touch /var/tmp/$(basename $0 .sh).reload
-    python3 ${srcdir}/${comd} -t ${srcdir}/${wsgi_file2} \
-            -o /usr/local/share/patt/monitoring/wsgi/${wsgi_file2} \
-            --chmod 644 \
-            --touch /var/tmp/$(basename $0 .sh).reload
+    for monitoring_files in ${monitoring1} ${monitoring2}
+    do
+        python3 ${srcdir}/${comd} -t ${srcdir}/${monitoring_files} \
+                -o /usr/local/share/patt/monitoring/${monitoring_files} \
+                --chmod 644 \
+                --touch /var/tmp/$(basename $0 .sh)-httpd.reload
+    done
+
+    for wsgi_files in  ${wsgi_file1} ${wsgi_file2} ${wsgi_file3}
+    do
+        python3 ${srcdir}/${comd} -t ${srcdir}/${wsgi_files} \
+                -o /usr/local/share/patt/monitoring/wsgi/${wsgi_files} \
+                --chmod 644 \
+                --touch /var/tmp/$(basename $0 .sh)-httpd.reload
+    done
+
+    python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl2} -o /etc/systemd/system/${tmpl2}             \
+            --dictionary_key_val "user=${wsgi_user}"                                            \
+            --dictionary_key_val "group=${wsgi_user}"                                           \
+            --dictionary_key_val "df_recorder=/usr/local/share/patt/monitoring/${monitoring2}"  \
+            --chmod 644                                                                         \
+            --touch /var/tmp/$(basename $0 .sh)-df-recorder.reload
 
     test -f "${srcdir}/${pe_file}" || { echo "error ${pe_file}" >&2 ; exit 1 ; }
     selinux_policy "${srcdir}/${pe_file}"
@@ -194,10 +201,10 @@ enable () {
 
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
-            httpd_service="httpd"
+            httpd_service="httpd@${httpd_instance}"
             ;;
         'debian' | 'ubuntu')
-            httpd_service="apache2"
+            httpd_service="apache2@${httpd_instance}"
             ;;
         *)
             echo "unsupported release vendor: ${os_id}" 1>&2
@@ -205,27 +212,40 @@ enable () {
             ;;
     esac
 
-    if ! systemctl is-enabled -q ${httpd_service}\@${httpd_instance} ; then
-        test -f /var/tmp/$(basename $0 .sh).reload && {
-            systemctl is-active ${httpd_service}@patt_health.service || {
-                systemctl restart ${httpd_service}\@${httpd_instance} && \
-                    rm -f /var/tmp/$(basename $0 .sh).reload
+    for services in "${httpd_service}" "df-recorder.service"
+    do
+        pre=""
+        case "${services}" in
+            "${httpd_service}")
+                pre="-httpd"
+                ;;
+            "df-recorder.service")
+                pre="-df-recorder"
+                ;;
+        esac
+        if ! systemctl is-enabled -q "${services}" ; then
+            test -f /var/tmp/$(basename $0 .sh)${pre}.reload && {
+                systemctl is-active "${services}" || {
+                    systemctl restart "${services}" && \
+                        rm -f /var/tmp/$(basename $0 .sh)${pre}.reload
+                }
             }
+            systemctl enable --now "${services}"
+        elif test -f /var/tmp/$(basename $0 .sh)${pre}.reload ; then
+            systemctl restart "${services}" && rm -f /var/tmp/$(basename $0 .sh)${pre}.reload
+        elif ! systemctl -q is-active "${services}" ; then
+            systemctl start "${services}"
+        fi
+        systemctl status "${services}" > /dev/null ||  {
+            systemctl status "${services}"  >&2 ; exit 1
         }
-        systemctl enable --now ${httpd_service}\@${httpd_instance}
-    elif test -f /var/tmp/$(basename $0 .sh).reload ; then
-        systemctl restart ${httpd_service}\@${httpd_instance} && rm -f /var/tmp/$(basename $0 .sh).reload
-    elif ! systemctl -q is-active ${httpd_service}\@patt_health.service ; then
-        systemctl start ${httpd_service}\@${httpd_instance}
-    fi
-    systemctl status ${httpd_service}\@${httpd_instance} > /dev/null ||  {
-        systemctl status ${httpd_service}\@${httpd_instance}  >&2 ; exit 1
-    }
+    done
+
 }
 
 touch ${lock_file} 2> /dev/null || true
 case "${1:-''}" in
-    # must be run on each postgres peer
+    # must be run at least on each postgres and archiving peer
     'init')
         shift 1
         { flock -w 10 8 || exit 1

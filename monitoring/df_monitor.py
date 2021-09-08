@@ -7,8 +7,10 @@ logger.setLevel(logging.DEBUG)
 # logger.setLevel(logging.ERROR)
 
 """
-all functions are bounded to max 1hour (3600 seconds) worth of data
+all functions are bounded to max 24hour (86400 seconds) worth of data
 """
+class MonitorFsValueError(Exception):
+    pass
 
 class MonitorFs(SystemService):
 
@@ -18,8 +20,8 @@ class MonitorFs(SystemService):
     """
     def statvfs_b_get_data (self, mnt_name=None, stamp_pivot=None, stamp_delta=1800):
         dt_format = "%Y-%m-%dT%H:%M:%S%Z"
-        step = 1 if stamp_delta <= 3600 else 1
-        #assert stamp_delta < 3600
+        step = 1 if stamp_delta <= 3600 else 3
+        assert stamp_delta < 43200 # 86400 / 2
         if stamp_pivot is None:
             stamp_pivot = time.mktime(time.gmtime()) - stamp_delta
         try:
@@ -85,7 +87,7 @@ class MonitorFs(SystemService):
     def gnuplot_script (self, mnt_name, data_file_name, max_data_file_name):
         s = """
         set xtics rotate
-        set title 'disk usage for {0} ending the '.strftime('%Y-%m-%d UTC', time(0))
+        set title 'disk usage for {0}
         set xdata time
         set timefmt "%s"
         #set format x "%Y-%m-%dT%H:%M:%SUTC"
@@ -104,22 +106,23 @@ class MonitorFs(SystemService):
         # color definitions
         set style line 1 lc rgb '#8b1a0e' pt 1 ps 1 lt 1 lw 2 # --- red
         set style line 2 lc rgb '#5e9c36' pt 9 ps 1 lt 1 lw 2 # --- green
-        set key bottom right Left
+        set key top right Left box ls 11 height 1 width 0
 
         set encoding utf8
 
         set yrange[0:130]
-        plot "{1}" using 2:(($3 - $4) * 100 / $3) with lines title '% space use' ls 1,                 \
-        ""    using 2:(($5 - $6) * 100 / $5) with lines title '% inodes use' ls 2,                     \
-        "{2}" using 2:($4>500?$5:-1) ev 3 with points pt 14 lc rgb "blue" title 'free >500MB',         \
-        "" using 2:($4<=500?$5:-1)  ev 1 with points pt 3 lc rgb "red" title 'free ≤500MB',            \
-        "" using 2:($4<=500?$5+5*$6-30:-1):4 ev 1 with labels center offset 0,0 tc rgb "red" notitle,  \
-        "" using 2:($4>500?$5-5*$6+10:-1):4 ev 3 with labels center offset 0,0 tc rgb "blue" notitle,  \
+        plot "{1}" using 2:(($3 - $4) * 100 / $3) with lines title ' % space use' ls 1,                 \
+        ""    using 2:(($5 - $6) * 100 / $5) with lines title ' % inodes use' ls 2,                     \
+        "{2}" using 2:($4>500?$5:-1) ev 3 with points pt 14 lc rgb "blue" title ' free >500MB',         \
+        "" using 2:($4<=500?$5:-1)  ev 1 with points pt 3 lc rgb "red" title ' free ≤500MB',            \
+        "" using 2:($4<=500?$5+5*$6-30:-1):4 ev 1 with labels center offset 0,0 tc rgb "red" notitle,   \
+        "" using 2:($4>500?$5-5*$6+10:-1):4 ev 3 with labels center offset 0,0 tc rgb "blue" notitle,   \
         #""    using 2:5  lc rgb "black" with impulses title ''
 """.format(mnt_name, data_file_name, max_data_file_name)
         return s
 
-def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800):
+def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None):
+
     ssp = MonitorFs()
 
     from tempfile import NamedTemporaryFile
@@ -138,18 +141,106 @@ def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800):
             data_file.flush()
 
             if os.stat(data_file.name).st_size == 0:
-                raise ValueError ('no data')
+                raise MonitorFsValueError ('no data')
 
             p = GnuPlot()
             p.send("reset session")
-            p.send([
-                "set terminal canvas standalone mousing",
-                "#set output '/tmp/output.html'",
-                "set termoption enhanced"
-            ])
+            if output:
+                p.send("set output '{}'".format(output))
+                p.send([
+                    "set terminal canvas standalone mousing jsdir '/gnuplotjsdir'",
+                    "set termoption enhanced"
+                ])
+            else:
+                p.send([
+                    "set terminal canvas standalone mousing",
+                    "set termoption enhanced"
+                ])
+
+
             p.send(ssp.gnuplot_script (
                 mnt_name=mnt_name, data_file_name=data_file.name, max_data_file_name=max_data_file.name))
             p.close()
+
+class CltException(Exception):
+    pass
+class SrvException(Exception):
+    pass
+
+def application(environ, start_response):
+    dt_format = "%Y-%m-%dT%H:%M:%S%Z"
+    try:
+        from mod_wsgi import version
+        # Put code here which should only run when mod_wsgi is being used.
+        from urllib import parse
+        query = environ.get('QUERY_STRING', '')
+        params = dict(parse.parse_qsl(query))
+        logger.debug ("params: {}".format(params))
+
+        mntpt = params['mntpt'] if 'mntpt' in params else ''
+        pivot = params['pivot'] if 'pivot' in params else None
+        delta = params['delta'] if 'delta' in params else None
+
+        status_ok = '200 OK'
+        status_ko_clt = '400 Bad Request'
+        status_ko_srv = '501 Not Implemented'
+
+        status = None
+        tmp = "/tmp"
+        # a cache cleanup procedure is not implemented yet
+        # you may need to use systemd: systemd-tmpfiles-clean.timer and /etc/tmpfiles.d
+        try:
+            delta = int(delta) if delta else 1800
+            pivot = pivot if pivot else time.mktime(time.gmtime()) - delta
+            try:
+                pivot = int(float(pivot))
+            except ValueError:
+                pivot = time.mktime(time.strptime(pivot, dt_format))
+
+            p = int(pivot)|int('111', 2)
+            fhtml=os.path.join(tmp, "{}-{}-{}.html".format(mntpt.replace('/','_'), bin(p), int(delta)))
+            if os.path.isfile(fhtml):
+                logger.info("use cache: {}".format(fhtml))
+            else:
+                logger.info("gen cache: {}".format(fhtml))
+                statvfs_plot2file (mntpt, stamp_pivot=pivot, stamp_delta=delta, output=fhtml)
+        except MonitorFsValueError as e:
+            logger.error(e)
+            status = status_ko_clt
+            output = b'no data'
+            response_headers = [('Content-type', 'text/plain'),
+                                ('Content-Length', str(len(output)))]
+            start_response(status, response_headers)
+            return [output]
+        except Exception as e:
+            logger.error(e)
+            status = status_ko_srv
+            output = b'not implemented'
+            response_headers = [('Content-type', 'text/plain'),
+                                ('Content-Length', str(len(output)))]
+            start_response(status, response_headers)
+            return [output]
+        else:
+            status = status_ok
+            response_headers = [('Content-type', 'text/html')]
+
+            filelike = open(file=fhtml, mode='rb')
+            block_size = 4096
+
+            start_response(status, response_headers)
+
+            if 'wsgi.file_wrapper' in environ:
+                return environ['wsgi.file_wrapper'](filelike, block_size)
+            else:
+                return iter(lambda: filelike.read(block_size), '')
+        finally:
+            pass
+    except Exception as e:
+        logger.error(e)
+    else:
+        pass
+    finally:
+        pass
 
 if __name__ == "__main__":
 
