@@ -520,10 +520,10 @@ if __name__ == "__main__":
                 print ("\nPostgres Cluster\n{}".format(pformat(patroni_cluster_info)))
                 logger.info ("Postgres Cluster\n{}".format(pformat(patroni_cluster_info)))
 
-            if postgres_peers:
-                health_init = patt_health.health_init (postgres_peers)
+            if postgres_peers or sftpd_peers:
+                health_init = patt_health.health_init (postgres_peers + sftpd_peers)
                 assert health_init, "health init error"
-                health_configure = patt_health.health_configure (postgres_peers)
+                health_configure = patt_health.health_configure (postgres_peers + sftpd_peers)
                 assert health_configure, "health configure error"
-                health_enable = patt_health.health_enable (postgres_peers)
+                health_enable = patt_health.health_enable (postgres_peers + sftpd_peers)
                 assert health_enable, "health enable error"
