@@ -111,7 +111,7 @@ configure () {
     }
 
     # gnuplot
-    mkdir -p /var/www/gnuplot/{scripts,icons,plots}
+    mkdir -m 755 -p /var/www/gnuplot/{scripts,icons,plots}
     test `stat -c '%U' /var/www/gnuplot/plots/` == "${wsgi_user}" || {
         chown ${wsgi_user}.${wsgi_user} /var/www/gnuplot/plots/
     }
@@ -185,7 +185,7 @@ configure () {
     esac
     test -d /usr/local/share/patt/monitoring/wsgi/ || mkdir -p /usr/local/share/patt/monitoring/wsgi/
 
-    for monitoring_files in ${monitoring1} ${monitoring2}
+    for monitoring_files in ${monitoring1} ${monitoring2} "xhtml.py"
     do
         python3 ${srcdir}/${comd} -t ${srcdir}/${monitoring_files} \
                 -o /usr/local/share/patt/monitoring/${monitoring_files} \

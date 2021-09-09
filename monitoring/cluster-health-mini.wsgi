@@ -1,58 +1,10 @@
 # -*- mode: python -*-
 
-import sys
-import os
-import json
-from xml.dom.minidom import getDOMImplementation, Document
 from patt_monitoring import EtcdService, PatroniService
+from xhtml import Xhtml
 
 OK_TEXT="all good"
 KO_TEXT="ERROR"
-
-class Xml(object):
-    pass
-
-class Xhtml(Xml):
-    def __init__(self):
-        self.dom = getDOMImplementation().createDocument(
-            "http://www.w3.org/1999/xhtml", "html",
-            getDOMImplementation().createDocumentType(
-                "html",
-                "-//W3C//DTD HTML 4.01//EN",
-                "http://www.w3.org/TR/html4/strict.dtd"))
-        self.root = self.dom.documentElement
-        self.id_count = 0
-
-    def append (self, child):
-        self.root.appendChild(child)
-
-    def print (self, file=sys.stdout, encoding='utf-8'):
-        self.dom.writexml(file, addindent='   ', newl='\n', encoding=encoding)
-
-    def to_string(self, encoding='utf-8'):
-        return self.dom.toprettyxml(indent='   ', newl="\n", encoding=encoding)
-
-    def create_element(self, Name, Id=None, Class=None):
-        tmp = self.dom.createElement(Name)
-        if Id:
-            tmp.setAttribute ("id", Id)
-        else:
-            self.id_count += 1
-            tmp.setAttribute ("id", "{}".format(self.id_count))
-        if Class:
-            tmp.setAttribute ("class", Class)
-        else:
-            tmp.setAttribute ("class", Name)
-        return tmp
-
-    def create_text_node (self, text):
-        return self.dom.createTextNode(text)
-
-    def append_child (self, parent, child):
-        parent.appendChild(child)
-
-    def append_text (self, node, text):
-        self.append_child (node, self.create_text_node (text))
 
 """
  cluster health

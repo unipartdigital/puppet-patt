@@ -47,7 +47,8 @@ def health_configure(nodes):
              'monitoring/df_monitor.py',
              'config/cluster_health.te',
              'config/monitoring-httpd-00.conf.apt',
-             'config/monitoring-httpd-00.conf.dnf'
+             'config/monitoring-httpd-00.conf.dnf',
+             'monitoring/xhtml.py',
              ]
 
     result = patt.exec_script (nodes=nodes, src="./dscripts/d50.health.sh", payload=payload,
