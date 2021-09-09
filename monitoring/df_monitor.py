@@ -148,7 +148,7 @@ def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None
             if output:
                 p.send("set output '{}'".format(output))
                 p.send([
-                    "set terminal canvas standalone mousing jsdir '/gnuplotjsdir'",
+                    "set terminal canvas standalone mousing jsdir '/scripts'",
                     "set termoption enhanced"
                 ])
             else:

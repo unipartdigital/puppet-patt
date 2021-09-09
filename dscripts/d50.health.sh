@@ -110,6 +110,26 @@ configure () {
         chown ${wsgi_user}.${wsgi_user} /home/${wsgi_user}/.cache
     }
 
+    # gnuplot
+    mkdir -p /var/www/gnuplot/{scripts,icons,plots}
+    test `stat -c '%U' /var/www/gnuplot/plots/` == "${wsgi_user}" || {
+        chown ${wsgi_user}.${wsgi_user} /var/www/gnuplot/plots/
+    }
+    share_gnuplot_js=`find /usr/share/gnuplot/*/js -maxdepth 1 -type d`
+    for js in ${share_gnuplot_js}/*.{js,css}
+    do
+        python3 ${srcdir}/${comd} -t ${js} -o /var/www/gnuplot/scripts/$(basename ${js}) --chmod 644
+    done
+
+    for i in ${share_gnuplot_js}/*.png
+    do
+        dst=/var/www/gnuplot/icons/$(basename ${i})
+        test -f ${dst} || cp ${i} ${dst}
+        dst=/var/www/gnuplot/scripts/$(basename ${i})
+        test -f ${dst} || cp ${i} ${dst}
+        # copy to jsdir too to keep compatibility with gnuplot generated html file
+    done
+
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
             test -d /etc/httpd/conf/conf.minimal.d || mkdir -p /etc/httpd/conf/conf.minimal.d
@@ -124,7 +144,6 @@ configure () {
                     --dictionary_key_val "mimemagicfile=conf/magic"                                  \
                     --dictionary_key_val "apache_cfg_dir=conf/conf.minimal.d"                        \
                     --dictionary_key_val "wsgi_user=${wsgi_user}"                                    \
-                    --dictionary_key_val "share_gnuplot_js=${share_gnuplot_js}"                      \
                     --chmod 644                                                                      \
                     --touch /var/tmp/$(basename $0 .sh)-httpd.reload
             python3 ${srcdir}/${comd} -t ${srcdir}/monitoring-httpd-00.conf.dnf \
@@ -142,7 +161,6 @@ configure () {
                 test -f envvars || cat ../apache2/envvars > envvars
                 test -f magic || ln -sf ../apache2/magic magic
             }
-            share_gnuplot_js=`find /usr/share/gnuplot/*/js -maxdepth 1 -type d`
             python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl1} -o /etc/apache2-${httpd_instance}/apache2.conf \
                     --dictionary_key_val "defaultruntimedir=\${APACHE_RUN_DIR}"                           \
                     --dictionary_key_val "pidfile=\${APACHE_PID_FILE}"                                    \
@@ -153,7 +171,6 @@ configure () {
                     --dictionary_key_val "mimemagicfile=magic"                                            \
                     --dictionary_key_val "apache_cfg_dir=conf.minimal.d"                                  \
                     --dictionary_key_val "wsgi_user=${wsgi_user}"                                         \
-                    --dictionary_key_val "share_gnuplot_js=${share_gnuplot_js}"                           \
                     --chmod 644                                                                           \
                     --touch /var/tmp/$(basename $0 .sh)-httpd.reload
             python3 ${srcdir}/${comd} -t ${srcdir}/monitoring-httpd-00.conf.apt \
