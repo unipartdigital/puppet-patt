@@ -18,7 +18,7 @@ class Xhtml(Xml):
             self.dom = getDOMImplementation().createDocument(
                 "http://www.w3.org/1999/xhtml", "html",
                 getDOMImplementation().createDocumentType(
-                    "html"))
+                    "html", None, None))
 
         self.root = self.dom.documentElement
         self.id_count = 0
@@ -47,7 +47,9 @@ class Xhtml(Xml):
         else:
             tmp.setAttribute ("class", Name)
         for a in Attr:
-            if a: tmp.setAttribute (a[0], a=[1])
+            if a: tmp.setAttribute (a[0], a[1])
+        if Name == "script":
+            tmp.appendChild(self.dom.createTextNode(""))
         return tmp
 
     def create_text_node (self, text):
@@ -58,3 +60,6 @@ class Xhtml(Xml):
 
     def append_text (self, node, text):
         self.append_child (node, self.create_text_node (text))
+
+    def unlink(self):
+        self.dom.unlink()
