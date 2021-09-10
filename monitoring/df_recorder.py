@@ -260,7 +260,7 @@ class SystemService(object):
             try:
                 cur = db3.cursor()
                 cur.execute("""
-                select distinct (name) from stat_vfs;
+                select distinct (name) from stat_vfs order by length(name),name;
                 """)
             except Exception as e:
                 logger.error (e)
