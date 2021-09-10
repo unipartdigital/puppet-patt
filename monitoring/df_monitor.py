@@ -1,10 +1,13 @@
+# -*- mode: python -*-
+
 from df_recorder import SystemService, PersistenceSQL3, sqlite3, time, logging, os, GnuPlot
+from xhtml import Xhtml
 
 logging.basicConfig()
 logger = logging.getLogger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 # logger.setLevel(logging.INFO)
-# logger.setLevel(logging.ERROR)
+logger.setLevel(logging.ERROR)
 
 """
 all functions are bounded to max 24hour (86400 seconds) worth of data
@@ -87,7 +90,7 @@ class MonitorFs(SystemService):
     def gnuplot_script (self, mnt_name, data_file_name, max_data_file_name):
         s = """
         set xtics rotate
-        set title 'disk usage for {0}
+        set title 'disk usage for {0}' noenhanced
         set xdata time
         set timefmt "%s"
         #set format x "%Y-%m-%dT%H:%M:%SUTC"
@@ -114,14 +117,17 @@ class MonitorFs(SystemService):
         plot "{1}" using 2:(($3 - $4) * 100 / $3) with lines title ' % space use' ls 1,                 \
         ""    using 2:(($5 - $6) * 100 / $5) with lines title ' % inodes use' ls 2,                     \
         "{2}" using 2:($4>500?$5:-1) ev 3 with points pt 14 lc rgb "blue" title ' free >500MB',         \
-        "" using 2:($4<=500?$5:-1)  ev 1 with points pt 3 lc rgb "red" title ' free ≤500MB',            \
+        "" using 2:($4<=500?$5:-1)  ev 1 with points pt 3 lc rgb "red" title ' free <500MB',            \
         "" using 2:($4<=500?$5+5*$6-30:-1):4 ev 1 with labels center offset 0,0 tc rgb "red" notitle,   \
         "" using 2:($4>500?$5-5*$6+10:-1):4 ev 3 with labels center offset 0,0 tc rgb "blue" notitle,   \
         #""    using 2:5  lc rgb "black" with impulses title ''
 """.format(mnt_name, data_file_name, max_data_file_name)
         return s
 
-def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None):
+"""
+ js_function_name: if not set use standalone mode
+"""
+def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None, js_function_name=None):
 
     ssp = MonitorFs()
 
@@ -144,23 +150,261 @@ def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None
                 raise MonitorFsValueError ('no data')
 
             p = GnuPlot()
-            p.send("reset session")
-            if output:
+            p.send(["reset session", "set termoption enhanced"])
+            if output and js_function_name:
                 p.send("set output '{}'".format(output))
-                p.send([
-                    "set terminal canvas standalone mousing jsdir '/scripts'",
-                    "set termoption enhanced"
-                ])
+                p.send("set terminal canvas name '{}' mousing jsdir '/scripts'".format(js_function_name))
+            elif output:
+                p.send("set output '{}'".format(output))
+                p.send("set terminal canvas standalone mousing jsdir '/scripts'")
             else:
-                p.send([
-                    "set terminal canvas standalone mousing",
-                    "set termoption enhanced"
-                ])
-
+                p.send("set terminal canvas standalone mousing")
 
             p.send(ssp.gnuplot_script (
                 mnt_name=mnt_name, data_file_name=data_file.name, max_data_file_name=max_data_file.name))
             p.close()
+
+"""
+ url: file name containing the plot canvas
+ js_function_name: name set in gnuplot script -> set term canvas name 'MyPlot'
+ title: html title
+ max_plot: how may toggle_plot button to display
+ fs_list list of fs to build the nav bar
+"""
+def html_document(url, js_function_name="", title="", max_plot=4,
+                  url_icon='/icons', url_js='/scripts',
+                  fs_list=[]):
+    try:
+        xhtml = Xhtml(version=5)
+        head = xhtml.create_element ("head", Class="")
+        xhtml.append(head)
+        if title:
+            html_title = xhtml.create_element ("title", Class="")
+            xhtml.append_text (html_title, title)
+            xhtml.append_child(head, html_title)
+
+        style = xhtml.create_element ("style", Class="")
+        xhtml.append_text (style, """
+.sidenav {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: #111;
+  overflow-x: hidden;
+  transition: 0.5s;
+  padding-top: 60px;
+}
+
+.sidenav a {
+  padding: 8px 8px 8px 32px;
+  text-decoration: none;
+  font-size: 12px;
+  color: #818181;
+  display: block;
+  transition: 0.3s;
+}
+
+.sidenav a:hover {
+  color: #f1f1f1;
+}
+
+.sidenav .closebtn {
+  position: absolute;
+  top: 0;
+  right: 25px;
+  font-size: 36px;
+  margin-left: 50px;
+}
+
+@media screen and (max-height: 450px) {
+  .sidenav {padding-top: 15px;}
+  .sidenav a {font-size: 18px;}
+}
+
+td.mb1 {
+width: auto;
+text-align: center;
+}
+table.mbleft{
+float: auto;
+}
+""")
+        nav_js = xhtml.create_element ("script", Class="")
+        xhtml.append_text (nav_js, """
+function openNav() {
+  document.getElementById('Sidenav01').style.width = '250px';
+}
+
+function closeNav() {
+  document.getElementById('Sidenav01').style.width = '0';
+}
+""")
+        xhtml.append_child (head, nav_js)
+
+        style_ln = xhtml.create_element ("link", Attr=[
+            ("type", "text/css"),
+            ("href", "{}/gnuplot_mouse.css".format(url_js)),
+            ("rel", "stylesheet")
+        ])
+        xhtml.append_child (head, style_ln)
+        xhtml.append_child (head, style)
+        # overwrite with inline style
+
+        body = xhtml.create_element ("body", Class="", Attr=[
+            ("onload", '{}();'.format(js_function_name))
+        ])
+
+        div_side_nav =  xhtml.create_element ("div", Id='Sidenav01', Class="sidenav")
+        div_side_nav_a1 = xhtml.create_element ("a" , Class="closebtn", Attr=[
+            ('href', 'javascript:void(0)'), ('onclick', 'closeNav()')])
+        xhtml.append_text (div_side_nav_a1, "×")
+        xhtml.append_child (div_side_nav, div_side_nav_a1)
+
+        for fs in fs_list:
+            div_side_nav_a2 = xhtml.create_element ("a", Attr=[('href', '/df?mntpt={}'.format(fs))])
+            xhtml.append_text (div_side_nav_a2, "↪ {}".format(fs))
+            xhtml.append_child (div_side_nav, div_side_nav_a2)
+
+        div_side_nav_span = xhtml.create_element ("span", Attr=[
+            ('style',"font-size:30px;cursor:pointer"),
+            ('onclick',"openNav()")])
+        xhtml.append_text (div_side_nav_span, "☰ Open")
+        xhtml.append_child (body, div_side_nav)
+        xhtml.append_child (body, div_side_nav_span)
+
+        div =  xhtml.create_element ("div", Class="gnuplot", Attr=[
+            ('onclick','{}()'.format(js_function_name))
+        ])
+        xhtml.append_child (body, div)
+        cdiv = xhtml.create_element ("canvas", Id="Tile", Attr=[
+            ('width',"32"), ('height', "32"), ('hidden', 'true')])
+        #xhtml.append_child (div, cdiv)
+        div_table =  xhtml.create_element ("table", Class="mbleft")
+        xhtml.append_child (div, div_table)
+        div_table_tr =  xhtml.create_element ("tr")
+        xhtml.append_child (div_table, div_table_tr)
+
+        div_table_td_1 =  xhtml.create_element ("td", Class="mbh")
+        xhtml.append_child (div_table_tr, div_table_td_1)
+        div_table_td_2 =  xhtml.create_element ("td", Class="mbh")
+        xhtml.append_child (div_table_tr, div_table_td_2)
+        div_table_td_3 =  xhtml.create_element ("td", Class="mbh")
+        xhtml.append_child (div_table_tr, div_table_td_3)
+
+
+        # mouse box
+        mouse_box_table = xhtml.create_element ("table", Class="mousebox")
+        mouse_box_table_tr1 = xhtml.create_element ("tr", Class="mousebox")
+        xhtml.append_child (mouse_box_table, mouse_box_table_tr1)
+        # grid
+        mouse_box_td_grid = xhtml.create_element ("td", Class="icon", Attr=[
+            ('onclick', 'gnuplot.toggle_grid("{}")'.format(js_function_name))
+        ])
+        mouse_box_td_grid_img = xhtml.create_element ("img", Class="icon-img", Attr=[
+            ('src', '/icons/grid.png'),
+            ('alt', '#'),
+            ('title', 'toggle grid')
+        ])
+        xhtml.append_child (mouse_box_td_grid, mouse_box_td_grid_img)
+        xhtml.append_child (mouse_box_table_tr1, mouse_box_td_grid)
+        # unzoom
+        mouse_box_td_unzoom = xhtml.create_element ("td", Class="icon", Attr=[
+            ('onclick', 'gnuplot.unzoom("{}")'.format(js_function_name))
+        ])
+        mouse_box_td_unzoom_img = xhtml.create_element ("img", Class="icon-img", Attr=[
+            ('src', '/icons/previouszoom.png'),
+            ('alt', 'unzoom'),
+            ('title', 'unzoom')
+        ])
+        xhtml.append_child (mouse_box_td_unzoom, mouse_box_td_unzoom_img)
+        xhtml.append_child (mouse_box_table_tr1, mouse_box_td_unzoom)
+        # rezoom
+        mouse_box_td_rezoom = xhtml.create_element ("td", Class="icon", Attr=[
+            ('onclick', 'gnuplot.rezoom("{}")'.format(js_function_name))
+        ])
+        mouse_box_td_rezoom_img = xhtml.create_element ("img", Class="icon-img", Attr=[
+            ('src', '/icons/nextzoom.png'),
+            ('alt', 'rezoom'),
+            ('title', 'rezoom')
+        ])
+        xhtml.append_child (mouse_box_td_rezoom, mouse_box_td_rezoom_img)
+        xhtml.append_child (mouse_box_table_tr1, mouse_box_td_rezoom)
+        # txtzoom
+        mouse_box_td_txtzoom = xhtml.create_element ("td", Class="icon", Attr=[
+            ('onclick', 'gnuplot.toggle_zoom_text("{}")'.format(js_function_name))
+        ])
+        mouse_box_td_txtzoom_img = xhtml.create_element ("img", Class="icon-img", Attr=[
+            ('src', '/icons/textzoom.png'),
+            ('alt', 'zoom text'),
+            ('title', 'zoom text with plot')
+        ])
+        xhtml.append_child (mouse_box_td_txtzoom, mouse_box_td_txtzoom_img)
+        xhtml.append_child (mouse_box_table_tr1, mouse_box_td_txtzoom)
+        # help
+        mouse_box_td_help = xhtml.create_element ("td", Class="icon", Attr=[
+            ('onclick', 'gnuplot.popup_help()')
+        ])
+        mouse_box_td_help_img = xhtml.create_element ("img", Class="icon-img", Attr=[
+            ('src', '/icons/help.png'),
+            ('alt', '?'),
+            ('title', 'help')
+        ])
+        xhtml.append_child (mouse_box_td_help, mouse_box_td_help_img)
+        xhtml.append_child (mouse_box_table_tr1, mouse_box_td_help)
+        # toggle_plot
+        mouse_box_table_tr2 = xhtml.create_element ("tr", Class="mousebox")
+        xhtml.append_child (mouse_box_table, mouse_box_table_tr2)
+        for i in range(1, max_plot + 1):
+            toggle_plot_td = xhtml.create_element (
+                "td", Class="icon",
+                Attr=[('onclick', 'gnuplot.toggle_plot("{}_plot_{}")'.format(js_function_name, i))])
+            xhtml.append_text (toggle_plot_td, "{}".format(i))
+            xhtml.append_child (mouse_box_table_tr2, toggle_plot_td)
+        # x,y
+        xy_table = xhtml.create_element ("table", Class="mousebox", Attr=[('border', '1')])
+        xy_table_tr1 = xhtml.create_element ("tr", Class="mousebox")
+        xhtml.append_child (xy_table, xy_table_tr1)
+        for xy in ['x', 'y']:
+            xy_table_tr2 = xhtml.create_element ("tr", Class="mousebox")
+            xy_table_td1 = xhtml.create_element ("td", Class="mb1")
+            xhtml.append_text (xy_table_td1, xy)
+            xy_table_td2 = xhtml.create_element ("td", Class="mb1", Id="{}_{}".format(js_function_name, xy))
+            xhtml.append_child (xy_table_tr2, xy_table_td1)
+            xhtml.append_child (xy_table_tr2, xy_table_td2)
+            xhtml.append_child (xy_table_tr1, xy_table_tr2)
+        # canvas
+        canvas = xhtml.create_element ("canvas", Id="{}".format(js_function_name), Attr=[
+            ('width','600'), ('height','400')
+        ])
+        xhtml.append_text (canvas, "Sorry, your browser seems not to support the HTML 5 canvas element")
+
+        # js
+        for js in [# 'canvasmath.js',
+                   'canvastext.js',
+                   'gnuplot_common.js',
+                   'gnuplot_dashedlines.js',
+                   'gnuplot_mouse.js']:
+            script = xhtml.create_element ("script", Attr=[
+                ('src', '{}/{}'.format(url_js, js))
+            ])
+            xhtml.append_child (body, script)
+        # plot js
+        pscript = xhtml.create_element ("script", Attr=[('src', '{}/{}'.format('/plots', url))])
+        xhtml.append_child (body, pscript)
+
+        xhtml.append_child (div_table_td_1, mouse_box_table)
+        xhtml.append_child (div_table_td_2, xy_table)
+        xhtml.append_child (div_table_td_3, canvas)
+        xhtml.append (body)
+    except:
+        raise
+    else:
+        return xhtml.to_string()
+    finally:
+        xhtml.unlink()
 
 class CltException(Exception):
     pass
@@ -169,6 +413,7 @@ class SrvException(Exception):
 
 def application(environ, start_response):
     dt_format = "%Y-%m-%dT%H:%M:%S%Z"
+    standalone=False
     try:
         from mod_wsgi import version
         # Put code here which should only run when mod_wsgi is being used.
@@ -177,16 +422,17 @@ def application(environ, start_response):
         params = dict(parse.parse_qsl(query))
         logger.debug ("params: {}".format(params))
 
-        mntpt = params['mntpt'] if 'mntpt' in params else ''
+        mntpt = params['mntpt'] if 'mntpt' in params else '/'
         pivot = params['pivot'] if 'pivot' in params else None
         delta = params['delta'] if 'delta' in params else None
+        standalone = True if 'standalone' in params else False
 
         status_ok = '200 OK'
         status_ko_clt = '400 Bad Request'
         status_ko_srv = '501 Not Implemented'
 
         status = None
-        tmp = "/tmp"
+        out_dir = '/tmp' if standalone else '/var/www/gnuplot/plots'
         # a cache cleanup procedure is not implemented yet
         # you may need to use systemd: systemd-tmpfiles-clean.timer and /etc/tmpfiles.d
         try:
@@ -198,12 +444,17 @@ def application(environ, start_response):
                 pivot = time.mktime(time.strptime(pivot, dt_format))
 
             p = int(pivot)|int('111', 2)
-            fhtml=os.path.join(tmp, "{}-{}-{}.html".format(mntpt.replace('/','_'), bin(p), int(delta)))
+            out_ext = "html" if standalone else "js"
+            fhtml=os.path.join(out_dir,
+                               "{}-{}-{}.{}".format(mntpt.replace('/','_'), bin(p), int(delta), out_ext))
             if os.path.isfile(fhtml):
                 logger.info("use cache: {}".format(fhtml))
             else:
                 logger.info("gen cache: {}".format(fhtml))
-                statvfs_plot2file (mntpt, stamp_pivot=pivot, stamp_delta=delta, output=fhtml)
+                js_name = None if standalone else "df_plot"
+                statvfs_plot2file (
+                    mntpt, stamp_pivot=pivot, stamp_delta=delta, output=fhtml, js_function_name=js_name
+                )
         except MonitorFsValueError as e:
             logger.error(e)
             status = status_ko_clt
@@ -222,17 +473,28 @@ def application(environ, start_response):
             return [output]
         else:
             status = status_ok
-            response_headers = [('Content-type', 'text/html')]
+            if standalone:
+                response_headers = [('Content-type', 'text/html')]
 
-            filelike = open(file=fhtml, mode='rb')
-            block_size = 4096
+                filelike = open(file=fhtml, mode='rb')
+                block_size = 4096
 
-            start_response(status, response_headers)
+                start_response(status, response_headers)
 
-            if 'wsgi.file_wrapper' in environ:
-                return environ['wsgi.file_wrapper'](filelike, block_size)
+                if 'wsgi.file_wrapper' in environ:
+                    return environ['wsgi.file_wrapper'](filelike, block_size)
+                else:
+                    return iter(lambda: filelike.read(block_size), '')
             else:
-                return iter(lambda: filelike.read(block_size), '')
+                ssp = MonitorFs()
+                fs_list = [i for i in ssp.statvfs_list_mnt()]
+                output = html_document(
+                    url=os.path.basename(fhtml), js_function_name=js_name, title='df plot', fs_list=fs_list)
+                response_headers = [('Content-type', 'text/html'),
+                                    ('Content-Length', str(len(output)))]
+                start_response(status, response_headers)
+                return [output]
+
         finally:
             pass
     except Exception as e:
