@@ -115,6 +115,9 @@ configure () {
     test `stat -c '%U' /var/www/gnuplot/plots/` == "${wsgi_user}" || {
         chown ${wsgi_user}.${wsgi_user} /var/www/gnuplot/plots/
     }
+    test -f /var/www/gnuplot/index.html || touch /var/www/gnuplot/index.html
+    test -f /var/www/gnuplot/favicon.ico || touch /var/www/gnuplot/favicon.ico
+    # used by moz
     share_gnuplot_js=`find /usr/share/gnuplot/*/js -maxdepth 1 -type d`
     for js in ${share_gnuplot_js}/*.{js,css}
     do
