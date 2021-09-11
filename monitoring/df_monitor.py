@@ -353,12 +353,15 @@ function gnuplot_canvas() {
         # toggle_plot
         mouse_box_table_tr2 = xhtml.create_element ("tr", Class="mousebox")
         xhtml.append_child (mouse_box_table, mouse_box_table_tr2)
-        for i in range(1, max_plot + 1):
+        count = 0
+        for i in ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨']:
+            count += 1
             toggle_plot_td = xhtml.create_element (
                 "td", Class="icon",
-                Attr=[('onclick', 'gnuplot.toggle_plot("{}_plot_{}")'.format(js_function_name, i))])
+                Attr=[('onclick', 'gnuplot.toggle_plot("{}_plot_{}")'.format(js_function_name, count))])
             xhtml.append_text (toggle_plot_td, "{}".format(i))
             xhtml.append_child (mouse_box_table_tr2, toggle_plot_td)
+            if count == max_plot: break
         # x,y
         xy_table = xhtml.create_element ("table", Class="mousebox", Attr=[('border', '1')])
         xy_table_tr1 = xhtml.create_element ("tr", Class="mousebox")
