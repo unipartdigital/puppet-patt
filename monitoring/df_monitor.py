@@ -199,9 +199,9 @@ def html_document(url, js_function_name="", title="", max_plot=4,
 }
 
 .sidenav a {
-  padding: 8px 8px 8px 32px;
+  padding: 8px 8px 8px 0;
   text-decoration: none;
-  font-size: 12px;
+  font-size: 19px;
   color: #818181;
   display: block;
   transition: 0.3s;
@@ -219,14 +219,9 @@ def html_document(url, js_function_name="", title="", max_plot=4,
   margin-left: 50px;
 }
 
-@media screen and (max-height: 450px) {
-  .sidenav {padding-top: 15px;}
-  .sidenav a {font-size: 18px;}
-}
-
 td.mb1 {
 width: auto;
-text-align: center;
+text-align: left;
 }
 table.mbleft{
 float: auto;
@@ -235,11 +230,12 @@ float: auto;
         nav_js = xhtml.create_element ("script", Class="")
         xhtml.append_text (nav_js, """
 function openNav() {
-  document.getElementById('Sidenav01').style.width = '250px';
+  document.getElementById('sidenav01').style.width = '30%';
 }
-
 function closeNav() {
-  document.getElementById('Sidenav01').style.width = '0';
+  document.getElementById('sidenav01').style.width = '0';
+}
+function gnuplot_canvas() {
 }
 """)
         xhtml.append_child (head, nav_js)
@@ -257,31 +253,31 @@ function closeNav() {
             ("onload", '{}();'.format(js_function_name))
         ])
 
-        div_side_nav =  xhtml.create_element ("div", Id='Sidenav01', Class="sidenav")
+        div_side_nav =  xhtml.create_element ("div", Id='sidenav01', Class="sidenav")
         div_side_nav_a1 = xhtml.create_element ("a" , Class="closebtn", Attr=[
             ('href', 'javascript:void(0)'), ('onclick', 'closeNav()')])
         xhtml.append_text (div_side_nav_a1, "×")
         xhtml.append_child (div_side_nav, div_side_nav_a1)
 
         for fs in fs_list:
-            div_side_nav_a2 = xhtml.create_element ("a", Attr=[('href', '/df?mntpt={}'.format(fs))])
+            div_side_nav_a2 = xhtml.create_element ("a", Attr=[('href', '/df?m={}'.format(fs))])
             xhtml.append_text (div_side_nav_a2, "↪ {}".format(fs))
             xhtml.append_child (div_side_nav, div_side_nav_a2)
 
         div_side_nav_span = xhtml.create_element ("span", Attr=[
             ('style',"font-size:30px;cursor:pointer"),
             ('onclick',"openNav()")])
-        xhtml.append_text (div_side_nav_span, "☰ Open")
+        xhtml.append_text (div_side_nav_span, "☰")
         xhtml.append_child (body, div_side_nav)
         xhtml.append_child (body, div_side_nav_span)
 
         div =  xhtml.create_element ("div", Class="gnuplot", Attr=[
-            ('onclick','{}()'.format(js_function_name))
+            ('onclick','{}()'.format(js_function_name)),
+            ('oncontextmenu','return false;'),
+            ('onmouseup','{}()'.format(js_function_name))
         ])
         xhtml.append_child (body, div)
-        cdiv = xhtml.create_element ("canvas", Id="Tile", Attr=[
-            ('width',"32"), ('height', "32"), ('hidden', 'true')])
-        #xhtml.append_child (div, cdiv)
+
         div_table =  xhtml.create_element ("table", Class="mbleft")
         xhtml.append_child (div, div_table)
         div_table_tr =  xhtml.create_element ("tr")
@@ -422,7 +418,7 @@ def application(environ, start_response):
         params = dict(parse.parse_qsl(query))
         logger.debug ("params: {}".format(params))
 
-        mntpt = params['mntpt'] if 'mntpt' in params else '/'
+        m = params['m'] if 'm' in params else '/'
         pivot = params['pivot'] if 'pivot' in params else None
         delta = params['delta'] if 'delta' in params else None
         standalone = True if 'standalone' in params else False
@@ -446,14 +442,14 @@ def application(environ, start_response):
             p = int(pivot)|int('111', 2)
             out_ext = "html" if standalone else "js"
             fhtml=os.path.join(out_dir,
-                               "{}-{}-{}.{}".format(mntpt.replace('/','_'), bin(p), int(delta), out_ext))
+                               "{}-{}-{}.{}".format(m.replace('/','_'), bin(p), int(delta), out_ext))
             if os.path.isfile(fhtml):
                 logger.info("use cache: {}".format(fhtml))
             else:
                 logger.info("gen cache: {}".format(fhtml))
                 js_name = None if standalone else "df_plot"
                 statvfs_plot2file (
-                    mntpt, stamp_pivot=pivot, stamp_delta=delta, output=fhtml, js_function_name=js_name
+                    m, stamp_pivot=pivot, stamp_delta=delta, output=fhtml, js_function_name=js_name
                 )
         except MonitorFsValueError as e:
             logger.error(e)
