@@ -87,7 +87,7 @@ class MonitorFs(SystemService):
                 for c in cur:
                     yield [r for r in c]
 
-    def gnuplot_script (self, mnt_name, data_file_name, max_data_file_name):
+    def gnuplot_script (self, mnt_name, data_file_name, max_data_file_name, size_trigger=500):
         s = """
         set xtics rotate
         set title 'disk usage for {0}' noenhanced
@@ -116,12 +116,12 @@ class MonitorFs(SystemService):
         set yrange[0:130]
         plot "{1}" using 2:(($3 - $4) * 100 / $3) with lines title ' % space use' ls 1,                 \
         ""    using 2:(($5 - $6) * 100 / $5) with lines title ' % inodes use' ls 2,                     \
-        "{2}" using 2:($4>500?$5:-1) ev 3 with points pt 14 lc rgb "blue" title ' free >500MB',         \
-        "" using 2:($4<=500?$5:-1)  ev 1 with points pt 3 lc rgb "red" title ' free <500MB',            \
-        "" using 2:($4<=500?$5+5*$6-30:-1):4 ev 1 with labels center offset 0,0 tc rgb "red" notitle,   \
-        "" using 2:($4>500?$5-5*$6+10:-1):4 ev 3 with labels center offset 0,0 tc rgb "blue" notitle,   \
+        "{2}" using 2:($4>{3}?$5:-1) ev 3 with points pt 14 lc rgb "blue" title ' free >{3}MB',         \
+        "" using 2:($4<={3}?$5:-1)  ev 1 with points pt 3 lc rgb "red" title ' free <{3}MB',            \
+        "" using 2:($4<={3}?$5+5*$6-30:-1):4 ev 1 with labels center offset 0,0 tc rgb "red" notitle,   \
+        "" using 2:($4>{3}?$5-5*$6+10:-1):4 ev 3 with labels center offset 0,0 tc rgb "blue" notitle,   \
         #""    using 2:5  lc rgb "black" with impulses title ''
-""".format(mnt_name, data_file_name, max_data_file_name)
+""".format(mnt_name, data_file_name, max_data_file_name, size_trigger)
         return s
 
 """
