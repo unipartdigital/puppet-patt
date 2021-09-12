@@ -6,8 +6,8 @@ from xhtml import Xhtml
 logging.basicConfig()
 logger = logging.getLogger(os.path.basename(__file__))
 # logger.setLevel(logging.DEBUG)
-# logger.setLevel(logging.INFO)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.INFO)
+# logger.setLevel(logging.ERROR)
 
 """
 all functions are bounded to max 24hour (86400 seconds) worth of data
@@ -475,7 +475,7 @@ def application(environ, start_response):
         status_ok = '200 OK'
         status_ko_clt = '400 Bad Request'
         status_ko_srv = '501 Not Implemented'
-
+        js_name = "df_plot"
         status = None
         out_dir = '/tmp' if standalone else '/var/www/gnuplot/plots'
         # a cache cleanup procedure is not implemented yet
@@ -496,7 +496,6 @@ def application(environ, start_response):
                 logger.info("use cache: {}".format(fhtml))
             else:
                 logger.info("gen cache: {}".format(fhtml))
-                js_name = None if standalone else "df_plot"
                 statvfs_plot2file (
                     m, stamp_pivot=pivot, stamp_delta=delta, output=fhtml, js_function_name=js_name
                 )
