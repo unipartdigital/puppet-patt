@@ -221,7 +221,12 @@ def html_document(url, js_function_name="", title="", max_plot=4,
 
 td.mb1 {
   width: auto;
-  text-align: left;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+td.mb1-val {
+  width: 14em;
 }
 
 table.mbleft{
@@ -392,7 +397,8 @@ function toggle_help() {
             xy_table_tr2 = xhtml.create_element ("tr", Class="mousebox")
             xy_table_td1 = xhtml.create_element ("td", Class="mb1")
             xhtml.append_text (xy_table_td1, xy)
-            xy_table_td2 = xhtml.create_element ("td", Class="mb1", Id="{}_{}".format(js_function_name, xy))
+            xy_table_td2 = xhtml.create_element ("td", Class="mb1 mb1-val",
+                                                 Id="{}_{}".format(js_function_name, xy))
             xhtml.append_child (xy_table_tr2, xy_table_td1)
             xhtml.append_child (xy_table_tr2, xy_table_td2)
             xhtml.append_child (xy_table_tr1, xy_table_tr2)
