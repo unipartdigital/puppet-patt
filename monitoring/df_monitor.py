@@ -87,6 +87,86 @@ class MonitorFs(SystemService):
                 for c in cur:
                     yield [r for r in c]
 
+    def statvfs_flog_db_create (self):
+        v = self.db_create()
+        with PersistenceSQL3(database=self.database) as db3:
+            db3.row_factory = sqlite3.Row
+            try:
+                cur = db3.cursor()
+                logger.debug("statvfs_flog_db_create: create table if not exists stat_vfs_flog")
+                cur.execute("""create table if not exists stat_vfs_flog
+                (
+                 id integer primary key,
+                 path text,
+                 ctime integer
+                );
+                """)
+            except Exception as e:
+                logger.error (e)
+                raise
+            else:
+                db3.commit()
+    """
+    store/remove the timestamped full path into db
+    """
+    def statvfs_flog_db_store_ctrl (self, command, fpath):
+        self.statvfs_flog_db_create()
+        logger.debug("statvfs_flog_db_store_ctrl {} {}".format (command, fpath))
+        assert command in ("add", "del")
+        assert '%' not in fpath
+        with PersistenceSQL3(database=self.database) as db3:
+            db3.row_factory = sqlite3.Row
+            try:
+                cur = db3.cursor()
+                if command == "del":
+                    cur.execute("""
+                    delete from stat_vfs_flog where path = ?;
+                    """, (fpath.strip(),))
+                elif command == "add":
+                    cur.execute("""
+                    update stat_vfs_flog set (path, ctime) = (select ?, strftime('%s')) where path = ?;
+                    """, (fpath.strip(), fpath.strip()))
+                    cur.execute("""insert into stat_vfs_flog (path, ctime) select ?, strftime('%s')
+                    where (select changes() = 0);
+                    """, (fpath.strip(),))
+            except Exception as e:
+                logger.error (e)
+                raise
+            else:
+                db3.commit()
+
+    def statvfs_flog_db_store_f_expired (self, cduration = 60):
+        with PersistenceSQL3(database=self.database) as db3:
+            db3.row_factory = sqlite3.Row
+            try:
+                cur = db3.cursor()
+                cur.execute("""
+                select path from stat_vfs_flog where ((SELECT strftime('%s') - ?) > ctime);
+                """, (cduration,))
+            except Exception as e:
+                logger.error (e)
+                raise
+            else:
+                for c in cur:
+                    yield [r for r in c]
+
+    """
+    storage cleanup
+    """
+    def statvfs_flog_cleanup (self, cduration=60):
+        for f in self.statvfs_flog_db_store_f_expired (cduration):
+            path = f[0] if f else 'undef'
+            try:
+                if os.path.isfile(path):
+                    logger.info ("unlink: {}".format(path))
+                    os.unlink (path)
+                else: logger.warning ("statvfs_flog_cleanup not found: {}".format(path))
+            except Exception as e:
+                logger.error (e)
+                continue
+            else:
+                self.statvfs_flog_db_store_ctrl ("del", path)
+
     def gnuplot_script (self, mnt_name, data_file_name, max_data_file_name, size_trigger=500):
         s = """
         set xtics rotate
@@ -481,6 +561,8 @@ def application(environ, start_response):
         # a cache cleanup procedure is not implemented yet
         # you may need to use systemd: systemd-tmpfiles-clean.timer and /etc/tmpfiles.d
         try:
+            ssp = MonitorFs()
+
             delta = int(delta) if delta else 1800
             pivot = pivot if pivot else time.mktime(time.gmtime()) - delta
             try:
@@ -494,11 +576,13 @@ def application(environ, start_response):
                                "{}-{}-{}.{}".format(m.replace('/','_'), bin(p), int(delta), out_ext))
             if os.path.isfile(fhtml):
                 logger.info("use cache: {}".format(fhtml))
+                ssp.statvfs_flog_db_store_ctrl("add", fhtml)
             else:
                 logger.info("gen cache: {}".format(fhtml))
                 statvfs_plot2file (
                     m, stamp_pivot=pivot, stamp_delta=delta, output=fhtml, js_function_name=js_name
                 )
+                ssp.statvfs_flog_db_store_ctrl("add", fhtml)
         except MonitorFsValueError as e:
             logger.error(e)
             status = status_ko_clt
@@ -530,7 +614,6 @@ def application(environ, start_response):
                 else:
                     return iter(lambda: filelike.read(block_size), '')
             else:
-                ssp = MonitorFs()
                 fs_list = [i for i in ssp.statvfs_list_mnt()]
                 output = html_document(
                     url=os.path.basename(fhtml), js_function_name=js_name, title='df plot', fs_list=fs_list)
@@ -540,7 +623,7 @@ def application(environ, start_response):
                 return [output]
 
         finally:
-            pass
+            ssp.statvfs_flog_cleanup()
     except Exception as e:
         logger.error(e)
     else:
