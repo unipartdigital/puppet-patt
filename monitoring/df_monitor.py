@@ -220,11 +220,22 @@ def html_document(url, js_function_name="", title="", max_plot=4,
 }
 
 td.mb1 {
-width: auto;
-text-align: left;
+  width: auto;
+  text-align: left;
 }
+
 table.mbleft{
-float: auto;
+  float: auto;
+}
+
+div.help {
+  width: min-content;
+  padding-right: 1em;
+  padding-left: 1em;
+  padding-top: 1em;
+  padding-bottom: 1em;
+  background-color: #EEE;
+  display: none;
 }
 """)
         nav_js = xhtml.create_element ("script", Class="")
@@ -232,10 +243,21 @@ float: auto;
 function openNav() {
   document.getElementById('sidenav01').style.width = '30%';
 }
+
 function closeNav() {
   document.getElementById('sidenav01').style.width = '0';
 }
+
 function gnuplot_canvas() {
+}
+
+function toggle_help() {
+  var div = document.getElementById('divhelp');
+  if (div.style.display == 'block') {
+    div.style.display = 'none';
+  } else {
+    div.style.display = 'block';
+  }
 }
 """)
         xhtml.append_child (head, nav_js)
@@ -341,7 +363,7 @@ function gnuplot_canvas() {
         xhtml.append_child (mouse_box_table_tr1, mouse_box_td_txtzoom)
         # help
         mouse_box_td_help = xhtml.create_element ("td", Class="icon", Attr=[
-            ('onclick', 'gnuplot.popup_help()')
+            ('onclick', 'toggle_help()')
         ])
         mouse_box_td_help_img = xhtml.create_element ("img", Class="icon-img", Attr=[
             ('src', '/icons/help.png'),
@@ -379,7 +401,25 @@ function gnuplot_canvas() {
             ('width','600'), ('height','400')
         ])
         xhtml.append_text (canvas, "Sorry, your browser seems not to support the HTML 5 canvas element")
+        # help
+        help_div = xhtml.create_element ("div", Id="divhelp", Class="help")
+        help_div_pre = xhtml.create_element ("pre", Class="help")
+        xhtml.append_text (help_div_pre, """
+Help
 
+* Mouse Menu:
+  - Zoom using right (Firefox, Konqueror) or center (Opera, Safari) mouse button
+  - Mark point using left mouse button
+  - ① ... ⑨ toggles plot on/off
+  - # toggles grid on/off
+
+* URL parameters:
+  - m: mount point
+  - pivot: number of seconds elapsed since the Epoch, default now
+  - delta: +/- number of seconds around the pivot, default 1800
+""")
+        xhtml.append_child (help_div, help_div_pre)
+        xhtml.append_child (body, help_div)
         # js
         for js in [# 'canvasmath.js',
                    'canvastext.js',
