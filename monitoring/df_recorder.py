@@ -7,8 +7,8 @@ from datetime import timedelta
 from contextlib import nullcontext
 
 logger = logging.getLogger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
-# logger.setLevel(logging.INFO)
+# logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 # logger.setLevel(logging.ERROR)
 
 """
@@ -62,12 +62,32 @@ class SystemService(object):
     PRAGMA journal_mode=WAL;
     PRAGMA schema.journal_size_limit=6815744; (6.5MB)
     https://www.sqlite.org/wal.html
+    update stat_vfs_schema_version using ie `date +%s` on schema change
     """
     def db_create (self):
+        stat_vfs_schema_version = '1631441163';
         with PersistenceSQL3(database=self.database) as db3:
             db3.row_factory = sqlite3.Row
             try:
                 cur = db3.cursor()
+                cur.execute("""create table if not exists stat_vfs_schema_version
+                (version TEXT NOT NULL, id INT DEFAULT 1 NOT NULL
+                CHECK(id == 1), UNIQUE (id));
+                """)
+            except Exception as e:
+                logger.error (e)
+                raise
+            else:
+                db3.commit()
+            try:
+                cur = db3.cursor()
+                cur.execute(
+                    "select version from stat_vfs_schema_version;")
+                r = cur.fetchone()
+                if r and r[0] == stat_vfs_schema_version:
+                    logger.debug("skip remaining db_update: {} == {}".format(r[0], stat_vfs_schema_version))
+                    return
+                # skip the remaining process
                 cur.execute("""create table if not exists stat_vfs
                 (
                  id integer primary key,
@@ -122,6 +142,14 @@ class SystemService(object):
                 logger.error (e)
                 raise
             else:
+                cur.execute("""
+                UPDATE stat_vfs_schema_version SET version = ? WHERE id = 1;
+                """, (stat_vfs_schema_version,))
+                cur.execute("""
+                -- If no update happened (i.e. the row didn't exist) then insert one
+                INSERT INTO  stat_vfs_schema_version (id, version) select 1, ?
+                WHERE (Select Changes() = 0);
+                """, (stat_vfs_schema_version,))
                 db3.commit()
 
     def __init__(self, database="{}".format(f"{_default_db_path()}"), exclude_path=[], mode='recorder'):
