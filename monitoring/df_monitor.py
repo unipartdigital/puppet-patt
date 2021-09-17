@@ -39,53 +39,6 @@ class MonitorFs(SystemService):
             mnt_name, stamp_start=stamp_start, step=step, stamp_stop=stamp_stop, smooth=False
         )
 
-    """
-    """
-    def statvfs_b_get_fs_agg(self, mnt_name=None, stamp_pivot=None, stamp_delta=1800,
-                                 agg="min", limit=None):
-        dt_format = "%Y-%m-%dT%H:%M:%S%Z"
-        assert agg.lower() in ("min", "max")
-        if limit is None:
-            if stamp_delta <= 60:
-                limit = 5
-            elif stamp_delta <= 1800:
-                limit = 7
-            else:
-                limit = 10
-        assert limit > 0 and limit < 30
-        step = 1 if stamp_delta <= 3600 else 3
-        assert stamp_delta < 43200
-        if stamp_pivot is None:
-            stamp_pivot = time.mktime(time.gmtime()) - stamp_delta
-        try:
-            stamp_pivot = int(float(stamp_pivot))
-        except ValueError:
-            stamp_pivot = time.mktime(time.strptime(stamp_pivot, dt_format))
-        assert int(float(stamp_pivot))
-        stamp_start = stamp_pivot - stamp_delta
-        stamp_stop = stamp_pivot  + stamp_delta
-        assert (stamp_start < stamp_stop) and (stamp_start > 0)
-
-        with PersistenceSQL3(database=self.database) as db3:
-            db3.row_factory = sqlite3.Row
-            db3.set_trace_callback(logger.debug)
-            try:
-                cur = db3.cursor()
-                cur.execute("""
-                select id, begin_stamp, fs_total, cast ((m / 1024 / 1024) as int),
-                (fs_total - m) / fs_total * 100.0,  row_number() OVER(ORDER BY id) as rn  from
-                (select id, begin_stamp, fs_total, cast ({0}(fs_avail) as float) as m
-                from stat_vfs where name = ?  and
-                ((stat_vfs.begin_stamp between ? and ?) or
-                 stat_vfs.renew_stamp between ? and ?)
-                group by id order by min(fs_avail) ASC limit ?) order by id;
-                """.format(agg), (mnt_name, stamp_start, stamp_stop, stamp_start, stamp_stop, limit))
-            except Exception as e:
-                logger.error (e)
-                raise
-            else:
-                for c in cur:
-                    yield [r for r in c]
 
     def statvfs_flog_db_create (self):
         v = self.db_create()
@@ -189,7 +142,7 @@ class MonitorFs(SystemService):
         # color definitions
         set style line 1 lc rgb '#8b1a0e' pt 1 ps 1 lt 1 lw 2 # --- red
         set style line 2 lc rgb '#5e9c36' pt 9 ps 1 lt 1 lw 2 # --- green
-        set key top right Left box ls 11 height 1 width 0
+        set key top right Left box ls 11 height 1 width 0 maxrows 2
 
         set encoding utf8
 
@@ -214,8 +167,8 @@ def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None
     from tempfile import NamedTemporaryFile
     with NamedTemporaryFile(mode='w+', encoding='utf-8') as data_file:
         with NamedTemporaryFile(mode='w+', encoding='utf-8') as max_data_file:
-            [print (str(i)[1:-1], file=max_data_file) for i in ssp.statvfs_b_get_fs_agg(
-                mnt_name=mnt_name,
+            [print (str(i)[1:-1], file=max_data_file) for i in ssp.statvfs_get_min_fs(
+                name=mnt_name,
                 stamp_pivot=stamp_pivot,
                 stamp_delta=stamp_delta)]
             max_data_file.flush()
@@ -501,8 +454,8 @@ Help
 
 * URL parameters:
   - m: mount point
-  - pivot: number of seconds elapsed since the Epoch, default now
-  - delta: +/- number of seconds around the pivot, default 1800
+  - pivot: number of seconds elapsed since the Epoch, default now - delta
+  - delta: +/- number of seconds around the pivot, default 1800, max 43199
 """)
         xhtml.append_child (help_div, help_div_pre)
         xhtml.append_child (body, help_div)

@@ -7,8 +7,8 @@ from datetime import timedelta
 from contextlib import nullcontext
 
 logger = logging.getLogger(os.path.basename(__file__))
-# logger.setLevel(logging.DEBUG)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.INFO)
 # logger.setLevel(logging.ERROR)
 
 """
@@ -415,6 +415,85 @@ class SystemService(object):
             else:
                 for c in cur:
                     yield [r for r in c]
+    """
+    """
+    def statvfs_get_min_fs(self, name=None, stamp_start=None, stamp_stop=None, limit=None):
+        dt_format = "%Y-%m-%dT%H:%M:%S%Z"
+        limit = 10 if limit is None else limit
+        assert limit > 0 and limit < 30
+
+        with PersistenceSQL3(database=self.database) as db3:
+            db3.row_factory = sqlite3.Row
+            # db3.set_trace_callback(logger.debug)
+            if not stamp_start:
+                try:
+                    cur = db3.cursor()
+                    cur.execute("""
+                    select min (begin_stamp) from stat_vfs where stat_vfs.name = ?;
+                    """, (name,))
+                except Exception as e:
+                    logger.error (e)
+                    raise
+                else:
+                    stamp_start = [c for c in cur][0][0]
+                    logger.debug ("statvfs_get_data min_stamp = {}".format(stamp_start))
+                    assert int(stamp_start)
+            else:
+                try:
+                    stamp_start = int(float(stamp_start))
+                except ValueError:
+                    stamp_start = time.mktime(time.strptime(stamp_start, dt_format))
+                assert int(float(stamp_start))
+
+            if not stamp_stop:
+                try:
+                    cur = db3.cursor()
+                    cur.execute("""
+                    select max (renew_stamp) from stat_vfs where stat_vfs.name = ?;
+                    """, (name,))
+                except Exception as e:
+                    logger.error (e)
+                    raise
+                else:
+                    stamp_stop = [c for c in cur][0][0]
+                    logger.debug ("statvfs_get_data max_stamp = {}".format(stamp_stop))
+                    assert int(stamp_stop)
+            else:
+                try:
+                    stamp_stop = int(float(stamp_stop))
+                except ValueError:
+                    stamp_stop = time.mktime(time.strptime(stamp_stop, dt_format))
+                assert int(float(stamp_stop))
+
+            if stamp_start < 0:
+                stamp_start = stamp_stop + stamp_start
+
+            logger.debug("statvfs_get_min_fs param name: {}".format(name))
+            logger.debug("statvfs_get_min_fs param stamp_start: {}".format(stamp_start))
+            logger.debug("statvfs_get_min_fs param stamp_stop: {}".format(stamp_stop))
+            assert stamp_start < stamp_stop
+
+        with PersistenceSQL3(database=self.database) as db3:
+            db3.row_factory = sqlite3.Row
+            if logger.level == logging.DEBUG:
+                db3.set_trace_callback(logger.debug)
+            try:
+                cur = db3.cursor()
+                cur.execute("""
+                select id, begin_stamp, fs_total, cast ((m / 1024 / 1024) as int),
+                (fs_total - m) / fs_total * 100.0,  row_number() OVER(ORDER BY id) as rn  from
+                (select id, begin_stamp, fs_total, cast (min(fs_avail) as float) as m
+                from stat_vfs where name = ?  and
+                ((stat_vfs.begin_stamp between ? and ?) or
+                 stat_vfs.renew_stamp between ? and ?)
+                group by id order by min(fs_avail) ASC limit ?) order by id;
+                """, (name, stamp_start, stamp_stop, stamp_start, stamp_stop, limit))
+            except Exception as e:
+                logger.error (e)
+                raise
+            else:
+                for c in cur:
+                    yield [r for r in c]
 
 class GnuPlot(object):
     def __init__(self, gnuplot="/usr/bin/gnuplot"):
@@ -468,6 +547,7 @@ if __name__ == "__main__":
     player.add_argument('-i', '--irange', help='interpolation range (ms)', required=False, type=int)
     player.add_argument('-s', '--smooth', help='apply n points window avg  (7 looks good)',
                         required=False, type=int)
+    player.add_argument('-m', '--min_fs', help='get only n minimals fs value on given time window', type=int)
 
     player.add_argument('-p', '--plot', help='plot', required=False, action='store_true', default=None)
 
@@ -508,9 +588,14 @@ if __name__ == "__main__":
                 smooth=args.smooth
                 assert smooth is None or smooth >= 0
                 if args.plot is None:
-                    [print (str(i)[1:-1]) for i in ssp.statvfs_get_data(
-                        args.name, stamp_start=stamp_start, step=step, stamp_stop=stamp_stop,
-                        smooth=smooth)]
+                    if args.min_fs:
+                        [print (str(i)[1:-1]) for i in ssp.statvfs_get_min_fs(
+                            args.name, stamp_start=stamp_start, stamp_stop=stamp_stop, limit=args.min_fs
+                        )]
+                    else:
+                        [print (str(i)[1:-1]) for i in ssp.statvfs_get_data(
+                            args.name, stamp_start=stamp_start, step=step, stamp_stop=stamp_stop,
+                            smooth=smooth)]
                 else:
                     from tempfile import NamedTemporaryFile
                     with NamedTemporaryFile(mode='w+', encoding='utf-8') as data_file:
