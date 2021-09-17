@@ -44,7 +44,7 @@ def health_configure(nodes):
              'monitoring/df_recorder.py',
              'monitoring/cluster-health.wsgi',
              'monitoring/cluster-health-mini.wsgi',
-             'monitoring/df_monitor.py',
+             'monitoring/df_plot.wsgi',
              'config/cluster_health.te',
              'config/monitoring-httpd-00.conf.apt',
              'config/monitoring-httpd-00.conf.dnf',

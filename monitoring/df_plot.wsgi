@@ -12,10 +12,10 @@ logger.setLevel(logging.INFO)
 """
 all functions are bounded to max 24hour (86400 seconds) worth of data
 """
-class MonitorFsValueError(Exception):
+class PlotFsValueError(Exception):
     pass
 
-class MonitorFs(SystemService):
+class PlotFs(SystemService):
 
     """
     get the data
@@ -162,7 +162,7 @@ class MonitorFs(SystemService):
 """
 def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None, js_function_name=None):
 
-    ssp = MonitorFs()
+    ssp = PlotFs()
 
     from tempfile import NamedTemporaryFile
     with NamedTemporaryFile(mode='w+', encoding='utf-8') as data_file:
@@ -180,7 +180,7 @@ def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None
             data_file.flush()
 
             if os.stat(data_file.name).st_size == 0:
-                raise MonitorFsValueError ('no data')
+                raise PlotFsValueError ('no data')
 
             p = GnuPlot()
             p.send(["reset session", "set termoption enhanced"])
@@ -514,7 +514,7 @@ def application(environ, start_response):
         # a cache cleanup procedure is not implemented yet
         # you may need to use systemd: systemd-tmpfiles-clean.timer and /etc/tmpfiles.d
         try:
-            ssp = MonitorFs()
+            ssp = PlotFs()
 
             delta = int(delta) if delta else 1800
             pivot = pivot if pivot else time.mktime(time.gmtime()) - delta
@@ -536,7 +536,7 @@ def application(environ, start_response):
                     m, stamp_pivot=pivot, stamp_delta=delta, output=fhtml, js_function_name=js_name
                 )
                 ssp.statvfs_flog_db_store_ctrl("add", fhtml)
-        except MonitorFsValueError as e:
+        except PlotFsValueError as e:
             logger.error(e)
             status = status_ko_clt
             output = b'no data'

@@ -68,7 +68,7 @@ puppet-module:
 	install -m 755 monitoring/cluster-health.wsgi $(DESTDIR)/patt/files/patt/monitoring/
 	install -m 755 monitoring/cluster-health-mini.wsgi $(DESTDIR)/patt/files/patt/monitoring/
 	install -m 644 monitoring/df_recorder.py $(DESTDIR)/patt/files/patt/monitoring/
-	install -m 644 monitoring/df_monitor.py $(DESTDIR)/patt/files/patt/monitoring/
+	install -m 644 monitoring/df_plot.wsgi $(DESTDIR)/patt/files/patt/monitoring/
 
 	install -m 644 ip_takeover.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 ip_takeover.make $(DESTDIR)/patt/files/patt/.

@@ -91,7 +91,7 @@ configure () {
     monitoring2=${6:-"df_recorder.py"}
     wsgi_file1=${7:-"cluster-health.wsgi"}
     wsgi_file2=${8:-"cluster-health-mini.wsgi"}
-    wsgi_file3=${9:-"df_monitor.py"}
+    wsgi_file3=${9:-"df_plot.wsgi"}
     pe_file=${10-:"cluster_health.te"}
     wsgi_user=${11:-$cluster_health_user}
 
