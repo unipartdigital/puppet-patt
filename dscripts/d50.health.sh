@@ -92,8 +92,10 @@ configure () {
     wsgi_file1=${7:-"cluster-health.wsgi"}
     wsgi_file2=${8:-"cluster-health-mini.wsgi"}
     wsgi_file3=${9:-"df_plot.wsgi"}
-    pe_file=${10-:"cluster_health.te"}
-    wsgi_user=${11:-$cluster_health_user}
+    wsgi_file4=${10:-"df_monitor.wsgi"}
+    pe_file=${11-:"cluster_health.te"}
+
+    wsgi_user=${cluster_health_user}
 
     test "$(getent passwd  ${wsgi_user} | cut -d: -f1)" == "${wsgi_user}" || {
         useradd --home-dir "/home/${wsgi_user}" --user-group  \
@@ -196,7 +198,7 @@ configure () {
                 --touch /var/tmp/$(basename $0 .sh)-httpd.reload
     done
 
-    for wsgi_files in  ${wsgi_file1} ${wsgi_file2} ${wsgi_file3}
+    for wsgi_files in  ${wsgi_file1} ${wsgi_file2} ${wsgi_file3} ${wsgi_file4}
     do
         python3 ${srcdir}/${comd} -t ${srcdir}/${wsgi_files} \
                 -o /usr/local/share/patt/monitoring/wsgi/${wsgi_files} \

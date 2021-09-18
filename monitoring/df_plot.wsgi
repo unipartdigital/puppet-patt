@@ -39,6 +39,23 @@ class PlotFs(SystemService):
             mnt_name, stamp_start=stamp_start, step=step, stamp_stop=stamp_stop, smooth=False
         )
 
+    def statvfs_b_get_min_fs (self, mnt_name=None, stamp_pivot=None, stamp_delta=1800, limit=10):
+        dt_format = "%Y-%m-%dT%H:%M:%S%Z"
+        step = 1 if stamp_delta <= 3600 else 3
+        assert stamp_delta < 43200 # 86400 / 2
+        if stamp_pivot is None:
+            stamp_pivot = time.mktime(time.gmtime()) - stamp_delta
+        try:
+            stamp_pivot = int(float(stamp_pivot))
+        except ValueError:
+            stamp_pivot = time.mktime(time.strptime(stamp_pivot, dt_format))
+        assert int(float(stamp_pivot))
+        stamp_start = stamp_pivot - stamp_delta
+        stamp_stop = stamp_pivot  + stamp_delta
+        assert (stamp_start < stamp_stop) and (stamp_start > 0)
+        return self.statvfs_get_min_fs (
+            mnt_name, stamp_start=stamp_start, stamp_stop=stamp_stop, limit=limit
+        )
 
     def statvfs_flog_db_create (self):
         v = self.db_create()
@@ -167,8 +184,8 @@ def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None
     from tempfile import NamedTemporaryFile
     with NamedTemporaryFile(mode='w+', encoding='utf-8') as data_file:
         with NamedTemporaryFile(mode='w+', encoding='utf-8') as max_data_file:
-            [print (str(i)[1:-1], file=max_data_file) for i in ssp.statvfs_get_min_fs(
-                name=mnt_name,
+            [print (str(i)[1:-1], file=max_data_file) for i in ssp.statvfs_b_get_min_fs(
+                mnt_name=mnt_name,
                 stamp_pivot=stamp_pivot,
                 stamp_delta=stamp_delta)]
             max_data_file.flush()

@@ -7,8 +7,8 @@ from datetime import timedelta
 from contextlib import nullcontext
 
 logger = logging.getLogger(os.path.basename(__file__))
-logger.setLevel(logging.DEBUG)
-# logger.setLevel(logging.INFO)
+# logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 # logger.setLevel(logging.ERROR)
 
 """
@@ -35,11 +35,11 @@ class SystemService(object):
             self.path = path
             self.statvfs = statvfs
 
-    def _default_db_path():
+    def _default_db_path(name="patt_monitoring-fs.sql3"):
         p = "{}/.cache".format(os.path.expanduser("~"))
         if os.path.isdir (p) :
-            return "{}/patt_monitoring-fs.sql3".format (p)
-        return "/var/tmp/patt_monitoring-fs-{}.sql3".format(os.getuid())
+            return "{}/{}".format (p, name)
+        return "/var/tmp/{}-{}.sql3".format(name, os.getuid())
 
     def local_mounts(exclude_path=[]):
         result=[]

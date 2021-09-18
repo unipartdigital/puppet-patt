@@ -45,6 +45,7 @@ def health_configure(nodes):
              'monitoring/cluster-health.wsgi',
              'monitoring/cluster-health-mini.wsgi',
              'monitoring/df_plot.wsgi',
+             'monitoring/df_monitor.wsgi',
              'config/cluster_health.te',
              'config/monitoring-httpd-00.conf.apt',
              'config/monitoring-httpd-00.conf.dnf',
@@ -62,7 +63,8 @@ def health_configure(nodes):
                                [os.path.basename(payload[5])] +
                                [os.path.basename(payload[6])] +
                                [os.path.basename(payload[7])] +
-                               [os.path.basename(payload[8])],
+                               [os.path.basename(payload[8])] +
+                               [os.path.basename(payload[9])],
                                sudo=True)
     log_results (result)
     return all(x == False for x in [bool(n.error) for n in result])
