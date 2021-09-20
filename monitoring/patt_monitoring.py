@@ -401,7 +401,7 @@ class DiskFreeService(ClusterService):
                 else:
                     break
             try:
-                p = [n for n in self.df_peers if n in c]
+                p = [n for n in self.df_peers if n in c][0]
                 assert 'df' in rj
                 assert rj['df']['error'] == False
                 assert 'result' in rj['df']
@@ -419,8 +419,8 @@ class DiskFreeService(ClusterService):
                     if l == []: result.append ({'node': p, 'error': False})
         return result
 
-    def is_healthy(self):
-        df = self.node_check()
+    def is_healthy(self, df=None):
+        df = df if df else self.node_check()
         for i in df:
             if 'node' not in i: return False
             if 'error' not in i : return False
@@ -483,8 +483,8 @@ if __name__ == "__main__":
 
     if 'df' not in exclude:
         df = DiskFreeService()
-        df.node_check()
-        df_healthy=df.is_healthy()
+        df_check = df.node_check()
+        df_healthy=df.is_healthy(df_check)
         if args.quiet:
             status.append(df_healthy)
         else:

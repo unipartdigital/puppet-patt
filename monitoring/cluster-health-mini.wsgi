@@ -1,6 +1,6 @@
 # -*- mode: python -*-
 
-from patt_monitoring import EtcdService, PatroniService
+from patt_monitoring import EtcdService, PatroniService, DiskFreeService
 from xhtml import Xhtml
 
 OK_TEXT="all good"
@@ -40,6 +40,10 @@ def application(environ, start_response):
 
     patroni_healthy=all([n[1] == True for n in patroni_health])
     service_status.append(patroni_healthy)
+
+    df = DiskFreeService()
+    df_healthy=df.is_healthy()
+    service_status.append(df_healthy)
 
     status = status_ok if all([x == True for x in service_status]) else status_ko
 
