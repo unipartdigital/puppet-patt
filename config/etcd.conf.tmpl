@@ -1,0 +1,39 @@
+#[Member]
+ETCD_DATA_DIR="${ETCD_DATA_DIR}"
+ETCD_LISTEN_PEER_URLS="https://[::]:2380"
+ETCD_LISTEN_CLIENT_URLS="http://[::]:2379"
+ETCD_NAME="${self_id}"
+#[Clustering]
+ETCD_INITIAL_ADVERTISE_PEER_URLS="https://[${self_ip}]:2380"
+ETCD_ADVERTISE_CLIENT_URLS="http://[${self_ip}]:2379"
+ETCD_INITIAL_CLUSTER="${etcd_initial_cluster}"
+ETCD_INITIAL_CLUSTER_TOKEN="${cluster_name}"
+${init_state}ETCD_INITIAL_CLUSTER_STATE="existing"
+#[Security]
+#ETCD_CERT_FILE=""
+#ETCD_KEY_FILE=""
+#ETCD_CLIENT_CERT_AUTH="false"
+#ETCD_TRUSTED_CA_FILE=""
+#ETCD_AUTO_TLS="false"
+#ETCD_PEER_CERT_FILE=""
+#ETCD_PEER_KEY_FILE=""
+#ETCD_PEER_CLIENT_CERT_AUTH="false"
+#ETCD_PEER_TRUSTED_CA_FILE=""
+ETCD_PEER_AUTO_TLS="true"
+#
+#[Logging]
+ETCD_DEBUG="false"
+ETCD_LOG_PACKAGE_LEVELS=""
+ETCD_LOG_OUTPUT="default"
+#
+#[TUNING]
+# https://etcd.io/docs/v3.3/tuning/
+ETCD_SNAPSHOT_COUNT=5000
+# HEARTBEAT_INTERVAL should take into consideration
+# network latency on time taken by fsync (disk latency)
+# ELECTION_TIMEOUT could be estimated as an order of magnitude greater
+# than HEARTBEAT_INTERVAL. Values must be set cluster wide (same on each node).
+#ETCD_HEARTBEAT_INTERVAL="150"
+#ETCD_ELECTION_TIMEOUT="1500"
+ETCD_HEARTBEAT_INTERVAL=2900
+ETCD_ELECTION_TIMEOUT=30000
