@@ -4,6 +4,7 @@ import patt
 import logging
 import random
 import time
+import os
 
 logger = logging.getLogger('patt_etcd')
 
@@ -105,10 +106,10 @@ def pick_init_node(nodes):
     logger.debug ("pick up etcd node: {}".format(picked_up.hostname))
     return picked_up
 
-def etcd_init(cluster_name, nodes):
+def etcd_init(cluster_name, nodes, etcd_template="config/etcd.conf.tmpl"):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
-    payload=['config/etcd.conf.tmpl', 'dscripts/tmpl2file.py']
+    payload=[etcd_template, 'dscripts/tmpl2file.py']
     id_hosts = [n.id + '_' +  n.hostname for n in nodes]
     result = patt.exec_script (nodes=nodes, src="./dscripts/d10.etcd.sh",
                                 args=['init'] + [cluster_name] + id_hosts, sudo=True)
@@ -130,6 +131,7 @@ def etcd_init(cluster_name, nodes):
 
         result = patt.exec_script (nodes=[init_node], src="./dscripts/d10.etcd.sh", payload=payload,
                                    args=['config'] + ['new'] + [cluster_name] +
+                                   [os.path.basename(etcd_template)] +
                                    [id_hosts], sudo=True)
         log_results (result)
 
@@ -189,8 +191,9 @@ def etcd_init(cluster_name, nodes):
             time.sleep(3.0)
 
         result = patt.exec_script (nodes=members, src="./dscripts/d10.etcd.sh", payload=payload,
-                                    args=['config'] + ['existing'] + [cluster_name] +
-                                    id_hosts, sudo=True)
+                                   args=['config'] + ['existing'] + [cluster_name] +
+                                   [os.path.basename(etcd_template)] +
+                                   id_hosts, sudo=True)
         log_results (result)
 
         result = patt.exec_script (nodes=members, src="./dscripts/d10.etcd.sh",

@@ -34,6 +34,7 @@ class Config(object):
         self.vol_size_pgsql_safe = None
         self.vol_size_walg = None
         self.etcd_peers = None
+        self.etcd_template_file = None
         self.floating_ip = None
         self.haproxy_peers = None
         self.haproxy_template_file = None
@@ -282,7 +283,8 @@ if __name__ == "__main__":
             assert vol_walg_ok, "vol walg error"
         progress_bar (4, 14)
 
-        etcd_report = patt_etcd.etcd_init(cfg.cluster_name, etcd_peers)
+        etcd_template = cfg.etcd_template_file if cfg.etcd_template_file else "config/etcd.conf.tmpl"
+        etcd_report = patt_etcd.etcd_init(cfg.cluster_name, etcd_peers, etcd_template=etcd_template)
 
         progress_bar (5, 14)
 

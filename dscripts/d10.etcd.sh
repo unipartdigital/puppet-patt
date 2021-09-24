@@ -27,6 +27,10 @@ case "${os_id}" in
         ;;
 esac
 
+faketty () {
+    script -e -qfc "$(printf "%q " "$@")"
+}
+
 init() {
 
     etcd --version > /dev/null 2>&1 || {
@@ -46,14 +50,13 @@ init() {
                 exit 1
                 ;;
         esac
-        # extend etcd.service
-        EDITOR="/bin/tee" systemctl edit etcd <<'EOF'
+    }
+    # extend etcd.service
+     faketty EDITOR="/bin/tee" systemctl edit etcd <<'EOF'
 [Service]
 ExecStartPost=-/bin/bash -c "/bin/ionice -c2 -n0 -p $(/bin/pgrep etcd)"
 Nice=-10
 EOF
-
-    }
 }
 
 check_healthy () {
@@ -96,6 +99,8 @@ config () {
     config_type=$1
     shift 1
     cluster_name=$1
+    shift 1
+    etcd_template=$1
     shift 1
     cluster_nodes=$*
 
@@ -146,7 +151,7 @@ EOF
     else
         init_state="#"
     fi
-    python3 ${srcdir}/tmpl2file.py -t ${srcdir}/etcd.conf.tmpl -o /etc/etcd/etcd.conf   \
+    python3 ${srcdir}/tmpl2file.py -t ${srcdir}/${etcd_template} -o /etc/etcd/etcd.conf   \
                     --dictionary_key_val "ETCD_DATA_DIR=${ETCD_DATA_DIR}"               \
                     --dictionary_key_val "self_id=${self_id}"                           \
                     --dictionary_key_val "self_ip=${self_ip}"                           \
