@@ -20,7 +20,7 @@ import scapy.all as sca
 
 logger = logging.getLogger(__name__)
 
-ip_takeover_version = "0.92"
+ip_takeover_version = "0.93"
 
 def blackhole_add (ipv6=[], table="postgres_patroni"):
     try:
@@ -37,14 +37,20 @@ def blackhole_add (ipv6=[], table="postgres_patroni"):
 
 def blackhole_del (ipv6=[], table="postgres_patroni"):
     try:
-        ipv6_str = ", ".join (ipv6)
-        cmd_list = ["nft", "delete",  "element", "ip6", table, "pg_blackhole", '{', ipv6_str, '}']
+        cmd_list = ["nft", "flush",  "set", "ip6", table, "pg_blackhole"]
         logger.debug ("pg_blackhole: {}".format (cmd_list))
         cmd = subprocess.run (cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
         if cmd.returncode == 0:
             pass
         else:
-            logger.error (cmd.stderr)
+            ipv6_str = ", ".join (ipv6)
+            cmd_list = ["nft", "delete",  "element", "ip6", table, "pg_blackhole", '{', ipv6_str, '}']
+            logger.debug ("pg_blackhole: {}".format (cmd_list))
+            cmd = subprocess.run (cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
+            if cmd.returncode == 0:
+                pass
+            else:
+                logger.error (cmd.stderr)
     except Exception as e:
         logger.error (e)
 
@@ -104,9 +110,9 @@ def neighbour_advertisement (addr, iface):
         adv = sca.IPv6(src=lla, dst="ff02::1")/sca.ICMPv6ND_NA(R=0, S=0, O=1, tgt=addr)
         opt = sca.ICMPv6NDOptDstLLAddr (lladdr=sca.get_if_hwaddr(iface))
         adv.add_payload(opt)
-        logger.debug ("neighbour_advertisement packet {}".format (adv.show()))
+        logger.info ("send an unsolicited advertisements")
         sca.send (adv, iface=iface)
-        logger.debug ("neighbour_advertisement packet send {}".format (adv.show()))
+        # logger.debug ("neighbour_advertisement packet send {}".format (adv.show()))
     except Exception as e:
         logger.error (e)
 

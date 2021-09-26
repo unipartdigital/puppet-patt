@@ -38,7 +38,7 @@ class Config(object):
         self.floating_ip = None
         self.haproxy_peers = None
         self.haproxy_template_file = None
-        self.ip_takeover_version="0.92"
+        self.ip_takeover_version="0.93"
         self.log_file = None
         self.loglevel = None
         self.lock_dir = None
