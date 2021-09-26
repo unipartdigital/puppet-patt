@@ -19,6 +19,7 @@ puppet-module:
 	install -m 644 config/firewall.nft $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/etcd.conf.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/postgres-ipv6.yaml $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/postgresql-patroni.service.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/pg_create_role.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/pg_create_database.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/postgres-gc.sh.tmpl $(DESTDIR)/patt/files/patt/config

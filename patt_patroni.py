@@ -44,9 +44,10 @@ install patroni packages and dep on each nodes
 def patroni_init(postgres_version, patroni_version, nodes):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
-
-    result = patt.exec_script (nodes=nodes, src="./dscripts/d30.patroni.sh", payload='config/patroni.te',
-                               args=['init'] + [postgres_version] + [patroni_version] + ['patroni.te'],
+    payload=['config/patroni.te','dscripts/tmpl2file.py', 'config/postgresql-patroni.service.tmpl']
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d30.patroni.sh", payload=payload,
+                               args=['init'] + [postgres_version] + [patroni_version] +
+                               ['patroni.te'] + ['postgresql-patroni.service.tmpl'],
                                sudo=True)
     log_results (result)
 
