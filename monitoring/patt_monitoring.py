@@ -40,7 +40,7 @@ class PersistenceSQL3(object):
 
 class ClusterService:
 
-    cluster_keys = ['cluster_name', 'etcd_peers', 'postgres_peers', 'sftpd_peers']
+    cluster_keys = ['cluster_name', 'dcs_peers', 'dcs_type', 'postgres_peers', 'sftpd_peers']
     # subset of class Config(object) from patt_cli
 
     def load_cluster_config(self):
@@ -63,7 +63,8 @@ class ClusterService:
             if not hasattr(Gconfig, k):
                 self.load_cluster_config()
                 break
-        self.etcd_peers = Gconfig.etcd_peers if hasattr(Gconfig, 'etcd_peers') else []
+        self.dcs_peers = Gconfig.dcs_peers if hasattr(Gconfig, 'dcs_peers') else []
+        self.dcs_type = Gconfig.dcs_type if hasattr(Gconfig, 'dcs_type') else None
         self.postgres_peers = Gconfig.postgres_peers if hasattr(Gconfig, 'postgres_peers') else []
         self.sftpd_peers = Gconfig.sftpd_peers if hasattr(Gconfig, 'sftpd_peers') else []
 
@@ -114,8 +115,8 @@ class EtcdService(ClusterService):
 
     def __init__(self):
         super().__init__()
-        if self.etcd_peers:
-            self.init_urls = self.etcd_peers
+        if self.dcs_type in ('etcd', 'etcd3'):
+            self.init_urls = self.dcs_peers
         self.init_urls = self.http_normalize_url (2379, self.init_urls)
 
     def get_client_urls (self):
@@ -142,8 +143,8 @@ class EtcdService(ClusterService):
         cluster_client_urls = self.get_client_urls()
         if cluster_client_urls:
             return [(c, self.node_health ([c])) for c in cluster_client_urls]
-        return ([(c, False) for c in self.etcd_peers])
-    # return cluster_config.yaml etcd list set to False if all down
+        return ([(c, False) for c in self.dcs_peers])
+    # return cluster_config.yaml dcs_peers list set to False if all down or if dcs is not etcd
 
     def is_healthy(self):
         clth = self.cluster_health()
@@ -364,8 +365,8 @@ class DiskFreeService(ClusterService):
     def __init__(self, use_ssl=False):
         self.df_peers = []
         super().__init__()
-        if self.etcd_peers:
-            self.df_peers = set(self.df_peers) | set (self.etcd_peers)
+        if self.dcs_peers:
+            self.df_peers = set(self.df_peers) | set (self.dcs_peers)
         if self.postgres_peers:
             self.df_peers = set(self.df_peers) | set (self.postgres_peers)
         if self.sftpd_peers:

@@ -89,9 +89,10 @@ def _get_patroni_config (patroni_config="{}/patroni.yaml".format (pwd.getpwnam('
 
 class PatroniConfig(object):
 
-   def __init__(self, cluster_name, template_file, nodes, etcd_peers,
+   def __init__(self, cluster_name, template_file, nodes, etcd_peers, raft_peers,
                 sys_user_pass, dst_file, postgres_version, name_space="/service",
-                owner='postgres', group='postgres'):
+                owner='postgres', group='postgres', touch='/tmp/patroni.reload',
+                raft_port='7204', raft_data_dir='/var/lib/raft',):
         self.tmpl=None
         self.file_name=dst_file
         self.user_pass_dict = {} if sys_user_pass == None else dict(ast.literal_eval(sys_user_pass))
@@ -101,6 +102,7 @@ class PatroniConfig(object):
         self.prev=_get_patroni_config(self.file_name)
         self.owner = owner
         self.group = group
+        self.touch = touch
         self.output_mod = int("0o{}".format(640), 8)
 
         osr = os_release()
@@ -166,9 +168,17 @@ class PatroniConfig(object):
         # restapi address + port to access the REST API (from the others node)
         self.tmpl['restapi']['connect_address'] = my_ip + ':8008'
 
-        # provide a static list of etcd peers
-        self.tmpl['etcd']['hosts'] = ",".join([str(i) + ":2379" for i in etcd_peers])
-
+        if etcd_peers:
+           # provide a static list of etcd peers
+           self.tmpl['etcd']['hosts'] = ",".join([str(i) + ":2379" for i in etcd_peers])
+        elif raft_peers:
+           self.tmpl.pop ('etcd', None)
+           self.tmpl.pop ('etcd3', None)
+           self.tmpl['raft'] = {}
+           self.tmpl['raft']['self_addr'] = "{}:{}".format (my_ip, raft_port)
+           self.tmpl['raft']['partner_addrs'] = ["{}:{}".format (
+              n, raft_port) for n in raft_peers if n not in my_ip]
+           self.tmpl['raft']['data_dir'] = raft_data_dir
         # enable ssl if not set or explicitly disabled (and if possible)
         def is_ssl_set (tmpl_str):
             if not 'postgresql' in tmpl_str: return False
@@ -201,8 +211,8 @@ class PatroniConfig(object):
     write only on change
    """
    def write (self):
-      uid = pwd.getpwnam(self.owner).pw_uid
-      gid = grp.getgrnam(self.group).gr_gid
+      uid = pwd.getpwnam(self.owner).pw_uid if self.owner else None
+      gid = grp.getgrnam(self.group).gr_gid if self.group else None
       old_md5 = hashlib.md5()
       new_md5 = hashlib.md5()
       if os.path.isfile(self.file_name):
@@ -220,17 +230,19 @@ class PatroniConfig(object):
                print(yaml.dump(self.tmpl, default_flow_style=False), file=f)
          except:
             raise
-         try:
-            with open('/tmp/patroni.reload', 'w') as f:
-               pass
-         except:
-            raise
-         finally:
-            f.close()
-      if os.stat(self.file_name).st_uid == uid and os.stat(self.file_name).st_gid == gid:
-         pass
-      else:
-         os.chown(self.file_name, uid, gid)
+         if touch:
+            try:
+               with open(self.touch, 'w') as f:
+                  pass
+            except:
+               raise
+            finally:
+               f.close()
+      if uid and gid:
+         if os.stat(self.file_name).st_uid == uid and os.stat(self.file_name).st_gid == gid:
+            pass
+         else:
+            os.chown(self.file_name, uid, gid)
       if self.output_mod:
          mode = oct(S_IMODE(os.stat(self.file_name).st_mode))
          if oct(self.output_mod) != mode:
@@ -242,48 +254,90 @@ class PatroniConfig(object):
       except:
          raise
 
+class RaftConfig(PatroniConfig):
+
+   def __init__(self, cluster_name, nodes=[], raft_peers=[],
+                raft_port='7204', raft_data_dir='/var/lib/raft',
+                dst_file='', owner='', group='', touch=''):
+      my_ip = _get_ip(nodes)
+      self.tmpl={}
+      self.tmpl['raft'] = {}
+      self.tmpl['raft']['self_addr'] = "{}:{}".format (my_ip, raft_port)
+      self.tmpl['raft']['partner_addrs'] = ["{}:{}".format (
+         n, raft_port) for n in raft_peers if n not in my_ip]
+      self.tmpl['raft']['data_dir'] = raft_data_dir
+      self.dst_file = dst_file if dst_file else '/usr/local/etc/patroni-raft-{}.yaml'.format(cluster_name)
+      self.output_mod = int("0o{}".format(640), 8)
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c','--cluster_name', help='cluster name', required=True)
-    parser.add_argument('-t','--template_file', help='patroni yaml template file', required=True)
-    parser.add_argument('-d','--destination_file', help='patroni yaml destination file', required=True)
-    parser.add_argument('-u','--user', help='destination_file relative to <user> home dit', required=False)
-    parser.add_argument('-v','--postgres_version', help='postgres version', required=True)
-    parser.add_argument('-p','--postgres_peers', help='postgres peers', required=True, nargs='+')
-    # peers argument should be called like: '-p p1 p2 p3'
-    parser.add_argument('-e','--etcd_peers', help='etcd peers', required=True, nargs='+')
-    parser.add_argument('-s','--sys_user_pass', help='system user password dict', required=True, type=str)
-    parser.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
+   parser = argparse.ArgumentParser()
+   subparsers = parser.add_subparsers(dest='interface')
+   pconf = subparsers.add_parser('PatroniConfig')
+   pconf.add_argument('-c','--cluster_name', help='cluster name', required=True)
+   pconf.add_argument('-t','--template_file', help='patroni yaml template file', required=True)
+   pconf.add_argument('-d','--destination_file', help='patroni yaml destination file', required=True)
+   pconf.add_argument('-u','--user', help='destination_file relative to <user> home dit', required=False)
+   pconf.add_argument('-v','--postgres_version', help='postgres version', required=True)
+   pconf.add_argument('-p','--postgres_peers', help='postgres peers', required=True, nargs='+')
+   # peers argument should be called like: '-p p1 p2 p3'
+   pconf.add_argument('-e','--etcd_peers', help='etcd peers', required=True, nargs='+', default=[])
+   pconf.add_argument('-r','--raft_peers', help='raft peers', required=True, nargs='+', default=[])
+   pconf.add_argument('-s','--sys_user_pass', help='system user password dict', required=True, type=str)
+   pconf.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
 
-    args = parser.parse_args()
-    os.chdir (os.path.dirname (__file__))
+   rconf = subparsers.add_parser('RaftConfig')
+   rconf.add_argument('-c','--cluster_name', help='cluster name', required=True)
+   rconf.add_argument('-d','--destination_file', help='patroni yaml destination file', required=True)
+   rconf.add_argument('-u','--user', help='destination_file relative to <user> home dit', required=False)
+   rconf.add_argument('-p','--postgres_peers', help='postgres peers', required=True, nargs='+')
+   # peers argument should be called like: '-p p1 p2 p3'
+   rconf.add_argument('-r','--raft_peers', help='raft peers', required=True, nargs='+', default=[])
+   rconf.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
 
-    lock_filename = args.lock_dir + '/' + os.path.basename (__file__).split('.')[0] + '.lock'
-    if not os.path.exists(lock_filename):
-        lockf = open(lock_filename, "w+")
-        lockf.close()
-    lockf = open(lock_filename, "r")
-    lock_fd = lockf.fileno()
-    flock(lock_fd, LOCK_EX | LOCK_NB)
+   args = parser.parse_args()
+   try:
+      assert args.interface
+   except AssertionError as e:
+      parser.print_help()
+      raise
 
-    destination_file=None
-    if args.user and args.user is not None:
-        destination_file = "{}/{}".format (pwd.getpwnam(args.user).pw_dir, args.destination_file)
-    else:
-        destination_file = args.destination_file
+   os.chdir (os.path.dirname (__file__))
 
-    pc = PatroniConfig (cluster_name=args.cluster_name,
-                        template_file=args.template_file,
-                        postgres_version=args.postgres_version,
-                        nodes=args.postgres_peers,
-                        etcd_peers=args.etcd_peers,
-                        sys_user_pass=args.sys_user_pass,
-                        dst_file=destination_file)
-    pc.write ()
+   lock_filename = args.lock_dir + '/' + os.path.basename (__file__).split('.')[0] + '.lock'
+   if not os.path.exists(lock_filename):
+      lockf = open(lock_filename, "w+")
+      lockf.close()
+   lockf = open(lock_filename, "r")
+   lock_fd = lockf.fileno()
+   flock(lock_fd, LOCK_EX | LOCK_NB)
 
-    flock(lock_fd, LOCK_UN)
-    lockf.close()
-    try:
-        os.remove(lock_filename)
-    except OSError:
-        pass
+   destination_file=None
+   if args.user and args.user is not None:
+      destination_file = "{}/{}".format (pwd.getpwnam(args.user).pw_dir, args.destination_file)
+   else:
+      destination_file = args.destination_file
+
+   if args.interface == 'PatroniConfig':
+      pc = PatroniConfig (cluster_name=args.cluster_name,
+                          template_file=args.template_file,
+                          postgres_version=args.postgres_version,
+                          nodes=args.postgres_peers,
+                          etcd_peers=args.etcd_peers,
+                          raft_peers=args.raft_peers,
+                          sys_user_pass=args.sys_user_pass,
+                          dst_file=destination_file)
+      pc.write ()
+
+   elif args.interface == 'PatroniConfig':
+      rc = RaftConfig (cluster_name=args.cluster_name,
+                       nodes=args.postgres_peers,
+                       raft_peers=args.raft_peers,
+                       dst_file=destination_file)
+      rc.write ()
+
+   flock(lock_fd, LOCK_UN)
+   lockf.close()
+   try:
+      os.remove(lock_filename)
+   except OSError:
+      pass

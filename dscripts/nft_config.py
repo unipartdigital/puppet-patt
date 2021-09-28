@@ -9,7 +9,7 @@ from fcntl import flock,LOCK_EX, LOCK_NB, LOCK_UN
 
 class NftConfig(object):
 
-    def __init__(self, template_file, patroni_peers=[], etcd_peers=[], haproxy_peers=[],
+    def __init__(self, template_file, patroni_peers=[], etcd_peers=[], raft_peers=[], haproxy_peers=[],
                  postgres_clients=[], monitoring_clients=[]):
         tmpl=None
         self.dic = {}
@@ -23,6 +23,8 @@ class NftConfig(object):
             patroni_peers=["::1"]
         if not etcd_peers:
             etcd_peers=["::1"]
+        if not raft_peers:
+            raft_peers=["::1"]
         if not haproxy_peers:
             haproxy_peers=["::1"]
         if not postgres_clients:
@@ -31,6 +33,7 @@ class NftConfig(object):
             monitoring_clients=["::0/0"]
 
         self.dic['etcd_peers'] = ", ".join (etcd_peers)
+        self.dic['raft_peers'] = ", ".join (raft_peers)
         self.dic['patroni_peers'] = ", ".join (patroni_peers)
         self.dic['haproxy_peers'] = ", ".join (haproxy_peers)
         self.dic['postgres_clients'] = ", ".join (postgres_clients)
@@ -55,7 +58,8 @@ if __name__ == "__main__":
     parser.add_argument('-d','--destination_file', help='patroni yaml destination file', required=False)
     # peers arguments should look like: -p p1 p2 p3 -e e1 e2 e3 -x x1 x2 x3 -c c1 c2 c3
     parser.add_argument('-p','--patroni_peers', help='postgres peers', required=True, nargs='+')
-    parser.add_argument('-e','--etcd_peers', help='etcd peers', required=True, nargs='+')
+    parser.add_argument('-e','--etcd_peers', help='etcd peers', required=False, nargs='+')
+    parser.add_argument('-r','--raft_peers', help='raft peers', required=False, nargs='+')
     parser.add_argument('-x','--haproxy_peers', help='haproxy peers', required=False, nargs='+')
     parser.add_argument('-c','--postgres_clients', help='postgres_clients', required=False, nargs='+')
     parser.add_argument('-m','--monitoring_clients', help='monitoring_clients', required=False, nargs='+')
@@ -75,6 +79,7 @@ if __name__ == "__main__":
     nft = NftConfig (template_file=args.template_file,
                      patroni_peers=args.patroni_peers,
                      etcd_peers=args.etcd_peers,
+                     raft_peers=args.raft_peers,
                      haproxy_peers=args.haproxy_peers,
                      postgres_clients=args.postgres_clients,
                      monitoring_clients=args.monitoring_clients)

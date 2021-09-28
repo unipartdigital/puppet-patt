@@ -24,7 +24,7 @@ class patt::mount
      before  => [Package["etcd"]],
      onlyif  => "/bin/test `ls -CA ${etcd_data} 2> /dev/null | wc -l` == 0",
      logoutput => true,
-  }
+   }
   }else{
    exec{"mount_$etcd_data":
      command => "/bin/true",
@@ -32,7 +32,7 @@ class patt::mount
      before  => [Package["etcd"]],
      onlyif  => "/bin/test `ls -CA ${etcd_data} 2> /dev/null | wc -l` == 0",
      logoutput => true,
-    }
+   }
   }
   file{"${etcd_data}":
      ensure  => directory,

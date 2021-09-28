@@ -24,15 +24,19 @@ import file_lock as fl
 
 logger = logging.getLogger('patt_cli')
 
+
 class Config(object):
     def __init__(self):
         self.add_repo = None
         self.cluster_name = None
         self.vol_size_etcd = None
+        self.vol_size_raft = None
         self.vol_size_pgsql = None
         self.vol_size_pgsql_temp = None
         self.vol_size_pgsql_safe = None
         self.vol_size_walg = None
+        self.dcs_peers = None
+        self.dcs_type = 'etcd'
         self.etcd_peers = None
         self.etcd_template_file = None
         self.floating_ip = None
@@ -176,10 +180,21 @@ if __name__ == "__main__":
 
         nodes = patt.to_nodes (cfg.nodes, ssh_login, cfg.ssh_keyfile)
 
-        if cfg.etcd_peers:
-            etcd_peers = patt.to_nodes (cfg.etcd_peers, ssh_login, cfg.ssh_keyfile)
-        else:
+        assert cfg.dcs_type in ('etcd', 'etcd3', 'raft')
+        if cfg.dcs_type in ('etcd', 'etcd3') and cfg.dcs_peers:
+            is_dcs_etcd = True
+            etcd_peers = patt.to_nodes (cfg.dcs_peers, ssh_login, cfg.ssh_keyfile)
+        elif cfg.dcs_type in ('etcd', 'etcd3'):
             etcd_peers = nodes
+        else:
+            is_dcs_etcd = False
+            etcd_peers = []
+        if cfg.dcs_type == 'raft' and cfg.dcs_peers:
+            is_dcs_raft = True
+            raft_peers = patt.to_nodes (cfg.dcs_peers, ssh_login, cfg.ssh_keyfile)
+        else:
+            is_dcs_raft = False
+            raft_peers = []
 
         if cfg.postgres_peers:
             postgres_peers = patt.to_nodes (cfg.postgres_peers, ssh_login, cfg.ssh_keyfile)
@@ -198,22 +213,29 @@ if __name__ == "__main__":
 
         progress_bar (1, 14)
         # Peer check
-        for p in [etcd_peers, postgres_peers, haproxy_peers, sftpd_peers]:
+        for p in [etcd_peers, raft_peers, postgres_peers, haproxy_peers, sftpd_peers]:
             if not p: continue
             for n in patt.check_priv(p):
                 assert (n.sudo == True)
                 patt.host_id(p)
                 patt.host_ip_aliases(p)
         patt.check_dup_id ([p for p in etcd_peers])
+        patt.check_dup_id ([p for p in raft_peers])
         patt.check_dup_id ([p for p in postgres_peers])
         patt.check_dup_id ([p for p in haproxy_peers])
         patt.check_dup_id ([p for p in sftpd_peers])
 
         logger.info ("cluster name   : {}".format(cfg.cluster_name))
         logger.info ("cluster nodes  : {}".format([(n.hostname, n.ip_aliases) for n in nodes]))
-        logger.info ("etcd_peers     : {}".format([(n.hostname, n.id, n.ip_aliases) for n in etcd_peers]))
-        logger.info ("postgres_peers : {}".format(
-            [(n.hostname, n.id, n.ip_aliases) for n in postgres_peers]))
+        if etcd_peers:
+            logger.info ("etcd_peers     : {}".format(
+                [(n.hostname, n.id, n.ip_aliases) for n in etcd_peers]))
+        if raft_peers:
+            logger.info ("raft_peers     : {}".format(
+                [(n.hostname, n.id, n.ip_aliases) for n in raft_peers]))
+        if postgres_peers:
+            logger.info ("postgres_peers : {}".format(
+                [(n.hostname, n.id, n.ip_aliases) for n in postgres_peers]))
         if cfg.haproxy_template_file:
             logger.info ("haproxy_peers  : {}".format([(n.hostname, n.id) for n in haproxy_peers]))
         if sftpd_peers:
@@ -234,6 +256,7 @@ if __name__ == "__main__":
             config_file_target='/etc/nftables/postgres_patroni.nft',
             patroni_peers=postgres_peers,
             etcd_peers=etcd_peers,
+            raft_peers=raft_peers,
             haproxy_peers=haproxy_peers,
             postgres_clients=postgres_clients,
             monitoring_clients=monitoring_clients,
@@ -241,6 +264,7 @@ if __name__ == "__main__":
         assert nftables_configure_ok, "nftables configure error"
 
         sftpd_only_id = list(set([n.id for n in sftpd_peers]) - set([n.id for n in etcd_peers] +
+                                                                    [n.id for n in raft_peers] +
                                                                     [n.id for n in postgres_peers] +
                                                                     [n.id for n in haproxy_peers]))
         sftpd_only=[n for n in sftpd_peers if n.id in sftpd_only_id]
@@ -258,6 +282,11 @@ if __name__ == "__main__":
             vol_etcd_ok = patt_syst.disk_init (
                 etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd, user=None, mode='711')
             assert vol_etcd_ok, "vol etcd error"
+
+        if raft_peers and cfg.vol_size_raft:
+            vol_raft_ok = patt_syst.disk_init (
+                raft_peers, mnt="/var/lib/raft", vol_size=cfg.vol_size_raft, user=None, mode='711')
+            assert vol_raft_ok, "vol raft error"
 
         if postgres_peers and cfg.vol_size_pgsql:
             vol_pgsql_ok = patt_syst.disk_init (
@@ -283,8 +312,9 @@ if __name__ == "__main__":
             assert vol_walg_ok, "vol walg error"
         progress_bar (4, 14)
 
-        etcd_template = cfg.etcd_template_file if cfg.etcd_template_file else "config/etcd.conf.tmpl"
-        etcd_report = patt_etcd.etcd_init(cfg.cluster_name, etcd_peers, etcd_template=etcd_template)
+        if is_dcs_etcd:
+            etcd_template = cfg.etcd_template_file if cfg.etcd_template_file else "config/etcd.conf.tmpl"
+            etcd_report = patt_etcd.etcd_init(cfg.cluster_name, etcd_peers, etcd_template=etcd_template)
 
         progress_bar (5, 14)
 
@@ -403,7 +433,9 @@ if __name__ == "__main__":
 
             progress_bar (9, 14)
 
-        patt_patroni.patroni_init(cfg.postgres_release, cfg.patroni_release, postgres_peers)
+        patt_patroni.patroni_init(postgres_version=cfg.postgres_release,
+                                  patroni_version=cfg.patroni_release,
+                                  nodes=postgres_peers, dcs=cfg.dcs_type)
 
         progress_bar (10, 14)
 
@@ -435,6 +467,7 @@ if __name__ == "__main__":
                 template_src=cfg.patroni_template_file,
                 nodes=postgres_peers,
                 etcd_peers=etcd_peers,
+                raft_peers=raft_peers,
                 config_file_target='patroni.yaml',
                 user='postgres',
                 sysuser_pass=pass_dict,
@@ -445,12 +478,31 @@ if __name__ == "__main__":
             )
             assert patroni_configure_ok, "patroni configure error"
 
+            raft_only_id = list(set([n.id for n in raft_peers]) - set([n.id for n in postgres_peers]))
+            raft_only_peers=[n for n in raft_peers if n.id in raft_only_id]
+            if raft_only_peers:
+                patroni_raft_controller_configure_ok = patt_patroni.patroni_raft_controller_configure (
+                    cluster_name=cfg.cluster_name,
+                    nodes=raft_only_peers,
+                    raft_peers=raft_peers,
+                    config_file_target='',
+                    user=None)
+                assert patroni_raft_controller_configure_ok, "patroni raft controller configure error"
+
             progress_bar (11, 14)
+
+            disable_auto_failover_ok = patt_patroni.disable_auto_failover (
+                cfg.postgres_release, postgres_peers)
+            assert disable_auto_failover_ok, "disable auto failover error"
 
             patroni_report = patt_patroni.patroni_enable(cfg.postgres_release, cfg.patroni_release,
                                                          postgres_peers)
-            progress_bar (12, 14)
 
+            enable_auto_failover_ok = patt_patroni.enable_auto_failover (
+                cfg.postgres_release, postgres_peers)
+            assert enable_auto_failover_ok, "enable auto failover error"
+
+            progress_bar (12, 14)
 
             if cfg.haproxy_template_file:
                 patt_haproxy.haproxy_configure(cluster_name=cfg.cluster_name,
@@ -515,8 +567,10 @@ if __name__ == "__main__":
                         postgres_version=cfg.postgres_release)
                     assert walg_backup_service_command_ok, "enable backup_service_command error"
 
-            print ("\nEtcd Cluster\n{}".format(etcd_report))
-            logger.info ("Etcd Cluster {}".format(etcd_report))
+            if is_dcs_etcd:
+                print ("\nEtcd Cluster\n{}".format(etcd_report))
+                logger.info ("Etcd Cluster {}".format(etcd_report))
+
             if cfg.patroni_template_file:
                 patroni_cluster_info = patt_patroni.get_cluster_info(postgres_peers)
                 print ("\nPostgres Cluster\n{}".format(pformat(patroni_cluster_info)))

@@ -56,7 +56,8 @@ def nftables_enable(nodes):
     return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
 def nftables_configure(cluster_name, template_src, config_file_target,
-                       patroni_peers=[], etcd_peers=[], haproxy_peers=[], sftpd_peers=[],
+                       patroni_peers=[], etcd_peers=[], raft_peers=[],
+                       haproxy_peers=[], sftpd_peers=[],
                        postgres_clients=[], monitoring_clients=[], floating_ip=[]):
     nodes = list ({n.hostname: n for n in
                    patroni_peers + etcd_peers + haproxy_peers + sftpd_peers}.values())
@@ -70,6 +71,9 @@ def nftables_configure(cluster_name, template_src, config_file_target,
     x_etcd=[x.hostname for x in etcd_peers] + floating_ip
     if not x_etcd:
         x_etcd=['::1']
+    x_raft=[x.hostname for x in raft_peers] + floating_ip
+    if not x_raft:
+        x_raft=['::1']
     x_haproxy=[x.hostname for x in haproxy_peers] + floating_ip
     if not x_haproxy:
         x_haproxy=['::1']
@@ -93,17 +97,19 @@ def nftables_configure(cluster_name, template_src, config_file_target,
         return " ".join(e)
 
     result = patt.exec_script (nodes=nodes, src="./dscripts/nft_config.py", payload=template_src,
-                                args=['-t'] + [os.path.basename (template_src)] +
-                                ['-d'] + [config_file_target] +
-                                ['-p'] + x_patroni +
-                                list ([rm_vip(p.ip_aliases, floating_ip) for p in patroni_peers]) +
-                                ['-e'] + x_etcd +
-                                list ([rm_vip(e.ip_aliases, floating_ip) for e in etcd_peers]) +
-                                ['-x'] + x_haproxy +
-                                list ([rm_vip(x.ip_aliases, floating_ip) for x in haproxy_peers]) +
-                                ['-c'] + x_postgres_clients +
-                                ['-m'] + x_monitoring_clients,
-                                sudo=True)
+                               args=['-t'] + [os.path.basename (template_src)] +
+                               ['-d'] + [config_file_target] +
+                               ['-p'] + x_patroni +
+                               list ([rm_vip(p.ip_aliases, floating_ip) for p in patroni_peers]) +
+                               ['-e'] + x_etcd +
+                               list ([rm_vip(e.ip_aliases, floating_ip) for e in etcd_peers]) +
+                               ['-r'] + x_raft +
+                               list ([rm_vip(r.ip_aliases, floating_ip) for r in raft_peers]) +
+                               ['-x'] + x_haproxy +
+                               list ([rm_vip(x.ip_aliases, floating_ip) for x in haproxy_peers]) +
+                               ['-c'] + x_postgres_clients +
+                               ['-m'] + x_monitoring_clients,
+                               sudo=True)
     log_results (result)
     all_ok = not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
     if all_ok:

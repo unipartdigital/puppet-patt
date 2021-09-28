@@ -148,7 +148,7 @@ init() {
     patroni_version=${2:-"2.0.2"}
     pe_file="${3}"
     systemd_patroni="${4}"
-
+    dcs="${5}"
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
     case "${os_id}" in
@@ -174,7 +174,7 @@ init() {
     cat <<EOF | su - postgres
 PATH=$PATH:~/.local/bin
 python3 -m pip -q install --user -U requests
-python3 -m pip -q install --user patroni[etcd]==${patroni_version}
+python3 -m pip -q install --user patroni[${dcs}]==${patroni_version}
 EOF
 
     test -f "${srcdir}/${pe_file}" || { echo "error ${pe_file}" >&2 ; exit 1 ; }
@@ -249,6 +249,22 @@ patronictl -c ~/patroni.yaml list
 EOF
 }
 
+disable_auto_failover () {
+    postgres_version=$1
+    patroni_service=postgresql-${postgres_version}_patroni.service
+    cat <<EOF | su - postgres
+systemctl -q is-active ${patroni_service} && patronictl -c ~/patroni.yaml pause --wait
+EOF
+}
+
+enable_auto_failover () {
+    postgres_version=$1
+    patroni_service=postgresql-${postgres_version}_patroni.service
+    cat <<EOF | su - postgres
+systemctl -q is-active ${patroni_service} && patronictl -c ~/patroni.yaml resume --wait
+EOF
+}
+
 {
     flock -n 9 || exit 1
 
@@ -264,6 +280,14 @@ EOF
         'check')
             shift 1
             check "$@"
+            ;;
+        'disable_auto_failover')
+            shift 1
+            disable_auto_failover "$@"
+            ;;
+        'enable_auto_failover')
+            shift 1
+            enable_auto_failover "$@"
             ;;
         *)
             cat <<EOF

@@ -4,7 +4,8 @@
 class patt (
  String                  $cluster_name,
  Optional[Array[String]] $add_repo = [],
- Optional[Array[String]] $etcd_peers,
+ Optional[Array[String]] $dcs_peers,
+ Optional[Enum['etcd', 'etcd3', 'raft']] $dcs_type = '',
  Array[String]           $floating_ip,
  Optional[Array[String]] $haproxy_peers = [],
  Optional[String]        $haproxy_template_file = '',
@@ -39,6 +40,7 @@ class patt (
 
  Optional[String]        $vol_size_walg  = '2G',
  Optional[String]        $vol_size_etcd  = '2G',
+ Optional[String]        $vol_size_raft  = '1G',
  Optional[String]        $vol_size_pgsql = '2G',
  Optional[String]        $vol_size_pgsql_temp = '0',
  Optional[String]        $vol_size_pgsql_safe = '0',
@@ -89,14 +91,14 @@ class patt (
 
 $iplist = split(inline_epp('<%=$facts[all_ip]%>'), " ")
 
-if is_array($patt::etcd_peers) {
- $etcd_p = $patt::etcd_peers
+if is_array($patt::dcs_peers) {
+ $dcs_p = $patt::dcs_peers
 }else{
- $etcd_p = $patt::nodes
+ $dcs_p = $patt::nodes
 }
 
- $is_etcd = inline_epp(@(END))
-<% [$etcd_p].flatten.each |$peer| { -%>
+ $is_dcs = inline_epp(@(END))
+<% [$dcs_p].flatten.each |$peer| { -%>
 <% $iplist.flatten.each |$i| { -%>
 <% if $i == $peer { -%>
 <%=$i == $peer-%>
@@ -137,7 +139,7 @@ if is_array($patt::haproxy_peers) {
 <% } -%>
 |- END
 
-if "${patt::is_etcd}" == "true" {
+if "${patt::is_dcs}" == "true" {
  $is_peer_installer = "true"
 }elsif "${patt::is_postgres}" == "true" {
  $is_peer_installer = "true"
@@ -145,10 +147,23 @@ if "${patt::is_etcd}" == "true" {
  $is_peer_installer = "false"
 }
 
+if "${patt::is_dcs}" == "true" {
+ if "${patt::dcs_type}" == "etcd" or "${patt::dcs_type}" == "etcd3" {
+  $is_etcd = "true"
+ }else{
+  $is_etcd = false
+ }
+}else{
+ $is_etcd = false
+}
+
 # notify {"$iplist":
 #  withpath => true,
 #  }
 notify {"is installer peer: ${is_peer_installer}":
+ withpath => true,
+ }
+notify {"is dcs peer: ${is_dcs}":
  withpath => true,
  }
 notify {"is etcd peer: ${is_etcd}":
@@ -181,7 +196,7 @@ notify {"is haproxy peer: ${is_haproxy}":
 #  - '2001:db8:3c4d:15:f321:3eff:feb9:4802'
 #  - '2001:db8:3c4d:15:f321:3eff:fee0:b279'
 #  - '2001:db8:3c4d:15:f321:3eff:fe21:d83a'
-# patt::etcd_peers:
+# patt::dcs_peers:
 #  - '2001:db8:3c4d:15:f321:3eff:fee0:b279'
 #  - '2001:db8:3c4d:15:f321:3eff:fe21:d83a'
 #  - '2001:db8:3c4d:15:f321:3eff:feb9:4802'
@@ -211,6 +226,7 @@ notify {"is haproxy peer: ${is_haproxy}":
 # patt::ssh_keyfile: ''
 # patt::ssh_login: ''
 # patt::vol_size_etcd: '2G'
+# patt::vol_size_raft: '0'
 # patt::vol_size_pgsql: '8G'
 # patt::vol_size_pgsql_temp = '0',
 # patt::vol_size_pgsql_safe = '0',
