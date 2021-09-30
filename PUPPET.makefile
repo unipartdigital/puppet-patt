@@ -36,6 +36,7 @@ puppet-module:
 	install -m 644 config/pg_create_tablespace.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/backup_walg.service $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/df-recorder.service $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/patroni_raft_controller.service.tmpl $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d02.util.sh $(DESTDIR)/patt/files/patt/dscripts/
@@ -61,6 +62,7 @@ puppet-module:
 	install -m 644 dscripts/d22_tuned.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/tmpl2file.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/pg_wait_ready.sh $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/d12.raft_controller.sh $(DESTDIR)/patt/files/patt/dscripts/
 
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/patt/files/patt/misc/
 	install -m 644 misc/__init__.py $(DESTDIR)/patt/files/patt/misc/

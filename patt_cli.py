@@ -181,20 +181,17 @@ if __name__ == "__main__":
         nodes = patt.to_nodes (cfg.nodes, ssh_login, cfg.ssh_keyfile)
 
         assert cfg.dcs_type in ('etcd', 'etcd3', 'raft')
-        if cfg.dcs_type in ('etcd', 'etcd3') and cfg.dcs_peers:
+        dcs_peers = patt.to_nodes (cfg.dcs_peers, ssh_login, cfg.ssh_keyfile) if cfg.dcs_peers else nodes
+        if cfg.dcs_type in ('etcd', 'etcd3'):
             is_dcs_etcd = True
-            etcd_peers = patt.to_nodes (cfg.dcs_peers, ssh_login, cfg.ssh_keyfile)
-        elif cfg.dcs_type in ('etcd', 'etcd3'):
-            etcd_peers = nodes
-        else:
+            is_dcs_raft = False
+            etcd_peers = dcs_peers
+            raft_peers= []
+        elif cfg.dcs_type in ('raft'):
+            is_dcs_raft = True
             is_dcs_etcd = False
             etcd_peers = []
-        if cfg.dcs_type == 'raft' and cfg.dcs_peers:
-            is_dcs_raft = True
-            raft_peers = patt.to_nodes (cfg.dcs_peers, ssh_login, cfg.ssh_keyfile)
-        else:
-            is_dcs_raft = False
-            raft_peers = []
+            raft_peers = dcs_peers
 
         if cfg.postgres_peers:
             postgres_peers = patt.to_nodes (cfg.postgres_peers, ssh_login, cfg.ssh_keyfile)
@@ -243,7 +240,7 @@ if __name__ == "__main__":
 
         progress_bar (2, 14)
 
-        if cfg.add_repo:
+        if cfg.add_repo and is_dcs_etcd:
             add_repo_ok = patt_syst.add_repo (repo_url=cfg.add_repo, nodes=etcd_peers)
             assert add_repo_ok, "add repo error"
 
@@ -255,8 +252,8 @@ if __name__ == "__main__":
             template_src='./config/firewall.nft',
             config_file_target='/etc/nftables/postgres_patroni.nft',
             patroni_peers=postgres_peers,
-            etcd_peers=etcd_peers,
-            raft_peers=raft_peers,
+            etcd_peers=dcs_peers, # keep dsc ports open for all dcs in sets (raft and etcd)
+            raft_peers=dcs_peers, # could be restricted at the end of run if necessary
             haproxy_peers=haproxy_peers,
             postgres_clients=postgres_clients,
             monitoring_clients=monitoring_clients,
@@ -278,12 +275,12 @@ if __name__ == "__main__":
 
         progress_bar (3, 14)
 
-        if etcd_peers and cfg.vol_size_etcd:
+        if is_dcs_etcd and cfg.vol_size_etcd:
             vol_etcd_ok = patt_syst.disk_init (
                 etcd_peers, mnt="/var/lib/etcd", vol_size=cfg.vol_size_etcd, user=None, mode='711')
             assert vol_etcd_ok, "vol etcd error"
 
-        if raft_peers and cfg.vol_size_raft:
+        if is_dcs_raft and cfg.vol_size_raft:
             vol_raft_ok = patt_syst.disk_init (
                 raft_peers, mnt="/var/lib/raft", vol_size=cfg.vol_size_raft, user=None, mode='711')
             assert vol_raft_ok, "vol raft error"
@@ -459,6 +456,29 @@ if __name__ == "__main__":
                     pass_dict[u] = s
 
             enable_pg_temp = True if cfg.vol_size_pgsql_temp else False
+
+            disable_auto_failover_ok = patt_patroni.disable_auto_failover (
+                cfg.postgres_release, postgres_peers)
+            assert disable_auto_failover_ok, "disable auto failover error"
+
+            raft_only_id = list(set([n.id for n in raft_peers]) - set([n.id for n in postgres_peers]))
+            raft_only_peers=[n for n in raft_peers if n.id in raft_only_id]
+            if is_dcs_raft and raft_only_peers:
+                patroni_raft_init_ok = patt_patroni.patroni_raft_init (
+                    patroni_version=cfg.patroni_release, nodes=raft_only_peers)
+                assert patroni_raft_init_ok, "patroni raft init error"
+
+                patroni_raft_controller_configure_ok = patt_patroni.patroni_raft_controller_configure (
+                    cluster_name=cfg.cluster_name,
+                    nodes=raft_only_peers,
+                    raft_peers=raft_peers,
+                    config_file_target='raft.yaml',
+                    user='raft')
+                assert patroni_raft_controller_configure_ok, "patroni raft controller configure error"
+
+                patroni_raft_configure_ok = patt_patroni.patroni_raft_configure (nodes=raft_only_peers)
+                assert patroni_raft_configure_ok, "patroni raft configure error"
+
             # FIXME:
             # it may be required to re-run patroni_configure after temp_tablespace creation on bootstrap
             patroni_configure_ok=patt_patroni.patroni_configure(
@@ -468,6 +488,7 @@ if __name__ == "__main__":
                 nodes=postgres_peers,
                 etcd_peers=etcd_peers,
                 raft_peers=raft_peers,
+                dcs_type=cfg.dcs_type,
                 config_file_target='patroni.yaml',
                 user='postgres',
                 sysuser_pass=pass_dict,
@@ -478,22 +499,11 @@ if __name__ == "__main__":
             )
             assert patroni_configure_ok, "patroni configure error"
 
-            raft_only_id = list(set([n.id for n in raft_peers]) - set([n.id for n in postgres_peers]))
-            raft_only_peers=[n for n in raft_peers if n.id in raft_only_id]
-            if raft_only_peers:
-                patroni_raft_controller_configure_ok = patt_patroni.patroni_raft_controller_configure (
-                    cluster_name=cfg.cluster_name,
-                    nodes=raft_only_peers,
-                    raft_peers=raft_peers,
-                    config_file_target='',
-                    user=None)
-                assert patroni_raft_controller_configure_ok, "patroni raft controller configure error"
-
             progress_bar (11, 14)
 
-            disable_auto_failover_ok = patt_patroni.disable_auto_failover (
-                cfg.postgres_release, postgres_peers)
-            assert disable_auto_failover_ok, "disable auto failover error"
+            # disable_auto_failover_ok = patt_patroni.disable_auto_failover (
+            #     cfg.postgres_release, postgres_peers)
+            # assert disable_auto_failover_ok, "disable auto failover error"
 
             patroni_report = patt_patroni.patroni_enable(cfg.postgres_release, cfg.patroni_release,
                                                          postgres_peers)
@@ -567,19 +577,19 @@ if __name__ == "__main__":
                         postgres_version=cfg.postgres_release)
                     assert walg_backup_service_command_ok, "enable backup_service_command error"
 
-            if is_dcs_etcd:
-                print ("\nEtcd Cluster\n{}".format(etcd_report))
-                logger.info ("Etcd Cluster {}".format(etcd_report))
+        if is_dcs_etcd:
+            print ("\nEtcd Cluster\n{}".format(etcd_report))
+            logger.info ("Etcd Cluster {}".format(etcd_report))
 
-            if cfg.patroni_template_file:
-                patroni_cluster_info = patt_patroni.get_cluster_info(postgres_peers)
-                print ("\nPostgres Cluster\n{}".format(pformat(patroni_cluster_info)))
-                logger.info ("Postgres Cluster\n{}".format(pformat(patroni_cluster_info)))
+        if cfg.patroni_template_file:
+            patroni_cluster_info = patt_patroni.get_cluster_info(postgres_peers)
+            print ("\nPostgres Cluster\n{}".format(pformat(patroni_cluster_info)))
+            logger.info ("Postgres Cluster\n{}".format(pformat(patroni_cluster_info)))
 
-            if postgres_peers or sftpd_peers:
-                health_init = patt_health.health_init (postgres_peers + sftpd_peers)
-                assert health_init, "health init error"
-                health_configure = patt_health.health_configure (postgres_peers + sftpd_peers)
-                assert health_configure, "health configure error"
-                health_enable = patt_health.health_enable (postgres_peers + sftpd_peers)
-                assert health_enable, "health enable error"
+        if postgres_peers or sftpd_peers:
+            health_init = patt_health.health_init (postgres_peers + sftpd_peers)
+            assert health_init, "health init error"
+            health_configure = patt_health.health_configure (postgres_peers + sftpd_peers)
+            assert health_configure, "health configure error"
+            health_enable = patt_health.health_enable (postgres_peers + sftpd_peers)
+            assert health_enable, "health enable error"

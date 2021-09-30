@@ -233,6 +233,9 @@ enable() {
             elif [ -f "/tmp/patroni.reload" ]; then
                 systemctl reload postgresql-${postgres_version}_patroni && \
                     rm -f "/tmp/patroni.reload"
+            elif [ -f "/tmp/patroni.restart" ]; then
+                systemctl restart postgresql-${postgres_version}_patroni && \
+                    rm -f "/tmp/patroni.restart"
             fi
             ;;
         *)
@@ -245,7 +248,7 @@ enable() {
 
 check() {
     cat <<EOF | su - postgres
-patronictl -c ~/patroni.yaml list
+timout -v 10s patronictl -c ~/patroni.yaml list
 EOF
 }
 
@@ -253,7 +256,10 @@ disable_auto_failover () {
     postgres_version=$1
     patroni_service=postgresql-${postgres_version}_patroni.service
     cat <<EOF | su - postgres
-systemctl -q is-active ${patroni_service} && patronictl -c ~/patroni.yaml pause --wait
+{
+ systemctl -q is-active ${patroni_service} || return 0
+ timeout -v 10s  patronictl -c ~/patroni.yaml pause --wait
+}
 EOF
 }
 
@@ -261,7 +267,10 @@ enable_auto_failover () {
     postgres_version=$1
     patroni_service=postgresql-${postgres_version}_patroni.service
     cat <<EOF | su - postgres
-systemctl -q is-active ${patroni_service} && patronictl -c ~/patroni.yaml resume --wait
+{
+ systemctl -q is-active ${patroni_service} || return 1
+ timeout -v 10s patronictl -c ~/patroni.yaml resume --wait
+}
 EOF
 }
 

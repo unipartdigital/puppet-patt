@@ -1,0 +1,24 @@
+[Unit]
+Description=Patroni Raft Controller Only
+Documentation=https://patroni.readthedocs.io/en/latest/SETTINGS.html?highlight=patroni_raft_controller#raft
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=${raft_user}
+Group=${raft_group}
+Environment=PATH=${raft_bin}:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
+OOMScoreAdjust=-1000
+Environment=PG_OOM_ADJUST_FILE=/proc/self/oom_score_adj
+Environment=PG_OOM_ADJUST_VALUE=0
+ExecStart=${raft_bin}/patroni_raft_controller ${raft_controller_config_file}
+ExecReload=/bin/kill -HUP $$MAINPID
+KillMode=process
+KillSignal=SIGINT
+TimeoutSec=0
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
