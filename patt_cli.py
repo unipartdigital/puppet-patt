@@ -457,17 +457,25 @@ if __name__ == "__main__":
 
             enable_pg_temp = True if cfg.vol_size_pgsql_temp else False
 
-            disable_auto_failover_ok = patt_patroni.disable_auto_failover (
-                cfg.postgres_release, postgres_peers)
-            assert disable_auto_failover_ok, "disable auto failover error"
+            try:
+                disable_auto_failover_ok = patt_patroni.disable_auto_failover (
+                    cfg.postgres_release, postgres_peers)
+                assert disable_auto_failover_ok, "disable auto failover error"
+            except AssertionError as e:
+                logger.warning (e)
 
             raft_only_id = list(set([n.id for n in raft_peers]) - set([n.id for n in postgres_peers]))
             raft_only_peers=[n for n in raft_peers if n.id in raft_only_id]
             if is_dcs_raft and raft_only_peers:
+                # init
                 patroni_raft_init_ok = patt_patroni.patroni_raft_init (
                     patroni_version=cfg.patroni_release, nodes=raft_only_peers)
                 assert patroni_raft_init_ok, "patroni raft init error"
-
+                # config
+                patroni_raft_configure_ok = patt_patroni.patroni_raft_configure (
+                    nodes=raft_only_peers)
+                assert patroni_raft_configure_ok, "patroni raft configure error"
+                # raft.yaml
                 patroni_raft_controller_configure_ok = patt_patroni.patroni_raft_controller_configure (
                     cluster_name=cfg.cluster_name,
                     nodes=raft_only_peers,
@@ -475,9 +483,13 @@ if __name__ == "__main__":
                     config_file_target='raft.yaml',
                     user='raft')
                 assert patroni_raft_controller_configure_ok, "patroni raft controller configure error"
-
-                patroni_raft_configure_ok = patt_patroni.patroni_raft_configure (nodes=raft_only_peers)
-                assert patroni_raft_configure_ok, "patroni raft configure error"
+                # enable
+                patroni_raft_enable_ok = patt_patroni.patroni_raft_enable (nodes=raft_only_peers)
+                assert patroni_raft_enable_ok, "patroni raft enable error"
+            if is_dcs_raft:
+                patroni_pg_node_raft_configure_ok = patt_patroni.patroni_pg_node_raft_configure (
+                    nodes=postgres_peers)
+                assert patroni_pg_node_raft_configure_ok, "patroni pg node raft configure error"
 
             # FIXME:
             # it may be required to re-run patroni_configure after temp_tablespace creation on bootstrap

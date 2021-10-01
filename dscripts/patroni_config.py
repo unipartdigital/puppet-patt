@@ -300,7 +300,7 @@ class RaftConfig(BaseConfig):
 
    def __init__(self, cluster_name, nodes=[], raft_peers=[],
                 raft_port='7204', raft_data_dir='/var/lib/raft',
-                dst_file='', owner='', group='', touch=''):
+                dst_file='', owner='', group='', touch='/tmp/patroni_raft_controller.reload'):
       super().__init__()
       my_ip = _get_ip(nodes)
       self.tmpl={}
@@ -313,7 +313,7 @@ class RaftConfig(BaseConfig):
       self.owner = owner
       self.group = group
       self.touch = touch
-      self.output_mod = int("0o{}".format(640), 8)
+      self.output_mod = int("0o{}".format(644), 8)
 
 if __name__ == "__main__":
    parser = argparse.ArgumentParser()

@@ -59,25 +59,35 @@ selinux_policy () {
 init () {
     patroni_version=${1:-"2.0.2"}
     data_dir=${2:-"/var/lib/raft"}
+    raft_user=${3:-"${raft_controller_user}"}
     dcs="raft"
-    raft_user=${raft_controller_user}
     test "$(getent passwd  ${raft_user} | cut -d: -f1)" == "${raft_user}" || {
-        useradd --home-dir "/home/${raft_user}" --user-group  \
+        useradd --home-dir "${data_dir}" --user-group  \
                 --comment "Patroni Raft Controller" \
                 --system --no-log-init \
                 --shell /bin/false ${raft_user}
     }
-    test -d /home/${raft_user} || {
-        mkdir -m 711 -p /home/${raft_user}
-        chown ${raft_user}.${raft_user} /home/${raft_user}
+    test -d ${data_dir} || mkdir -m 711 ${data_dir}
+    test `stat -c "%a" ${data_dir}` == "711" || {
+        chmod 711 ${data_dir}
     }
-    test -d /home/${raft_user}/.cache || {
-        mkdir -m 700 -p /home/${raft_user}/.cache
-        chown ${raft_user}.${raft_user} /home/${raft_user}/.cache
+    test `stat -c "%U.%G" ${data_dir}` == "${raft_user}.${raft_user}" || {
+        chown ${raft_user}.${raft_user} ${data_dir}
     }
-
+    for i in ".cache" ".local"; do
+        test -d ${data_dir}/${i} || {
+            mkdir -m 700 -p ${data_dir}/${i}
+            chown ${raft_user}.${raft_user} ${data_dir}/${i}
+        }
+        test `stat -c "%U.%G" ${data_dir}/${i}` == "${raft_user}.${raft_user}" || {
+            chown  ${raft_user}.${raft_user} ${data_dir}/${i}
+        }
+        test `stat -c "%a" ${data_dir}/${i}` == "700" || {
+            chmod 700 ${data_dir}/${i}
+        }
+    done
     touch /tmp/patroni_pip.stamp
-    cat <<EOF | su - ${raft_user}
+    cat <<EOF | su ${raft_user} -s /bin/bash
 PATH=$PATH:~/.local/bin
 #python3 -m pip -q install --user -U requests
 python3 -m pip -q install --user patroni[${dcs}]==${patroni_version}
@@ -91,9 +101,7 @@ EOF
 
 configure () {
     systemd_raft_controller=${1:-"patroni_raft_controller.service.tmpl"}
-    #raft_controller_config_file=${2}
-    dcs="raft"
-    raft_user=${raft_controller_user}
+    raft_user=${2:-"${raft_controller_user}"}
     raft_home=$(getent passwd ${raft_user} | cut -d ':' -f 6)
     raft_controller_config_file="${raft_home}/raft.yaml"
 
@@ -105,8 +113,10 @@ configure () {
             --dictionary_key_val "raft_controller_config_file=${raft_controller_config_file}" \
             --chmod 644                                                                       \
             --touch /var/tmp/$(basename $0 .sh).systemd-reload
-    test -f /var/tmp/$(basename $0 .sh).systemd-reload && systemctl daemon-reload
-
+    test -f /var/tmp/$(basename $0 .sh).systemd-reload && {
+        systemctl daemon-reload
+        rm -f /var/tmp/$(basename $0 .sh).systemd-reload
+    }
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora')
             :
@@ -123,12 +133,13 @@ configure () {
 
 enable () {
     systemd_service=${1:-"patroni_raft_controller.service"}
-    raft_user_home="/home/${raft_controller_user}"
+    raft_user=${2:-"${raft_controller_user}"}
+    raft_home=$(getent passwd ${raft_user} | cut -d ':' -f 6)
     case "${os_id}" in
         'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
             if ! systemctl is-active --quiet ${systemd_service} ; then
                 systemctl start ${systemd_service} && systemctl enable ${systemd_service}
-            elif [ "x" != "x$(find -L ${raft_user_home}/.local/bin/patroni_raft_controller -newer /tmp/patroni_pip.stamp)" ]; then
+            elif [ "x" != "x$(find -L ${raft_home}/.local/bin/patroni_raft_controller -newer /tmp/patroni_pip.stamp)" ]; then
                 systemctl restart ${systemd_service}
             elif [ -f "/tmp/patroni_raft_controller.reload" ]; then
                 systemctl reload ${systemd_service}
@@ -141,6 +152,34 @@ enable () {
             ;;
     esac
     rm -f /tmp/patroni_pip.stamp
+}
+
+pg_node_configure () {
+    data_dir=${1:-"/var/lib/raft"}
+    postgres_user="postgres"
+    pg_user=`id -n -u ${postgres_user}`
+    pg_group=`id -n -g ${postgres_user}`
+
+    test -d ${data_dir} || mkdir -m 711 ${data_dir}
+    test `stat -c "%a" ${data_dir}` == "711" || {
+        chmod 711 ${data_dir}
+    }
+    test `stat -c "%U.%G" ${data_dir}` == "${pg_user}.${pg_group}" || {
+        chown ${pg_user}.${pg_group} ${data_dir}
+    }
+
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            :
+            ;;
+        'debian' | 'ubuntu')
+            :
+            ;;
+        *)
+            echo "unsupported release vendor: ${os_id}" 1>&2
+            exit 1
+            ;;
+    esac
 }
 
 touch ${lock_file} 2> /dev/null || true
@@ -162,6 +201,13 @@ case "${1:-''}" in
         shift 1
         { flock -w 10 8 || exit 1
           enable "$@"
+        } 8< ${lock_file}
+        ;;
+    # must be run at least on each postgres peer
+    'pg_node_configure')
+        shift 1
+        { flock -w 10 8 || exit 1
+          pg_node_configure "$@"
         } 8< ${lock_file}
         ;;
     *)

@@ -251,21 +251,53 @@ def enable_auto_failover (postgres_version, postgres_peers):
             continue
     return False
 
-def patroni_raft_init (patroni_version, nodes):
+"""
+raft only node init
+"""
+def patroni_raft_init (patroni_version, nodes, data_dir="/var/lib/raft", user="raft"):
     payload=[]
     result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
                                args=['init'] +
-                               [patroni_version],
+                               [patroni_version] + [data_dir] + [user],
                                sudo=True,
                                log_call=True)
     log_results (result)
     return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
-def patroni_raft_configure (nodes):
+"""
+raft only node configure
+"""
+def patroni_raft_configure (nodes, user="raft"):
     payload=['dscripts/tmpl2file.py', 'config/patroni_raft_controller.service.tmpl']
     result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
                                args=['configure'] +
-                               ['patroni_raft_controller.service.tmpl'],
+                               ['patroni_raft_controller.service.tmpl'] + [user],
+                               sudo=True,
+                               log_call=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+"""
+raft only node service enable
+"""
+def patroni_raft_enable (nodes, user="raft"):
+    payload=[]
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
+                               args=['enable'] +
+                               ['patroni_raft_controller.service'] + [user],
+                               sudo=True,
+                               log_call=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+"""
+postgres peer raft path configure
+"""
+def patroni_pg_node_raft_configure (nodes):
+    payload=['dscripts/tmpl2file.py', 'config/patroni_raft_controller.service.tmpl']
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
+                               args=['pg_node_configure'] +
+                               ['/var/lib/raft'],
                                sudo=True,
                                log_call=True)
     log_results (result)
