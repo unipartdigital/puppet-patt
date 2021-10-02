@@ -337,7 +337,7 @@ function toggle_help() {
         xhtml.append_child (div_side_nav, div_side_nav_a1)
 
         for fs in fs_list:
-            div_side_nav_a2 = xhtml.create_element ("a", Attr=[('href', '/df?m={}'.format(fs))])
+            div_side_nav_a2 = xhtml.create_element ("a", Attr=[('href', '/dfp?m={}'.format(fs))])
             xhtml.append_text (div_side_nav_a2, "↪ {}".format(fs))
             xhtml.append_child (div_side_nav, div_side_nav_a2)
 
@@ -528,8 +528,6 @@ def application(environ, start_response):
         js_name = "df_plot"
         status = None
         out_dir = '/tmp' if standalone else '/var/www/gnuplot/plots'
-        # a cache cleanup procedure is not implemented yet
-        # you may need to use systemd: systemd-tmpfiles-clean.timer and /etc/tmpfiles.d
         try:
             ssp = PlotFs()
 

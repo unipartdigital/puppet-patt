@@ -5,6 +5,7 @@ require {
         type unreserved_port_t;
         type user_home_t;
         type cache_home_t;
+        type gconf_home_t;
         type http_port_t;
         type httpd_sys_content_t;
         class dir { read add_name remove_name write };
@@ -23,19 +24,12 @@ allow httpd_t http_port_t:tcp_socket name_connect;
 allow httpd_t unreserved_port_t:tcp_socket name_connect;
 
 #!!!! This avc can be allowed using the boolean 'httpd_read_user_content'
-allow httpd_t user_home_t:dir read;
-
-#!!!! This avc can be allowed using the boolean 'httpd_read_user_content'
 allow httpd_t user_home_t:file { ioctl open read };
-
-#!!!! This avc can be allowed using the boolean 'httpd_read_user_content'
+allow httpd_t user_home_t:dir read;
+allow httpd_t gconf_home_t:dir read;
 allow httpd_t cache_home_t:dir { add_name remove_name write };
-
-#!!!! This avc can be allowed using the boolean 'httpd_read_user_content'
 allow httpd_t cache_home_t:file { getattr lock create open read unlink write map };
 
 #!!!! This avc can be allowed using the boolean 'httpd_unified'
 allow httpd_t httpd_sys_content_t:dir { add_name write };
-
-#!!!! This avc can be allowed using the boolean 'httpd_unified'
 allow httpd_t httpd_sys_content_t:file { create write };
