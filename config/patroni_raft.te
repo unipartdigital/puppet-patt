@@ -1,0 +1,20 @@
+# patroni_raft.te
+# checkmodule -M  -m  patroni_raft.te -o patroni_raft.mod
+# semodule_package -o patroni_raft.pp -m patroni_raft.mod
+# semodule -X 300 -i patroni_raft.pp
+
+module patroni_raft 1.0;
+
+require {
+        type init_t;
+        type unlabeled_t;
+        type unreserved_port_t;
+        class dir { add_name remove_name };
+        class file { create execute execute_no_trans map rename unlink write };
+        class tcp_socket name_connect;
+}
+
+#============= init_t ==============
+allow init_t unlabeled_t:dir { add_name remove_name };
+allow init_t unlabeled_t:file { create execute execute_no_trans map rename unlink write };
+allow init_t unreserved_port_t:tcp_socket name_connect;

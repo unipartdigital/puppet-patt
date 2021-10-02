@@ -37,6 +37,7 @@ puppet-module:
 	install -m 644 config/backup_walg.service $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/df-recorder.service $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/patroni_raft_controller.service.tmpl $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/patroni_raft.te $(DESTDIR)/patt/files/patt/config
 
 	install -m 644 dscripts/d01.nft.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d02.util.sh $(DESTDIR)/patt/files/patt/dscripts/

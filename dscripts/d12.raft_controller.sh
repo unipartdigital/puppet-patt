@@ -102,6 +102,8 @@ EOF
 configure () {
     systemd_raft_controller=${1:-"patroni_raft_controller.service.tmpl"}
     raft_user=${2:-"${raft_controller_user}"}
+    pe_file=${3:-"patroni_raft.te"}
+
     raft_home=$(getent passwd ${raft_user} | cut -d ':' -f 6)
     raft_controller_config_file="${raft_home}/raft.yaml"
 
@@ -117,18 +119,8 @@ configure () {
         systemctl daemon-reload
         rm -f /var/tmp/$(basename $0 .sh).systemd-reload
     }
-    case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
-            :
-            ;;
-        'debian' | 'ubuntu')
-            :
-            ;;
-        *)
-            echo "unsupported release vendor: ${os_id}" 1>&2
-            exit 1
-            ;;
-    esac
+
+    selinux_policy "${srcdir}/${pe_file}"
 }
 
 enable () {
@@ -156,6 +148,7 @@ enable () {
 
 pg_node_configure () {
     data_dir=${1:-"/var/lib/raft"}
+    pe_file=${2:-"patroni_raft.te"}
     postgres_user="postgres"
     pg_user=`id -n -u ${postgres_user}`
     pg_group=`id -n -g ${postgres_user}`
@@ -168,18 +161,7 @@ pg_node_configure () {
         chown ${pg_user}.${pg_group} ${data_dir}
     }
 
-    case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
-            :
-            ;;
-        'debian' | 'ubuntu')
-            :
-            ;;
-        *)
-            echo "unsupported release vendor: ${os_id}" 1>&2
-            exit 1
-            ;;
-    esac
+    selinux_policy "${srcdir}/${pe_file}"
 }
 
 touch ${lock_file} 2> /dev/null || true
