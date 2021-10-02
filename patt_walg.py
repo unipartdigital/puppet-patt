@@ -125,6 +125,7 @@ def walg_archiving_standalone_sftpd(cluster_name, nodes, listen_addr="::0", list
                                payload=tmpl,
                                args=['-t'] + [os.path.basename (tmpl)] +
                                ['-o'] + ["/etc/systemd/system/{}".format (os.path.basename (tmpl))] +
+                               ['--dictionary_key_val'] + ["listen_port={}".format(listen_port)] +
                                ['--chmod'] + ['644'],
                                sudo=True)
     log_results (result)
