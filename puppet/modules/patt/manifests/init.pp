@@ -4,8 +4,9 @@
 class patt (
  String                  $cluster_name,
  Optional[Array[String]] $add_repo = [],
- Optional[Array[String]] $dcs_peers,
- Optional[Enum['etcd', 'etcd3', 'raft']] $dcs_type = '',
+ Optional[Array[String]] $dcs_peers = [],
+ Optional[Enum['etcd', 'etcd3', 'raft']] $dcs_type = undef,
+ Optional[Array[String]] $etcd_peers = [],
  Array[String]           $floating_ip,
  Optional[Array[String]] $haproxy_peers = [],
  Optional[String]        $haproxy_template_file = '',
@@ -91,8 +92,10 @@ class patt (
 
 $iplist = split(inline_epp('<%=$facts[all_ip]%>'), " ")
 
-if is_array($patt::dcs_peers) {
+if is_array($patt::dcs_peers) and ! empty($patt::dcs_peers) {
  $dcs_p = $patt::dcs_peers
+}elsif is_array($patt::etcd_peers) and ! empty($patt::etcd_peers) {
+ $dcs_p = $patt::etcd_peers
 }else{
  $dcs_p = $patt::nodes
 }
@@ -107,7 +110,7 @@ if is_array($patt::dcs_peers) {
 <% } -%>
 |- END
 
-if is_array($patt::postgres_peers) {
+if is_array($patt::postgres_peers) and ! empty ($patt::postgres_peers) {
  $postgres_p = $patt::postgres_peers
 }else{
  $postgres_p = $patt::nodes
@@ -123,7 +126,7 @@ if is_array($patt::postgres_peers) {
 <% } -%>
 |- END
 
-if is_array($patt::haproxy_peers) {
+if is_array($patt::haproxy_peers) and ! empty ($patt::haproxy_peers) {
  $haproxy_p = $patt::haproxy_peers
 }else{
  $haproxy_p = []
@@ -196,6 +199,7 @@ notify {"is haproxy peer: ${is_haproxy}":
 #  - '2001:db8:3c4d:15:f321:3eff:feb9:4802'
 #  - '2001:db8:3c4d:15:f321:3eff:fee0:b279'
 #  - '2001:db8:3c4d:15:f321:3eff:fe21:d83a'
+# patt::dcs_type: 'etcd'
 # patt::dcs_peers:
 #  - '2001:db8:3c4d:15:f321:3eff:fee0:b279'
 #  - '2001:db8:3c4d:15:f321:3eff:fe21:d83a'

@@ -4,10 +4,22 @@ add_repo:
 - <%= $repo %>
 <% } -%>
 cluster_name: <%=$patt::cluster_name%>
+<% if ! empty($patt::dcs_peers) { -%>
 dcs_type: <%=$patt::dcs_type%>
 dcs_peers:
 <% [$patt::dcs_peers].flatten.each |$peer| { -%>
 - <%= $peer %>
+<% } -%>
+<% }elsif ! empty($patt::etcd_peers) { -%>
+<% if $patt::dcs_type == 'etcd' or $patt::dcs_type == 'etcd3' { -%>
+dcs_type: <%=$patt::dcs_type%>
+<% } else {-%>
+dcs_type: 'etcd'
+<% } -%>
+dcs_peers:
+<% [$patt::etcd_peers].flatten.each |$peer| { -%>
+- <%= $peer %>
+<% } -%>
 <% } -%>
 floating_ip:
 <% [$patt::floating_ip].flatten.each |$fip| { -%>
