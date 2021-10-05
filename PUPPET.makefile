@@ -68,6 +68,7 @@ puppet-module:
 	install -m 755 misc/self_signed_certificate.py $(DESTDIR)/patt/files/patt/misc/
 	install -m 644 misc/__init__.py $(DESTDIR)/patt/files/patt/misc/
 	install -m 644 misc/pg_auth-scram-helper.py $(DESTDIR)/patt/files/patt/misc/
+	install -m 644 misc/patroni_passwd.py $(DESTDIR)/patt/files/patt/misc/
 	install -m 755 monitoring/patt_monitoring.py $(DESTDIR)/patt/files/patt/monitoring/
 	install -m 755 monitoring/xhtml.py $(DESTDIR)/patt/files/patt/monitoring/
 	install -m 755 monitoring/cluster-health.wsgi $(DESTDIR)/patt/files/patt/monitoring/
