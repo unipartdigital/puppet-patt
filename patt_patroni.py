@@ -20,10 +20,10 @@ take a list of {'database': '', 'user': ''}
 def cert_pg_hba_list (db_user=[], key_db='database', key_user='user', key_cert='cert'):
     default_pg_hba_list = [
         'local    all         all                   ident',
-        'host     all         all         ::/0      md5',
-        'host     all         all         0.0.0.0/0 md5',
-        'host     replication replication ::/0      md5',
-        'host     replication replication 0.0.0.0/0 md5'
+        'host     all         all         ::/0      scram-sha-256',
+        'host     all         all         0.0.0.0/0 scram-sha-256',
+        'host     replication replication ::/0      scram-sha-256',
+        'host     replication replication 0.0.0.0/0 scram-sha-256'
     ]
     result = ["# TYPE   DATABASE   USER   ADDRESS   METHOD"]
     db_user = db_user if db_user else []

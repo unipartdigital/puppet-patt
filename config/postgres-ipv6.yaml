@@ -63,17 +63,17 @@ bootstrap:
   - local: en_GB.UTF-8
   - data-checksums
 #  - auth-local: ident
-#  - auth-host: md5
+#  - auth-host: scram-sha-256
 
   pg_hba:  # Add following lines to pg_hba.conf after running 'initdb'
   # For kerberos gss based connectivity (discard @.*$)
   #- host replication replicator 127.0.0.1/32 gss include_realm=0
   #- host all all 0.0.0.0/0 gss include_realm=0
   - local all all     ident
-  - host all all ::/0 md5
-  - host all all 0.0.0.0/0 md5
-  - host replication replication ::/0 md5
-  - host replication replication 0.0.0.0/0 md5
+  - host all all ::/0 scram-sha-256
+  - host all all 0.0.0.0/0 scram-sha-256
+  - host replication replication ::/0 scram-sha-256
+  - host replication replication 0.0.0.0/0 scram-sha-256
 
   # Additional script to be launched after initial cluster creation (will be passed the connection URL as parameter)
 # post_init: /usr/local/bin/setup_cluster.sh
@@ -117,6 +117,9 @@ postgresql:
     # same as KRB5CCNAME used by the GSS
 #   krb_server_keyfile: /var/spool/keytabs/postgres
     unix_socket_directories: '/var/run/postgresql'
+    password_encryption: 'scram-sha-256'
+    # if it's not a new deployment, make all users set new passwords
+    # misc/patroni_passwd.py (to update patroni passwords)
   callbacks:
 # run this script when configuration reload is triggered.
     on_reload:
