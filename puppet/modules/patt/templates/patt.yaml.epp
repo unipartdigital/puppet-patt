@@ -60,9 +60,11 @@ network_monitoring_clients:
 walg_release: <%=$patt::walg_release%>
 walg_url: <%=$patt::walg_url%>
 walg_sha256: <%=$patt::walg_sha256%>
-<%- unless empty($patt::walg_store) { -%>
-walg_store:
-<%- [$patt::walg_store].flatten.each |$store| { -%>
+
+archiver: <%=$patt::archiver%>
+<%- unless empty($patt::archive_store) { -%>
+archive_store:
+<%- [$patt::archive_store].flatten.each |$store| { -%>
  <%- if $store["method"] == "s3" { -%>
 - {
    method: 's3',
@@ -108,6 +110,8 @@ vol_size_raft: <%=$patt::vol_size_raft%>
 vol_size_pgsql: <%=$patt::vol_size_pgsql%>
 vol_size_pgsql_temp: <%=$patt::vol_size_pgsql_temp%>
 vol_size_pgsql_safe: <%=$patt::vol_size_pgsql_safe%>
+vol_size_pgsql_safe: <%=$patt::vol_size_pgbackrest%>
+
 gc_cron_df_pc: <%=$patt::gc_cron_df_pc%>
 gc_cron_target: <%=$patt::gc_cron_target%>
 

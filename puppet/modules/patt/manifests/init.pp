@@ -21,6 +21,7 @@ class patt (
  Optional[String]        $walg_release,
  Optional[String]        $walg_url = '',
  Optional[String]        $walg_sha256 = '',
+ Optional[Enum['walg', 'pgbackrest']] $archiver = walg,
  Optional[Array[Struct[{method => Enum[s3, sh],
                         # s3
                         profile => Optional[String],
@@ -32,7 +33,7 @@ class patt (
                         # sh
                         host => Optional[String],
                         identity_file => Optional[String],
-                        }]]] $walg_store = [],
+                        }]]] $archive_store = [],
  Optional[String]        $aws_credentials = '',
  Optional[String]        $ssh_keyfile = '',
  Optional[String]        $ssh_login = '',
@@ -45,6 +46,7 @@ class patt (
  Optional[String]        $vol_size_pgsql = '2G',
  Optional[String]        $vol_size_pgsql_temp = '0',
  Optional[String]        $vol_size_pgsql_safe = '0',
+ Optional[String]        $vol_size_pgbackrest = '0',
  # size may be increased between run but not shrinked
 
  Optional[String]        $install_dir='/usr/local/libexec/patt',
@@ -213,7 +215,7 @@ notify {"is haproxy peer: ${is_haproxy}":
 # patt::postgres_release: '13'
 # patt::patroni_release: '2.0.1'
 # patt::walg_release: 'v0.2.19'
-# patt::walg_store:
+# patt::archive_store:
 #  - {method: 's3', profile: 'default' # should match ~/.aws/credential [profile]',
 #     endpoint: 'http://aws.end.point:8080', prefix: 'bucket_name',
 #     region: 'eu-west-2',

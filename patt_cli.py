@@ -11,16 +11,18 @@ import time
 import sys
 import os
 from pprint import pformat
+import file_lock as fl
 
 import patt
 import patt_syst
 import patt_etcd
 import patt_postgres
-import patt_walg
+from patt_archiver import Archiver
+from patt_archiver_walg import ArchiverWalg
+from patt_archiver_pgbackrest import ArchiverPgbackrest
 import patt_patroni
 import patt_haproxy
 import patt_health
-import file_lock as fl
 
 logger = logging.getLogger('patt_cli')
 
@@ -35,6 +37,7 @@ class Config(object):
         self.vol_size_pgsql_temp = None
         self.vol_size_pgsql_safe = None
         self.vol_size_walg = None
+        self.vol_size_pgbackrest = None
         self.dcs_peers = None
         self.dcs_type = 'etcd'
         self.etcd_peers = None
@@ -50,7 +53,8 @@ class Config(object):
         self.walg_release = None
         self.walg_url = None
         self.walg_sha256 = None
-        self.walg_store = None
+        self.archiver = 'walg'
+        self.archive_store = None
         self.patroni_release = None
         self.patroni_template_file = None
         self.postgres_peers = None
@@ -203,10 +207,10 @@ if __name__ == "__main__":
             haproxy_peers = patt.to_nodes (cfg.haproxy_peers, ssh_login, cfg.ssh_keyfile)
 
         sftpd_peers = []
-        if cfg.walg_store:
+        if cfg.archive_store:
             sftpd_peers = [n for n in nodes if n.hostname in
                            [patt.ipv6_nri_split(x['host'])[1] for x in
-                            [c for c in cfg.walg_store if c['method'] == 'sh'] if 'host' in x]]
+                            [c for c in cfg.archive_store if c['method'] == 'sh'] if 'host' in x]]
 
         progress_bar (1, 14)
         # Peer check
@@ -307,6 +311,11 @@ if __name__ == "__main__":
             vol_walg_ok = patt_syst.disk_init (
                 sftpd_peers, mnt="/var/lib/walg", vol_size=cfg.vol_size_walg)
             assert vol_walg_ok, "vol walg error"
+        if sftpd_peers and cfg.vol_size_pgbackrest:
+            vol_pgbackrest_ok = patt_syst.disk_init (
+                sftpd_peers, mnt="/var/lib/pgbackrest", vol_size=cfg.vol_size_pgbackrest)
+            assert vol_pgbackrest_ok, "vol pgbackrest error"
+
         progress_bar (4, 14)
 
         if is_dcs_etcd:
@@ -343,49 +352,62 @@ if __name__ == "__main__":
 
         progress_bar (8, 14)
 
-        if cfg.walg_store and postgres_peers:
-            init_ok = patt_walg.walg_init(walg_version=cfg.walg_release,
-                                          walg_url=cfg.walg_url,
-                                          walg_sha256=cfg.walg_sha256,
-                                          nodes=postgres_peers)
-            assert init_ok, "wal-g installation error"
+        # archiving/backup
+        if cfg.archiver == 'walg':
+            # wal-g archiving
+            archiver = ArchiverWalg()
+        elif cfg.archiver == 'pgbackrest':
+            archiver = ArchiverPgbackrest()
+        else:
+            archiver = Archiver()
+
+        if cfg.archive_store and postgres_peers:
+            archiver_version=cfg.walg_release if cfg.archiver == 'walg' else None
+            archiver_url=cfg.walg_url if cfg.archiver == 'walg' else None
+            archiver_sha256=cfg.walg_sha256 if cfg.archiver == 'walg' else None
+
+            init_ok = archiver.package_init(version=archiver_version,
+                                            url=archiver_url,
+                                            sha256=archiver_sha256,
+                                            nodes=postgres_peers)
+            assert init_ok, "archiver package init error"
 
             # if args.aws_credentials:
-            aws_credentials_ok = patt_walg.walg_aws_credentials(
+            aws_credentials_ok = archiver.aws_credentials(
                 nodes=postgres_peers,
                 aws_credentials=args.aws_credentials,
                 error_on_file_not_found=False)
             assert aws_credentials_ok, "s3 aws credentials error"
 
             # s3 store definition
-            walg_s3_json_ok = patt_walg.walg_s3_json(postgres_version=cfg.postgres_release,
-                                                     cluster_name=cfg.cluster_name,
-                                                     nodes=postgres_peers,
-                                                     walg_store=cfg.walg_store)
-            assert walg_s3_json_ok, "s3 json config error"
+            s3_config_ok = archiver.s3_config(postgres_version=cfg.postgres_release,
+                                              cluster_name=cfg.cluster_name,
+                                              nodes=postgres_peers,
+                                              archive_store=cfg.archive_store)
+            assert s3_config_ok, "s3 config error"
 
             # sh store definition
-            walg_sh_json_ok = patt_walg.walg_sh_json(postgres_version=cfg.postgres_release,
-                                                     cluster_name=cfg.cluster_name,
-                                                     nodes=postgres_peers,
-                                                     walg_store=cfg.walg_store)
-            assert walg_sh_json_ok, "sh json config error"
+            sh_config_ok = archiver.sh_config(postgres_version=cfg.postgres_release,
+                                              cluster_name=cfg.cluster_name,
+                                              nodes=postgres_peers,
+                                              archive_store=cfg.archive_store)
+            assert sh_config_ok, "sh config error"
 
 
-            walg_s3_create_bucket_ok = patt_walg.walg_s3_create_bucket(nodes=postgres_peers,
-                                                                       walg_store=cfg.walg_store)
-            assert walg_s3_create_bucket_ok, "create bucket error"
+            s3_create_bucket_ok = archiver.s3_create_bucket(nodes=postgres_peers,
+                                                            archive_store=cfg.archive_store)
+            assert s3_create_bucket_ok, "create bucket error"
 
             # systemd backup service setup
-            walg_backup_service_setup_ok = patt_walg.walg_backup_service_setup(
+            backup_service_setup_ok = archiver.backup_service_setup(
                 postgres_version=cfg.postgres_release,
                 nodes=postgres_peers)
-            assert walg_backup_service_setup_ok, "walg backup service setup error"
+            assert backup_service_setup_ok, "backup service setup error"
 
             if sftpd_peers:
-                init_ok = patt_walg.walg_ssh_archiving_init(nodes=sftpd_peers)
-                sftpd_archiving = patt_walg.sftpd_peers_service(walg_store=cfg.walg_store,
-                                                                sftpd_peers=sftpd_peers)
+                init_ok = archiver.ssh_archiving_init(nodes=sftpd_peers)
+                sftpd_archiving = archiver.archiver_peers_service(archive_store=cfg.archive_store,
+                                                                  archive_peers=sftpd_peers)
                 for n in sftpd_archiving:
                     add_ok=None
                     retry_max=10
@@ -393,30 +415,30 @@ if __name__ == "__main__":
                     for i in range(retry_max):
                         try:
                             retry_count += 1
-                            add_ok = patt_walg.walg_archiving_add(cluster_name=cfg.cluster_name,
-                                                                  nodes=[n[0]],
-                                                                  port=n[1].port)
+                            add_ok = archiver.archiving_add(cluster_name=cfg.cluster_name,
+                                                            nodes=[n[0]],
+                                                            port=n[1].port)
                             assert add_ok
                         except AssertionError as e:
                             time.sleep(1)
                             continue
                         else:
                             break
-                        assert add_ok, "walg archiving {} add error after {} retry".format(
+                        assert add_ok, "archiver archiving {} add error after {} retry".format(
                             n.hostname, retry_count)
 
-                walg_keys = patt_walg.walg_ssh_gen(cluster_name=cfg.cluster_name, nodes=postgres_peers)
-                assert all(x == True for x in [bool(n) for n in walg_keys]), "walg public key error"
-                assert len(walg_keys) == len (postgres_peers), "walg public key error"
+                archiver_keys = archiver.ssh_keygen(cluster_name=cfg.cluster_name, nodes=postgres_peers)
+                assert all(x == True for x in [bool(n) for n in archiver_keys]), "archiver public key error"
+                assert len(archiver_keys) == len (postgres_peers), "archiver public key error"
 
                 for n in sftpd_archiving:
-                    walg_authorize_keys_ok = patt_walg.walg_authorize_keys(cfg.cluster_name,
-                                                                           nodes=[n[0]],
-                                                                           keys=walg_keys)
-                    assert walg_authorize_keys_ok, "error walg_authorize_keys"
+                    archiver_authorize_keys_ok = archiver.authorize_keys(cfg.cluster_name,
+                                                                         nodes=[n[0]],
+                                                                         keys=archiver_keys)
+                    assert archiver_authorize_keys_ok, "error archiver authorize keys"
 
                 for n in sftpd_archiving:
-                    known_hosts_ok = patt_walg.walg_ssh_known_hosts(
+                    known_hosts_ok = archiver.ssh_known_hosts(
                         cluster_name=cfg.cluster_name,
                         nodes=postgres_peers,
                         archiving_server=n[1].hostname,
@@ -582,12 +604,12 @@ if __name__ == "__main__":
                                                target=cfg.gc_cron_target,
                                                postgres_version=cfg.postgres_release)
 
-                if cfg.walg_store and postgres_peers:
-                    walg_backup_service_command_ok = patt_walg.walg_backup_service_command(
+                if cfg.archive_store and postgres_peers:
+                    backup_service_command_ok = archiver.backup_service_command(
                         nodes=postgres_peers,
                         command='enable',
                         postgres_version=cfg.postgres_release)
-                    assert walg_backup_service_command_ok, "enable backup_service_command error"
+                    assert backup_service_command_ok, "enable backup_service_command error"
 
         if is_dcs_etcd:
             print ("\nEtcd Cluster\n{}".format(etcd_report))

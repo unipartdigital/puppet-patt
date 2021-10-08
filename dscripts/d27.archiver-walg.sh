@@ -26,7 +26,7 @@ walg_version () {
     }
 }
 
-init () {
+pkg_init () {
     walg_release=${1:-"v0.2.19"}
     walg_url=${2:-""}
     walg_sha256=${3:-""}
@@ -86,75 +86,6 @@ init () {
     done
 }
 
-ssh_archiving_init () {
-    /sbin/semanage -h > /dev/null 2>&1 || {
-        case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
-                dnf -q -y install policycoreutils-python-utils
-                ;;
-            'debian' | 'ubuntu')
-                apt-get -qq -y install policycoreutils-python-utils
-                ;;
-            *)
-                echo "unsupported release vendor: ${os_id}" 1>&2
-                exit 1
-                ;;
-        esac
-    }
-}
-
-ssh_archive_keygen() {
-    cluster_name="${1}"
-    user_name="${2:-postgres}"
-    group="$(id -ng ${user_name})"
-    home="$(getent passwd  ${user_name} | cut -d: -f6)"
-    test -d ${home}/.ssh/ || mkdir -m 700 ${home}/.ssh/
-    test `stat -c "%U.%G" ${home}/.ssh/` == "${user_name}.${group}" || \
-        chown "${user_name}.${group}" ${home}/.ssh/
-    test -f ${home}/.ssh/walg_rsa.pub || {
-        cat <<EOF | su ${user_name}
-/usr/bin/ssh-keygen -q -t rsa -b 4096 -f ~/.ssh/walg_rsa -N "" -C "walg_${cluster_name}_`hostname -f`"
-EOF
-    }
-    test -f ${home}/.ssh/walg_rsa.pub && cat ${home}/.ssh/walg_rsa.pub
-    test -s  ${home}/.ssh/config || {
-        cat <<EOF > ${home}/.ssh/config
-Host *
-IdentityFile  ~/.ssh/walg_rsa
-IdentityFile  ~/.ssh/id_rsa
-EOF
-        chown "${user_name}.${group}" "${home}/.ssh/config"
-    }
-}
-
-ssh_archive_user_add () {
-    user_name=${1}
-    archive_base_dir=${2}
-    initial_login_group=${3:-"walg"}
-    test -d "${archive_base_dir}" || mkdir -p -m 711 "${archive_base_dir}"
-    test -d "${archive_base_dir}/${user_name}" || {
-        mkdir -p -m 711 "${archive_base_dir}/${user_name}"
-        case "${os_id}" in
-            'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
-                cat <<EOF | sudo su -
-/sbin/semanage fcontext -a -t user_home_dir_t "${archive_base_dir}/${user_name}"
-/sbin/restorecon -R "${archive_base_dir}/${user_name}"
-EOF
-                ;;
-        esac
-    }
-    test "$(getent group ${initial_login_group} | cut -d':' -f1)" == "${initial_login_group}" || {
-        groupadd --system "${initial_login_group}"
-    }
-    test "$(getent passwd  ${user_name} | cut -d: -f1)" == "${user_name}" || {
-        useradd --home-dir "${archive_base_dir}/${user_name}" --gid "${initial_login_group}" \
-                --comment "sftp chroot user" \
-                --system \
-                --no-log-init --no-create-home --no-user-group \
-                --shell /bin/false ${user_name}
-        chown "${user_name}"."${initial_login_group}" "${archive_base_dir}/${user_name}"
-    }
-}
 
 sshd_conf_tmpl () {
     chroot_dir="$1"
@@ -249,61 +180,6 @@ stat -c "%A %U.%G %n" "${archive_base_dir}/${cluster_name}"
 EOF
 }
 
-ssh_authorize_keys () {
-    cluster_name="${1}"
-    keys_file="${2}"
-    group="walg"
-    archive_base_dir=/var/lib/walg
-    test -d ${archive_base_dir}/${cluster_name}/.ssh/ || {
-        mkdir -p -m 700 ${archive_base_dir}/${cluster_name}/.ssh/
-        chown ${cluster_name}.${group} ${archive_base_dir}/${cluster_name}/.ssh/
-    }
-    test -s "${srcdir}/${keys_file}" || { echo "error: ${srcdir}/${keys_file}" ; exit 1 ; }
-    if [ -f "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys" ]; then
-        test "`sort -u ${srcdir}/${keys_file} | md5sum  | cut -d' ' -f1`" == "`sort -u ${archive_base_dir}/${cluster_name}/.ssh/authorized_keys | md5sum | cut -d' ' -f1`" || {
-            cat "${srcdir}/${keys_file}" > ${archive_base_dir}/${cluster_name}/.ssh/authorized_keys
-        }
-    else
-        cat "${srcdir}/${keys_file}" > "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
-    fi
-    chown "${cluster_name}" "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
-    chmod 600 "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
-}
-
-ssh_known_hosts () {
-    cluster_name="${1}"
-    archive_host="${2}"
-    archive_port="${3:-22}"
-    user_name="${4:-postgres}"
-    group="$(id -ng ${user_name})"
-    home="$(getent passwd  ${user_name} | cut -d: -f6)"
-    known_hosts="${home}/.ssh/known_hosts"
-    if test -s ${known_hosts} ; then
-        ssh-keyscan -t rsa -p ${archive_port} "${archive_host}" > "${known_hosts}.tmp"
-        if [ "${archive_port}" -eq 22 ]; then
-            match="^${archive_host}[[:space:]]"
-        else
-            match="^\[${archive_host}\]:${archive_port}[[:space:]]"
-        fi
-        new_md5=`grep "${match}" ${known_hosts}.tmp | sort -u | md5sum | cut -d' ' -f1`
-        old_md5=`grep "${match}" ${known_hosts} | sort -u | md5sum | cut -d' ' -f1`
-        if test "${new_md5}" == "${old_md5}" ; then
-            :
-            # no change
-        elif test "${old_md5}" == "d41d8cd98f00b204e9800998ecf8427e" ; then
-            cat ${known_hosts}.tmp >> "${known_hosts}"
-            # new archiving server
-        else
-            echo "error: known_hosts keys ${archive_host}" >&2
-            exit 1
-        fi
-        rm -f ${known_hosts}.tmp
-    else
-        ssh-keyscan -t rsa -p ${archive_port} "${archive_host}" > "${known_hosts}"
-        chown "${user_name}"."${group}" "${known_hosts}"
-    fi
-}
-
 sh_json () {
     postgresql_version=${1}
     cluster_name=${2}
@@ -378,62 +254,6 @@ python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${s3_conf
 EOF
 }
 
-aws_credentials () {
-    comd=${1:-"tmpl2file.py"}
-    awc=${2:-""}
-    pg_home=$(getent passwd postgres | cut -d':' -f 6)
-    test "x${pg_home}" != "x" || { echo "pg_home not found"     >&2 ; rm -f "${srcdir}/${awc}" ; exit 1 ; }
-    test -d ${pg_home} || { echo "${pg_home} not directory"     >&2 ; rm -f "${srcdir}/${awc}" ; exit 1 ; }
-    test -f ${srcdir}/${comd} || { echo "script file not found" >&2 ; rm -f "${srcdir}/${awc}" ; exit 1 ; }
-    test -f ${srcdir}/${awc} || { echo "credential file not found" >&2 ; exit 1 ; }
-
-    test -d ${pg_home}/.aws || {
-        mkdir -m 700 ${pg_home}/.aws && chown postgres.postgres ${pg_home}/.aws
-    }
-
-    python3 ${srcdir}/${comd} -t ${srcdir}/${awc} -o ${pg_home}/.aws/credentials \
-            --skip '#'                                                           \
-            --chmod 640
-    test "`stat -c '%U' ${pg_home}/.aws/credentials`" == "postgres" || {
-        chown "postgres" ${pg_home}/.aws/credentials
-    }
-    rm -f "${srcdir}/${awc}"
-}
-
-aws_credentials_dump () {
-    comd=${1:-"tmpl2file.py"}
-    pg_home=$(getent passwd postgres | cut -d':' -f 6)
-    test -f ${pg_home}/.aws/credentials && {
-        python3 ${srcdir}/${comd} -t ${pg_home}/.aws/credentials
-    }
-}
-
-s3_create_bucket () {
-    comd=$1
-    endpoint_url=$2
-    bucket=$3
-    aws_profile=$4
-    aws_region=$5
-    aws_force_path=$6
-    user_name=$7
-
-    chown "${user_name}" "${srcdir}"
-    chown "${user_name}" "${srcdir}/${comd}"
-
-    cat <<EOF | su - ${user_name} > /dev/null
-python3 -c "import boto3" 2> /dev/null || python3 -m pip -q install --user boto3
-EOF
-
-    cat <<EOF | su - ${user_name} | tail -n 1
-python3 ${srcdir}/${comd} --endpoint_url ${endpoint_url} \
- --bucket ${bucket} \
- --aws_profile ${aws_profile} \
- --aws_region ${aws_region} \
- --aws_force_path ${aws_force_path}
-EOF
-
-}
-
 backup_walg_service () {
     command=$1
     postgres_version=$2
@@ -477,17 +297,10 @@ case "${1:-''}" in
         } 8< ${lock_file}
         ;;
     # must be run on each postgres peer
-    'init')
+    'pkg_init')
         shift 1
         { flock -w 10 8 || exit 1
-          init "$@"
-        } 8< ${lock_file}
-        ;;
-    # must be run on the archive server
-    'ssh_archiving_init')
-        shift 1
-        { flock -w 10 8 || exit 1
-          ssh_archiving_init "$@"
+          pkg_init "$@"
         } 8< ${lock_file}
         ;;
     'ssh_archiving_add')
@@ -496,25 +309,7 @@ case "${1:-''}" in
           ssh_archiving_add "$@"
         } 8< ${lock_file}
         ;;
-    'ssh_authorize_keys')
-        shift 1
-        { flock -w 10 8 || exit 1
-          ssh_authorize_keys "$@"
-        } 8< ${lock_file}
-        ;;
     # must be run on each postgres peer
-    'ssh_archive_keygen')
-        shift 1
-        { flock -w 10 8 || exit 1
-          ssh_archive_keygen "$@"
-        } 8< ${lock_file}
-        ;;
-    'ssh_known_hosts')
-        shift 1
-        { flock -w 10 8 || exit 1
-          ssh_known_hosts "$@"
-        } 8< ${lock_file}
-        ;;
     'sh_json')
         shift 1
         { flock -w 10 8 || exit 1
@@ -527,24 +322,6 @@ case "${1:-''}" in
           s3_json "$@"
         } 8< ${lock_file}
         ;;
-    'aws_credentials')
-        shift 1
-        { flock -w 10 8 || exit 1
-          aws_credentials "$@"
-        } 8< ${lock_file}
-        ;;
-    'aws_credentials_dump')
-        shift 1
-        { flock -w 10 8 || exit 1
-          aws_credentials_dump "$@"
-        } 8< ${lock_file}
-        ;;
-    's3_create_bucket')
-        shift 1
-        { flock -w 10 8 || exit 1
-          s3_create_bucket "$@"
-        } 8< ${lock_file}
-        ;;
     'backup_walg_service')
         shift 1
         { flock -w 10 8 || exit 1
@@ -555,16 +332,10 @@ case "${1:-''}" in
         {
             cat <<EOF
 usage:
- $0 init <wal-g release version> ['v0.2.19']
- $0 ssh_archiving_init
+ $0 pkg_init <wal-g release version> ['v0.2.19']
  $0 ssh_archiving_add <cluster name>
- $0 ssh_archive_keygen
- $0 ssh_known_hosts <cluster name> <archive host IP>
  $0 sh_json
  $0 s3_json
- $0 aws_credentials
- $0 aws_credentials_dump
- $0 s3_create_bucket
  $0 backup_walg_service enable <postgres_version> | disable <postgres_version>
 EOF
             exit 1
