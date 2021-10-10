@@ -11,7 +11,7 @@ Subsystem   sftp   $subsystem
 
 AuthenticationMethods publickey
 AuthorizedKeysFile    .ssh/authorized_keys
-AllowGroups "walg"
-Match Group "walg"
+AllowGroups "${group}"
+Match Group "${group}"
       ForceCommand internal-sftp
-      ChrootDirectory "/var/lib/walg"
+      ChrootDirectory "${chroot}"

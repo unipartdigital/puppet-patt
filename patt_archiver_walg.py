@@ -48,67 +48,37 @@ class ArchiverWalg(Archiver):
         log_results (result)
         return all(x == True for x in [bool(n.out) for n in result])
 
-
     """
     preapare the archive server for chroot sftp
+    walg in sh mode only require sftp access (no shell required)
     """
-    def _archiving_standalone_sftpd(self, cluster_name, nodes, listen_addr="::0", listen_port=2222):
-        patt.host_id(nodes)
-        # patt.check_dup_id (nodes)
-
-        tmpl="./config/sftpd.service"
-        result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
-                                   payload=tmpl,
-                                   args=['-t'] + [os.path.basename (tmpl)] +
-                                   ['-o'] + ["/etc/systemd/system/{}".format (os.path.basename (tmpl))] +
-                                   ['--dictionary_key_val'] + ["listen_port={}".format(listen_port)] +
-                                   ['--chmod'] + ['644'],
-                                   sudo=True)
-        log_results (result)
-        assert not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
-
-        tmpl="./config/sftpd_config"
-        result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
-                                   payload=tmpl,
-                                   args=['-t'] + [os.path.basename (tmpl)] +
-                                   ['-o'] + ["/etc/ssh/{}".format (os.path.basename (tmpl))] +
-                                   ['--dictionary_key_val'] +
-                                   ["listen_address=[{}]:{}".format(listen_addr, listen_port)] +
-                                   ['--dictionary-rhel'] +
-                                   ["subsystem=/usr/libexec/openssh/sftp-server"] +
-                                   ['--dictionary-fedora'] +
-                                   ["subsystem=/usr/libexec/openssh/sftp-server"] +
-                                   ['--dictionary-centos'] +
-                                   ["subsystem=/usr/libexec/openssh/sftp-server"] +
-                                   ['--dictionary-debian'] +
-                                   ["subsystem=/usr/lib/openssh/sftp-server"] +
-                                   ['--dictionary-ubuntu'] +
-                                   ["subsystem=/usr/lib/openssh/sftp-server"] +
-                                   ['--chmod'] + ['644'],
-                                   sudo=True)
-        log_results (result)
-        assert not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
-
-    """
-    preapare the archive server for chroot sftp
-    """
-    def archiving_add(self, cluster_name, nodes, port):
+    def archiving_add(self, cluster_name, nodes, port, archive_base_dir="/var/lib/walg", group=None):
+        result_all = []
+        group = group if group else self.archiver_type
         cluster_name="".join(
             ['-' if i in [j for j in cluster_name if j not in valid_cluster_char + '-']
              else i for i in cluster_name])
         assert cluster_name[0] in valid_cluster_char
         patt.host_id(nodes)
         patt.check_dup_id (nodes)
-        if not port == 22:
+        if port == 22:
+            r = self.sftpd22_chroot (nodes, archive_base_dir=archive_base_dir, group=group)
+            result_all.append (r)
+            r = self.sftpd_command_disable (nodes=nodes)
+            result_all.append(r)
+        else:
             assert port > 1024, "error: restricted to unreserved or default ssh port only"
-            self._archiving_standalone_sftpd(cluster_name=cluster_name, nodes=nodes,
-                                             listen_addr="::0", listen_port=port)
+            r = self.archiving_standalone_sftpd(nodes=nodes, archive_base_dir=archive_base_dir,
+                                                group=group, listen_addr="::0", listen_port=port)
+            result_all.append (r)
+            r = self.sftpd_enable (nodes=nodes, port=port)
+            result_all.append(r)
 
-        result = patt.exec_script (nodes=nodes, src="./dscripts/d27.archiver-walg.sh",
-                                   args=['ssh_archiving_add'] + [cluster_name] + [port], sudo=True)
-        log_results (result)
-        return all(x == True for x in [bool(n.out == "drwx--x--x {}.{} {}".format (
-            cluster_name, "walg", "/var/lib/walg/" + cluster_name)) for n in result])
+        r = self.user_add(nodes=nodes, user_name=cluster_name, archive_base_dir=archive_base_dir,
+                          initial_group=group, user_shell="/bin/false")
+        result_all.append(r)
+        logger.debug("archiving_add result_all: {}".format(result_all))
+        return all(result_all)
 
     """
     s3 json config

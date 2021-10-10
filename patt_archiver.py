@@ -62,6 +62,7 @@ class Archiver(object):
     """
     def user_add(self, nodes, user_name, archive_base_dir,
                  initial_group="archiver", user_shell="/bin/false"):
+        archive_base_dir = os.path.abspath(archive_base_dir)
         patt.host_id(nodes)
         # patt.check_dup_id (nodes)
         result = patt.exec_script (nodes=nodes, src="./dscripts/d27.archiver.sh",
@@ -69,7 +70,93 @@ class Archiver(object):
                                    args=['ssh_archive_user_add'] + [user_name] +
                                    [archive_base_dir] + [initial_group] + [user_shell], sudo=True)
         log_results (result)
+        if any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')]):
+            return False
+        else:
+            return all(x == True for x in [bool(n.out == "drwx--x--x {}.{} {}".format (
+                user_name, initial_group, archive_base_dir + '/' + user_name)) for n in result])
+
+    """
+    append 'Match Group' and 'ChrootDirectory' directive into the main /etc/sshd_config file
+    """
+    def sftpd22_chroot (self, nodes, archive_base_dir, group="archiver"):
+        archive_base_dir = os.path.abspath(archive_base_dir)
+        patt.host_id(nodes)
+        # patt.check_dup_id (nodes)
+        result = patt.exec_script (nodes=nodes, src="./dscripts/d27.archiver.sh",
+                                   payload=[],
+                                   args=['sshd_configure'] + [archive_base_dir] + [group], sudo=True)
+        log_results (result)
         return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+
+    """
+    create a dedicated sftpd only service
+    """
+    def archiving_standalone_sftpd(self, nodes, archive_base_dir,
+                                   group="archiver", listen_addr="::0", listen_port=2222):
+        result_all = []
+        patt.host_id(nodes)
+        # patt.check_dup_id (nodes)
+        tmpl="./config/sftpd.service"
+        result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
+                                   payload=tmpl,
+                                   args=['-t'] + [os.path.basename (tmpl)] +
+                                   ['-o'] + ["/etc/systemd/system/{}".format (os.path.basename (tmpl))] +
+                                   ['--dictionary_key_val'] + ["listen_port={}".format(listen_port)] +
+                                   ['--chmod'] + ['644'],
+                                   sudo=True)
+        log_results (result)
+        r = not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+        result_all.append (r)
+
+        archive_base_dir = os.path.abspath(archive_base_dir)
+        tmpl="./config/sftpd_config"
+        result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
+                                   payload=tmpl,
+                                   args=['-t'] + [os.path.basename (tmpl)] +
+                                   ['-o'] + ["/etc/ssh/{}".format (os.path.basename (tmpl))] +
+                                   ['--dictionary_key_val'] +
+                                   ["listen_address=[{}]:{}".format(listen_addr, listen_port)] +
+                                   ['--dictionary_key_val'] +
+                                   ["chroot={}".format(archive_base_dir)] +
+                                   ['--dictionary_key_val'] +
+                                   ["group={}".format(group)] +
+                                   ['--dictionary-rhel'] +
+                                   ["subsystem=/usr/libexec/openssh/sftp-server"] +
+                                   ['--dictionary-fedora'] +
+                                   ["subsystem=/usr/libexec/openssh/sftp-server"] +
+                                   ['--dictionary-centos'] +
+                                   ["subsystem=/usr/libexec/openssh/sftp-server"] +
+                                   ['--dictionary-debian'] +
+                                   ["subsystem=/usr/lib/openssh/sftp-server"] +
+                                   ['--dictionary-ubuntu'] +
+                                   ["subsystem=/usr/lib/openssh/sftp-server"] +
+                                   ['--chmod'] + ['644'],
+                                   sudo=True)
+        log_results (result)
+        r = not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+        result_all.append(r)
+        logger.debug("archiving_standalone_sftpd result_all: {}".format(result_all))
+        return result_all
+
+    """
+    disable dedicated sftpd port
+    """
+    def sftpd_disable (self, nodes):
+        result = patt.exec_script (nodes=nodes, src="./dscripts/d27.archiver.sh",
+                                   args=['sftpd_command'] + ['disable'], sudo=True)
+        log_results (result)
+        return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+    """
+    enable dedicated sftpd port
+    """
+    def sftpd_enable (self, nodes, port=2222):
+        result = patt.exec_script (nodes=nodes, src="./dscripts/d27.archiver.sh",
+                                   args=['sftpd_command'] + ['enable'] + [port], sudo=True)
+        log_results (result)
+        return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
 
     """
     add the public keys into the archive server

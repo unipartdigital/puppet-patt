@@ -85,6 +85,7 @@ ssh_archive_user_add () {
                 --shell ${user_shell} ${user_name}
         chown "${user_name}"."${initial_login_group}" "${archive_base_dir}/${user_name}"
     }
+    stat -c "%A %U.%G %n" "${archive_base_dir}/${user_name}"
 }
 
 sshd_conf_tmpl () {
@@ -117,15 +118,15 @@ sshd_configure () {
     }
 }
 
-sftpd_configure () {
+sftpd_command () {
     command=${1}
-    sftpd_port=${2:-22}
+    sftpd_port=${2:-2222}
     sftpd_service="sftpd.service"
     cache_dir="/var/cache/sftpd"
     case "${command}" in
         'enable')
             test -d ${cache_dir} || mkdir ${cache_dir}
-            test -f ${cache_dir}/port || echo "2222" > ${cache_dir}/port
+            test -f ${cache_dir}/port || echo "${sftpd_port}" > ${cache_dir}/port
             #
             test "$(nft list set ip6 postgres_patroni sftp_archiving_port | awk '/elements/ {print $4}')" \
                  == "${sftpd_port}" || {
@@ -163,22 +164,6 @@ sftpd_configure () {
     esac
 }
 
-ssh_archiving_add () {
-    cluster_name=${1}
-    sftpd_port=${2}
-    archive_base_dir=/var/lib/walg
-    group="walg"
-    if [ "${sftpd_port}" == 22 ]; then
-        sshd_configure "${archive_base_dir}" "${group}"
-        sftpd_configure "disable"
-    else
-        sftpd_configure "enable" "${sftpd_port}"
-    fi
-    ssh_archive_user_add "${cluster_name}" "${archive_base_dir}" "walg"
-    cat <<EOF | sudo su
-stat -c "%A %U.%G %n" "${archive_base_dir}/${cluster_name}"
-EOF
-}
 
 ssh_authorize_keys () {
     user_name="${1}"
@@ -303,12 +288,6 @@ case "${1:-''}" in
           ssh_archiving_init "$@"
         } 8< ${lock_file}
         ;;
-    'ssh_archiving_add')
-        shift 1
-        { flock -w 10 8 || exit 1
-          ssh_archiving_add "$@"
-        } 8< ${lock_file}
-        ;;
     'ssh_authorize_keys')
         shift 1
         { flock -w 10 8 || exit 1
@@ -352,18 +331,31 @@ case "${1:-''}" in
           ssh_archive_user_add "$@"
         } 8< ${lock_file}
         ;;
+    'sshd_configure')
+        shift 1
+        { flock -w 10 8 || exit 1
+          sshd_configure "$@"
+        } 8< ${lock_file}
+        ;;
+    'sftpd_command')
+        shift 1
+        { flock -w 10 8 || exit 1
+          sftpd_command "$@"
+        } 8< ${lock_file}
+        ;;
     *)
         {
             cat <<EOF
 usage:
  $0 ssh_archiving_init
- $0 ssh_archiving_add <cluster name>
  $0 ssh_archive_keygen
  $0 ssh_known_hosts <cluster name> <archive host IP>
  $0 aws_credentials
  $0 aws_credentials_dump
  $0 s3_create_bucket
  $0 ssh_archive_user_add user_name archive_base_dir initial_login_group (archiver) user_shell (/bin/false)
+ $0 sshd_configure chroot_dir group
+ $0 sftpd_command enable port | disable
 EOF
             exit 1
         } >&2

@@ -86,100 +86,6 @@ pkg_init () {
     done
 }
 
-
-sshd_conf_tmpl () {
-    chroot_dir="$1"
-    group=${2:-"walg"}
-    cat <<EOF | sed -e "/\(^[[:space:]]*#.*\|^$\)/d"
-Match Group "${group}"
-      ForceCommand internal-sftp
-      ChrootDirectory "${chroot_dir}"
-EOF
-}
-
-sshd_configure () {
-    chroot_dir="$1"
-    group=${2:-"walg"}
-    sshd_config_old="/etc/ssh/sshd_config"
-    sshd_config_new="/etc/ssh/sshd_config.$$"
-    tmpl=`sshd_conf_tmpl "${chroot_dir}" "${group}"`
-    l1=$(echo "$tmpl" | head -n 1 | sed -e "s|^[[:space:]]*||")
-    l2=$(echo "$tmpl" | tail -n 1 | sed -e "s|^[[:space:]]*||")
-
-    test -n "$(sed -n -e "\@^[[:space:]]*${l1}@,\@^[[:space:]]*${l2}@p" ${sshd_config_old})" || {
-        cp --preserve=all ${sshd_config_old} ${sshd_config_new}
-        echo "$tmpl" >> ${sshd_config_new}
-        sshd -t -f ${sshd_config_new} && {
-            mv ${sshd_config_new} ${sshd_config_old}
-            pidfile=$(sshd -T -C user=root | sed -n -e "/pidfile/p" | cut -d' ' -f2)
-            kill -HUP $(cat $pidfile)
-        }
-    }
-}
-
-sftpd_configure () {
-    command=${1}
-    sftpd_port=${2:-22}
-    sftpd_service="sftpd.service"
-    cache_dir="/var/cache/sftpd"
-    case "${command}" in
-        'enable')
-            test -d ${cache_dir} || mkdir ${cache_dir}
-            test -f ${cache_dir}/port || echo "2222" > ${cache_dir}/port
-            #
-            test "$(nft list set ip6 postgres_patroni sftp_archiving_port | awk '/elements/ {print $4}')" \
-                 == "${sftpd_port}" || {
-                nft flush set ip6 postgres_patroni sftp_archiving_port
-                nft add element ip6 postgres_patroni sftp_archiving_port { "${sftpd_port}" }
-            }
-            test -f ${cache_dir}/port && {
-                prev_port="$(cat ${cache_dir}/port)"
-                if test "${sftpd_port}" == "${prev_port}" ; then
-                    :
-                else
-                    test "$(semanage port -lC | awk '/ssh_port_t/{print $NF}')" == "${prev_port}" && {
-                        semanage port -d -t ssh_port_t -p tcp ${prev_port}
-                    }
-                    semanage port -a -t ssh_port_t -p tcp ${sftpd_port}
-                    echo "${sftpd_port}" > ${cache_dir}/port
-                    systemctl restart ${sftpd_service}
-                fi
-            }
-            systemctl -q is-enabled ${sftpd_service} || systemctl enable --now ${sftpd_service}
-            systemctl -q is-active ${sftpd_service} || systemctl restart ${sftpd_service}
-            ;;
-        'disable')
-            systemctl disable --now ${sftpd_service}
-            nft flush set ip6 postgres_patroni sftp_archiving_port
-            test -f ${cache_dir}/port && {
-                prev_port="$(cat ${cache_dir}/port)"
-                test "$(semanage port -lC | awk '/ssh_port_t/{print $NF}')" == "${prev_port}" && {
-                    semanage port -d -t ssh_port_t -p tcp ${prev_port}
-                }
-                rm -f ${cache_dir}/port
-                rmdir ${cache_dir} || true
-            }
-            ;;
-    esac
-}
-
-ssh_archiving_add () {
-    cluster_name=${1}
-    sftpd_port=${2}
-    archive_base_dir=/var/lib/walg
-    group="walg"
-    if [ "${sftpd_port}" == 22 ]; then
-        sshd_configure "${archive_base_dir}" "${group}"
-        sftpd_configure "disable"
-    else
-        sftpd_configure "enable" "${sftpd_port}"
-    fi
-    ssh_archive_user_add "${cluster_name}" "${archive_base_dir}" "walg"
-    cat <<EOF | sudo su
-stat -c "%A %U.%G %n" "${archive_base_dir}/${cluster_name}"
-EOF
-}
-
 sh_json () {
     postgresql_version=${1}
     cluster_name=${2}
@@ -303,12 +209,6 @@ case "${1:-''}" in
           pkg_init "$@"
         } 8< ${lock_file}
         ;;
-    'ssh_archiving_add')
-        shift 1
-        { flock -w 10 8 || exit 1
-          ssh_archiving_add "$@"
-        } 8< ${lock_file}
-        ;;
     # must be run on each postgres peer
     'sh_json')
         shift 1
@@ -333,7 +233,6 @@ case "${1:-''}" in
             cat <<EOF
 usage:
  $0 pkg_init <wal-g release version> ['v0.2.19']
- $0 ssh_archiving_add <cluster name>
  $0 sh_json
  $0 s3_json
  $0 backup_walg_service enable <postgres_version> | disable <postgres_version>
