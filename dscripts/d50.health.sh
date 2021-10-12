@@ -93,8 +93,8 @@ configure () {
     wsgi_file2=${8:-"cluster-health-mini.wsgi"}
     wsgi_file3=${9:-"df_plot.wsgi"}
     wsgi_file4=${10:-"df_monitor.wsgi"}
-    pe_file=${11-:"cluster_health.te"}
-
+    pe_file=${11:-"cluster_health.te"}
+    cluster_config=${12:-"cluster_config.yaml"}
     wsgi_user=${cluster_health_user}
 
     test "$(getent passwd  ${wsgi_user} | cut -d: -f1)" == "${wsgi_user}" || {
@@ -216,6 +216,12 @@ configure () {
     test -f "${srcdir}/${pe_file}" || { echo "error ${pe_file}" >&2 ; exit 1 ; }
     selinux_policy "${srcdir}/${pe_file}"
 
+    chgrp `id -n -g ${wsgi_user}` ${srcdir} && chmod 750 ${srcdir}
+    cat <<EOF | su "${wsgi_user}" -s /bin/bash
+cd ${srcdir}
+python3 -c "import yaml" > /dev/null 2>&1 || python3 -m pip install --user pyyaml
+python3 df_monitor.wsgi -f ${cluster_config}
+EOF
 }
 
 enable () {

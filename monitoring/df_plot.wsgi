@@ -137,6 +137,32 @@ class PlotFs(SystemService):
             else:
                 self.statvfs_flog_db_store_ctrl ("del", path)
 
+    """
+    from df_monitor.wsgi
+    """
+    def statvfs_notice_get_limit(self, name):
+        result = {}
+        name = name[:-1] if (name[-1] == '/' and name != '/') else name
+        with PersistenceSQL3(database=self.database) as db3:
+            db3.row_factory = sqlite3.Row
+            if logger.level == logging.DEBUG:
+                db3.set_trace_callback(logger.debug)
+            try:
+                cur = db3.cursor()
+                cur.execute ("""
+                select path, limit_mb, limit_pc from stat_vfs_limit where path = ?;
+                """,(name,))
+                r = cur.fetchone()
+                if r:
+                    result['path'] = r[0]
+                    result['mb'] = r[1]
+                    result['pcent'] = r[2]
+                    return result
+                else: raise ValueError ('{} not found'.format(name))
+            except Exception as e:
+                logger.error(e)
+                pass
+
     def gnuplot_script (self, mnt_name, data_file_name, max_data_file_name, size_trigger=500):
         s = """
         set xtics rotate
@@ -177,7 +203,8 @@ class PlotFs(SystemService):
 """
  js_function_name: if not set use standalone mode
 """
-def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None, js_function_name=None):
+def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None, js_function_name=None,
+                       size_trigger=500):
 
     ssp = PlotFs()
 
@@ -211,7 +238,10 @@ def statvfs_plot2file (mnt_name, stamp_pivot=None, stamp_delta=1800, output=None
                 p.send("set terminal canvas standalone mousing")
 
             p.send(ssp.gnuplot_script (
-                mnt_name=mnt_name, data_file_name=data_file.name, max_data_file_name=max_data_file.name))
+                mnt_name=mnt_name,
+                data_file_name=data_file.name,
+                max_data_file_name=max_data_file.name,
+                size_trigger=size_trigger))
             p.close()
 
 """
@@ -530,7 +560,8 @@ def application(environ, start_response):
         out_dir = '/tmp' if standalone else '/var/www/gnuplot/plots'
         try:
             ssp = PlotFs()
-
+            lim = ssp.statvfs_notice_get_limit(m)
+            lim = lim['mb'] if 'mb' in lim else 500
             delta = int(delta) if delta else 1800
             pivot = pivot if pivot else time.mktime(time.gmtime()) - delta
             try:
@@ -548,7 +579,8 @@ def application(environ, start_response):
             else:
                 logger.info("gen cache: {}".format(fhtml))
                 statvfs_plot2file (
-                    m, stamp_pivot=pivot, stamp_delta=delta, output=fhtml, js_function_name=js_name
+                    m, stamp_pivot=pivot, stamp_delta=delta, output=fhtml, js_function_name=js_name,
+                    size_trigger=lim
                 )
                 ssp.statvfs_flog_db_store_ctrl("add", fhtml)
         except PlotFsValueError as e:

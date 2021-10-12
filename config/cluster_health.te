@@ -31,5 +31,5 @@ allow httpd_t cache_home_t:dir { add_name remove_name write };
 allow httpd_t cache_home_t:file { getattr lock create open read unlink write map };
 
 #!!!! This avc can be allowed using the boolean 'httpd_unified'
-allow httpd_t httpd_sys_content_t:dir { add_name write };
-allow httpd_t httpd_sys_content_t:file { create write };
+allow httpd_t httpd_sys_content_t:dir { add_name remove_name write };
+allow httpd_t httpd_sys_content_t:file { create unlink write };

@@ -131,3 +131,22 @@ backup_keep_away_schedule:
     - <%=$l%>
 <%- } -%>
 <%- } -%>
+
+disk_free_alert_threshold_default_mb: <%=$patt::disk_free_alert_threshold_default_mb%>
+disk_free_alert_threshold_default_pc: <%=$patt::disk_free_alert_threshold_default_pc%>
+<%- if empty ($patt::disk_free_alert_threshold) { -%>
+disk_free_alert_threshold: []
+<%- }else{ -%>
+disk_free_alert_threshold:
+<%- [$patt::disk_free_alert_threshold].flatten.each |$k| { -%>
+  - {
+      path: '<%=$k['path']%>',
+<%- if ! empty ($k["mb_free"]) { -%>
+      mb_free: <%=$k["mb_free"]%>,
+<%- } -%>
+<%- if ! empty ($k["pc_free"]) { -%>
+      pc_free: <%=$k["pc_free"]%>,
+<%- } -%>
+    }
+<%- } -%>
+<%- } -%>
