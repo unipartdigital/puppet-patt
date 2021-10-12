@@ -70,6 +70,13 @@ class patt (
  Optional[Array[String]] $network_allow_monitoring_clients = ['::0/0'],
  # nftables allowed network clients
 
+
+ Optional[Integer]         $disk_free_alert_threshold_default_mb = 1000,
+ Optional[Integer[0, 100]] $disk_free_alert_threshold_default_pc = 5,
+ Optional[Array[Struct[{path => String, mb_free => Optional[Integer], pc_free => Optional[Integer[0, 100]]}]]] $disk_free_alert_threshold = [],
+ # disk free alert threshold are applied cluster wide
+ # path not found on one node are ignored, only the last value set is relevant if there is duplicate path definition
+
  Optional[Boolean]        $backup_cleanup_dry_run = true,
  Optional[Integer]        $backup_cleanup_keep_days = 0,
  Optional[Integer]        $backup_cleanup_keep_hours = 0,

@@ -185,10 +185,38 @@ def application(environ, start_response):
         pass
 
 if __name__ == "__main__":
-    pass
-    # m_fs = MonitorFs()
-    # m_fs.statvfs_notice_add_limit(limits=[{'path': '/', 'mb': 100, 'pcent': 9}])
-    # m_fs.statvfs_notice_add_limit(limits=[{'path': '/', 'mb': 100, 'pcent': None}])
-    # m_fs.statvfs_notice_add_limit(limits=[{'path': '/', 'mb': None, 'pcent': 9}])
-    # m_fs.statvfs_notice_add_limit(limits=[{'path': '/', 'mb': None, 'pcent': None}])
-    # m_fs.statvfs_notice_check()
+    import argparse
+    import yaml
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f','--yaml_config_file', help='config file', required=True)
+    args = parser.parse_args()
+    try:
+        custom_notice = []
+        default_notice_mb = None
+        default_notice_pc = None
+        with open(args.yaml_config_file, 'r') as f:
+            try:
+                result=yaml.safe_load(f)
+                for k in result.keys():
+                    if k == 'disk_free_alert_threshold_default_mb':
+                        default_notice_mb=result[k]
+                        logger.debug ("default_notice_mb: {}".format(default_notice_mb))
+                    if k == 'disk_free_alert_threshold_default_pc':
+                        default_notice_pc=result[k]
+                        logger.debug ("default_notice_pc: {}".format(default_notice_pc))
+                    if k == 'disk_free_alert_threshold':
+                        custom_notice=result[k]
+                        logger.debug ("disk_free_alert_threshold: {}".format(custom_notice))
+            except yaml.YAMLError as e:
+                print(str(e), file=sys.stderr)
+                raise
+            except:
+                raise
+    except:
+        raise
+    else:
+        m_fs = MonitorFs()
+        m_fs.statvfs_notice_add_limit(limits=custom_notice,
+                                      limit_default_mb=default_notice_mb,
+                                      limit_default_pcent=default_notice_pc)
+        m_fs.statvfs_notice_check()

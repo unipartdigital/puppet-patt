@@ -69,6 +69,9 @@ class Config(object):
         self.create_database = None
         self.gc_cron_df_pc = 50
         self.gc_cron_target = "/etc/cron.hourly/postgres-gc.sh"
+        self.disk_free_alert_threshold = []
+        self.disk_free_alert_threshold_default_mb = 500
+        self.disk_free_alert_threshold_default_pc = 5
 
     def from_argparse_cli(self, args):
         for a in args._get_kwargs():
@@ -141,12 +144,14 @@ if __name__ == "__main__":
     cli.add_argument('--lock_dir', help='lock directory', required=False, default="/dev/shm")
 
     args = parser.parse_args()
+    cluster_config=None
     if args.interface == 'cli':
         cfg.from_argparse_cli (args)
         if args.yaml_dump:
             cfg.to_yaml()
     elif args.interface == 'yaml':
         cfg.from_yaml_file (args.yaml_config_file)
+        cluster_config=args.yaml_config_file
     else:
         print ("""
         Patt (deploy replicated PostgreSQL cluster managed by Patroni)
@@ -623,7 +628,7 @@ if __name__ == "__main__":
         if postgres_peers or sftpd_peers:
             health_init = patt_health.health_init (postgres_peers + sftpd_peers)
             assert health_init, "health init error"
-            health_configure = patt_health.health_configure (postgres_peers + sftpd_peers)
+            health_configure = patt_health.health_configure (postgres_peers + sftpd_peers, cluster_config)
             assert health_configure, "health configure error"
             health_enable = patt_health.health_enable (postgres_peers + sftpd_peers)
             assert health_enable, "health enable error"
