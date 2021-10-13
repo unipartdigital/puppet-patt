@@ -331,6 +331,7 @@ if __name__ == "__main__":
    pconf.add_argument('-s','--sys_user_pass', help='system user password dict', required=True, type=str)
    pconf.add_argument('--dcs_type', help='dcs type', required=True, type=str, default='etcd')
    pconf.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
+   pconf.add_argument('--raft_data_dir', help='raft data dir', required=False, default="/var/lib/raft")
    pconf.add_argument('--verbose', action="store_const", dest="loglevel", const=logging.INFO,
                       default=logging.ERROR)
    pconf.add_argument('--debug', action="store_const", dest="loglevel", const=logging.DEBUG,
@@ -344,6 +345,7 @@ if __name__ == "__main__":
    # peers argument should be called like: '-p p1 p2 p3'
    rconf.add_argument('-r','--raft_peers', help='raft peers', required=True, nargs='+', default=[])
    rconf.add_argument('--lock_dir', help='lock directory', required=False, default="/tmp")
+   rconf.add_argument('--raft_data_dir', help='raft data dir', required=False, default="/var/lib/raft")
    rconf.add_argument('--verbose', action="store_const", dest="loglevel", const=logging.INFO,
                       default=logging.ERROR)
    rconf.add_argument('--debug', action="store_const", dest="loglevel", const=logging.DEBUG,
@@ -383,6 +385,7 @@ if __name__ == "__main__":
                           nodes=args.postgres_peers,
                           etcd_peers=args.etcd_peers,
                           raft_peers=args.raft_peers,
+                          raft_data_dir=args.raft_data_dir,
                           sys_user_pass=args.sys_user_pass,
                           dst_file=destination_file,
                           dcs_type=args.dcs_type)
@@ -392,6 +395,7 @@ if __name__ == "__main__":
       rc = RaftConfig (cluster_name=args.cluster_name,
                        nodes=args.postgres_peers,
                        raft_peers=args.raft_peers,
+                       raft_data_dir=args.raft_data_dir,
                        dst_file=destination_file)
       rc.write ()
 

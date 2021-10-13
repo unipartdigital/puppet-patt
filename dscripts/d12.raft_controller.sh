@@ -60,6 +60,7 @@ init () {
     patroni_version=${1:-"2.0.2"}
     data_dir=${2:-"/var/lib/raft"}
     raft_user=${3:-"${raft_controller_user}"}
+    raft_home=$(getent passwd ${raft_controller_user} | cut -d':' -f 6)
     dcs="raft"
     test "$(getent passwd  ${raft_user} | cut -d: -f1)" == "${raft_user}" || {
         useradd --home-dir "${data_dir}" --user-group  \
@@ -67,7 +68,7 @@ init () {
                 --system --no-log-init \
                 --shell /bin/false ${raft_user}
     }
-    test -d ${data_dir} || mkdir -m 711 ${data_dir}
+    test -d ${data_dir} || mkdir -p -m 711 ${data_dir}
     test `stat -c "%a" ${data_dir}` == "711" || {
         chmod 711 ${data_dir}
     }
@@ -75,15 +76,15 @@ init () {
         chown ${raft_user}.${raft_user} ${data_dir}
     }
     for i in ".cache" ".local"; do
-        test -d ${data_dir}/${i} || {
-            mkdir -m 700 -p ${data_dir}/${i}
-            chown ${raft_user}.${raft_user} ${data_dir}/${i}
+        test -d ${raft_home}/${i} || {
+            mkdir -p -m 700 ${raft_home}/${i}
+            chown ${raft_user}.${raft_user} ${raft_home}/${i}
         }
-        test `stat -c "%U.%G" ${data_dir}/${i}` == "${raft_user}.${raft_user}" || {
-            chown  ${raft_user}.${raft_user} ${data_dir}/${i}
+        test `stat -c "%U.%G" ${raft_home}/${i}` == "${raft_user}.${raft_user}" || {
+            chown  ${raft_user}.${raft_user} ${raft_home}/${i}
         }
-        test `stat -c "%a" ${data_dir}/${i}` == "700" || {
-            chmod 700 ${data_dir}/${i}
+        test `stat -c "%a" ${raft_home}/${i}` == "700" || {
+            chmod 700 ${raft_home}/${i}
         }
     done
     touch /tmp/patroni_pip.stamp
@@ -93,7 +94,7 @@ PATH=$PATH:~/.local/bin
 python3 -m pip -q install --user patroni[${dcs}]==${patroni_version}
 EOF
 
-    test -d ${data_dir} || mkdir -m 711 ${data_dir}
+    test -d ${data_dir} || mkdir -p -m 711 ${data_dir}
     test `stat -c "%U.%G" ${data_dir}` == "${raft_user}.${raft_user}" || {
         chown ${raft_user}.${raft_user} ${data_dir}
     }
@@ -153,7 +154,7 @@ pg_node_configure () {
     pg_user=`id -n -u ${postgres_user}`
     pg_group=`id -n -g ${postgres_user}`
 
-    test -d ${data_dir} || mkdir -m 711 ${data_dir}
+    test -d ${data_dir} || mkdir -p -m 711 ${data_dir}
     test `stat -c "%a" ${data_dir}` == "711" || {
         chmod 711 ${data_dir}
     }
