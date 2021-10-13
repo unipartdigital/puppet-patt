@@ -73,7 +73,7 @@ def patroni_enable(postgres_version, patroni_version, nodes):
 def patroni_configure(postgres_version, cluster_name, template_src, nodes,
                       config_file_target, sysuser_pass, postgres_parameters,
                       pg_hba_list=cert_pg_hba_list(), user=None, enable_pg_temp=False,
-                      etcd_peers=[], raft_peers=[], dcs_type='etcd'):
+                      etcd_peers=[], raft_peers=[], dcs_type='etcd', raft_data_dir="/var/lib/raft"):
     tmpl=""
     with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as tmpl_file:
         if os.path.isfile(template_src):
@@ -112,7 +112,9 @@ def patroni_configure(postgres_version, cluster_name, template_src, nodes,
                                    ['-p'] + [n.hostname for n in nodes] +
                                    opt_args +
                                    ['-s'] + ['"' + str(sysuser_pass) + '"'] +
-                                   ['--dcs_type'] + [dcs_type] + ['--debug'],
+                                   ['--dcs_type'] + [dcs_type] +
+                                   ['--raft_data_dir'] + [raft_data_dir] +
+                                   ['--debug'],
                                    sudo=True,
                                    log_call=False)
         log_results (result)
@@ -202,7 +204,8 @@ def get_leader (postgres_peers):
 """
 add only the ['raft'] config elements. to be used with raft only node.
 """
-def patroni_raft_controller_configure(cluster_name, nodes, config_file_target, user=None, raft_peers=[]):
+def patroni_raft_controller_configure(cluster_name, nodes, config_file_target, user=None,
+                                      raft_peers=[], raft_data_dir="/var/lib/raft"):
     result = patt.exec_script (nodes=nodes, src="./dscripts/patroni_config.py", payload=[],
                                args=['RaftConfig'] +
                                ['-c'] + [cluster_name] +
@@ -210,6 +213,7 @@ def patroni_raft_controller_configure(cluster_name, nodes, config_file_target, u
                                ['-u'] + [user] +
                                ['-p'] + [n.hostname for n in nodes] +
                                ['-r'] + [n.hostname for n in raft_peers] +
+                               ['--raft_data_dir'] + [raft_data_dir] +
                                ['--debug'],
                                sudo=True,
                                log_call=True)
@@ -254,11 +258,11 @@ def enable_auto_failover (postgres_version, postgres_peers):
 """
 raft only node init
 """
-def patroni_raft_init (patroni_version, nodes, data_dir="/var/lib/raft", user="raft"):
+def patroni_raft_init (patroni_version, nodes, raft_data_dir="/var/lib/raft", user="raft"):
     payload=[]
     result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
                                args=['init'] +
-                               [patroni_version] + [data_dir] + [user],
+                               [patroni_version] + [raft_data_dir] + [user],
                                sudo=True,
                                log_call=True)
     log_results (result)
@@ -268,7 +272,9 @@ def patroni_raft_init (patroni_version, nodes, data_dir="/var/lib/raft", user="r
 raft only node configure
 """
 def patroni_raft_configure (nodes, user="raft"):
-    payload=['dscripts/tmpl2file.py', 'config/patroni_raft_controller.service.tmpl', 'config/patroni_raft.te']
+    payload=['dscripts/tmpl2file.py',
+             'config/patroni_raft_controller.service.tmpl',
+             'config/patroni_raft.te']
     result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
                                args=['configure'] +
                                ['patroni_raft_controller.service.tmpl'] + [user] + ['patroni_raft.te'],
@@ -293,11 +299,13 @@ def patroni_raft_enable (nodes, user="raft"):
 """
 postgres peer raft path configure
 """
-def patroni_pg_node_raft_configure (nodes):
-    payload=['dscripts/tmpl2file.py', 'config/patroni_raft_controller.service.tmpl', 'config/patroni_raft.te']
+def patroni_pg_node_raft_configure (nodes, raft_data_dir="/var/lib/raft"):
+    payload=['dscripts/tmpl2file.py',
+             'config/patroni_raft_controller.service.tmpl',
+             'config/patroni_raft.te']
     result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
                                args=['pg_node_configure'] +
-                               ['/var/lib/raft'] + ['patroni_raft.te'],
+                               [raft_data_dir] + ['patroni_raft.te'],
                                sudo=True,
                                log_call=True)
     log_results (result)

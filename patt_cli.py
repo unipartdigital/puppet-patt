@@ -173,6 +173,22 @@ if __name__ == "__main__":
     else:
         lock_filename = '/dev/shm/' + os.path.basename (__file__).split('.')[0] + '.lock'
 
+    # sanitize check (only warning)
+    valid_cluster_char="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    try:
+        cluster_name="".join(
+            ['-' if i in [j for j in cfg.cluster_name if j not in valid_cluster_char + '-']
+             else i for i in cfg.cluster_name])
+        assert cluster_name[0] in valid_cluster_char
+        assert cfg.cluster_name == cluster_name, "cluster_name should be: {}".format(cluster_name)
+    except Exception as e:
+        logger.warning (e)
+        pass
+
+    # some constant definition (could reuse cluster_config)
+    raft_mnt_dir = os.path.abspath("/var/lib/raft")
+    raft_data_dir = os.path.abspath("{}/{}".format(raft_mnt_dir, cfg.cluster_name))
+
     lock = fl.file_lock(lock_filename)
     with lock:
         time_logger_handler = TimedRotatingFileHandler(filename=log_file, when='D', # 'H' Hours 'D' Days
@@ -291,7 +307,7 @@ if __name__ == "__main__":
 
         if is_dcs_raft and cfg.vol_size_raft:
             vol_raft_ok = patt_syst.disk_init (
-                raft_peers, mnt="/var/lib/raft", vol_size=cfg.vol_size_raft, user=None, mode='711')
+                raft_peers, mnt=raft_mnt_dir, vol_size=cfg.vol_size_raft, user=None, mode='711')
             assert vol_raft_ok, "vol raft error"
 
         if postgres_peers and cfg.vol_size_pgsql:
@@ -496,7 +512,7 @@ if __name__ == "__main__":
             if is_dcs_raft and raft_only_peers:
                 # init
                 patroni_raft_init_ok = patt_patroni.patroni_raft_init (
-                    patroni_version=cfg.patroni_release, nodes=raft_only_peers)
+                    patroni_version=cfg.patroni_release, nodes=raft_only_peers, raft_data_dir=raft_data_dir)
                 assert patroni_raft_init_ok, "patroni raft init error"
                 # config
                 patroni_raft_configure_ok = patt_patroni.patroni_raft_configure (
@@ -508,14 +524,15 @@ if __name__ == "__main__":
                     nodes=raft_only_peers,
                     raft_peers=raft_peers,
                     config_file_target='raft.yaml',
-                    user='raft')
+                    user='raft',
+                    raft_data_dir=raft_data_dir)
                 assert patroni_raft_controller_configure_ok, "patroni raft controller configure error"
                 # enable
                 patroni_raft_enable_ok = patt_patroni.patroni_raft_enable (nodes=raft_only_peers)
                 assert patroni_raft_enable_ok, "patroni raft enable error"
             if is_dcs_raft:
                 patroni_pg_node_raft_configure_ok = patt_patroni.patroni_pg_node_raft_configure (
-                    nodes=postgres_peers)
+                    nodes=postgres_peers, raft_data_dir=raft_data_dir)
                 assert patroni_pg_node_raft_configure_ok, "patroni pg node raft configure error"
 
             # FIXME:
@@ -527,6 +544,7 @@ if __name__ == "__main__":
                 nodes=postgres_peers,
                 etcd_peers=etcd_peers,
                 raft_peers=raft_peers,
+                raft_data_dir=raft_data_dir,
                 dcs_type=cfg.dcs_type,
                 config_file_target='patroni.yaml',
                 user='postgres',
