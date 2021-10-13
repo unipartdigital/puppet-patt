@@ -112,7 +112,10 @@ if __name__ == "__main__":
             write_out=True
             if os.path.isfile(output):
                 buf = io.StringIO()
-                print(tmpl.substitute(d), file=buf)
+                if d:
+                    print(tmpl.substitute(d), file=buf)
+                else:
+                    print(tmpl.safe_substitute(d), file=buf)
                 src_md5=hashlib.md5()
                 src_md5.update(buf.getvalue().encode('utf8'))
                 src_hexdigest=src_md5.hexdigest()
@@ -122,7 +125,10 @@ if __name__ == "__main__":
                     write_out=False
             if write_out:
                 with open(output, 'w') as f:
-                    print(tmpl.substitute(d), file=f)
+                    if d:
+                        print(tmpl.substitute(d), file=f)
+                    else:
+                        print(tmpl.safe_substitute(d), file=f)
                 if args.touch:
                     touch (args.touch)
             if output_mod:
@@ -133,7 +139,10 @@ if __name__ == "__main__":
             raise
     else:
         try:
-            print(tmpl.substitute(d))
+            if d:
+                print(tmpl.substitute(d))
+            else:
+                print(tmpl.safe_substitute(d))
         except:
             raise
 

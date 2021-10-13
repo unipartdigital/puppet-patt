@@ -4,9 +4,22 @@ add_repo:
 - <%= $repo %>
 <% } -%>
 cluster_name: <%=$patt::cluster_name%>
-etcd_peers:
+<% if ! empty($patt::dcs_peers) { -%>
+dcs_type: <%=$patt::dcs_type%>
+dcs_peers:
+<% [$patt::dcs_peers].flatten.each |$peer| { -%>
+- <%= $peer %>
+<% } -%>
+<% }elsif ! empty($patt::etcd_peers) { -%>
+<% if $patt::dcs_type == 'etcd' or $patt::dcs_type == 'etcd3' { -%>
+dcs_type: <%=$patt::dcs_type%>
+<% } else {-%>
+dcs_type: 'etcd'
+<% } -%>
+dcs_peers:
 <% [$patt::etcd_peers].flatten.each |$peer| { -%>
 - <%= $peer %>
+<% } -%>
 <% } -%>
 floating_ip:
 <% [$patt::floating_ip].flatten.each |$fip| { -%>
@@ -47,9 +60,11 @@ network_monitoring_clients:
 walg_release: <%=$patt::walg_release%>
 walg_url: <%=$patt::walg_url%>
 walg_sha256: <%=$patt::walg_sha256%>
-<%- unless empty($patt::walg_store) { -%>
-walg_store:
-<%- [$patt::walg_store].flatten.each |$store| { -%>
+
+archiver: <%=$patt::archiver%>
+<%- unless empty($patt::archive_store) { -%>
+archive_store:
+<%- [$patt::archive_store].flatten.each |$store| { -%>
  <%- if $store["method"] == "s3" { -%>
 - {
    method: 's3',
@@ -91,9 +106,12 @@ create_database:
 <% } -%>
 vol_size_walg: <%=$patt::vol_size_walg%>
 vol_size_etcd: <%=$patt::vol_size_etcd%>
+vol_size_raft: <%=$patt::vol_size_raft%>
 vol_size_pgsql: <%=$patt::vol_size_pgsql%>
 vol_size_pgsql_temp: <%=$patt::vol_size_pgsql_temp%>
 vol_size_pgsql_safe: <%=$patt::vol_size_pgsql_safe%>
+vol_size_pgsql_safe: <%=$patt::vol_size_pgbackrest%>
+
 gc_cron_df_pc: <%=$patt::gc_cron_df_pc%>
 gc_cron_target: <%=$patt::gc_cron_target%>
 
@@ -111,5 +129,24 @@ backup_keep_away_schedule:
   - <%=$k['day']%>:
 <%- [$k['schedule']].flatten.each |$l| { -%>
     - <%=$l%>
+<%- } -%>
+<%- } -%>
+
+disk_free_alert_threshold_default_mb: <%=$patt::disk_free_alert_threshold_default_mb%>
+disk_free_alert_threshold_default_pc: <%=$patt::disk_free_alert_threshold_default_pc%>
+<%- if empty ($patt::disk_free_alert_threshold) { -%>
+disk_free_alert_threshold: []
+<%- }else{ -%>
+disk_free_alert_threshold:
+<%- [$patt::disk_free_alert_threshold].flatten.each |$k| { -%>
+  - {
+      path: '<%=$k['path']%>',
+<%- if ! empty ($k["mb_free"]) { -%>
+      mb_free: <%=$k["mb_free"]%>,
+<%- } -%>
+<%- if ! empty ($k["pc_free"]) { -%>
+      pc_free: <%=$k["pc_free"]%>,
+<%- } -%>
+    }
 <%- } -%>
 <%- } -%>

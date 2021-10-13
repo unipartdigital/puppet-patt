@@ -27,6 +27,10 @@ case "${os_id}" in
         ;;
 esac
 
+faketty () {
+    script -e -qfc "$(printf "%q " "$@")"
+}
+
 init() {
 
     etcd --version > /dev/null 2>&1 || {
@@ -47,6 +51,12 @@ init() {
                 ;;
         esac
     }
+    # extend etcd.service
+     faketty EDITOR="/bin/tee" systemctl edit etcd <<'EOF'
+[Service]
+ExecStartPost=-/bin/bash -c "/bin/ionice -c2 -n0 -p $(/bin/pgrep etcd)"
+Nice=-10
+EOF
 }
 
 check_healthy () {
@@ -89,6 +99,8 @@ config () {
     config_type=$1
     shift 1
     cluster_name=$1
+    shift 1
+    etcd_template=$1
     shift 1
     cluster_nodes=$*
 
@@ -139,39 +151,15 @@ EOF
     else
         init_state="#"
     fi
-
-    cat <<EOF > $ETCD_CONF
-#[Member]
-ETCD_DATA_DIR="${ETCD_DATA_DIR}"
-ETCD_LISTEN_PEER_URLS="https://[::]:2380"
-ETCD_LISTEN_CLIENT_URLS="http://[::]:2379"
-ETCD_NAME="${self_id}"
-ETCD_HEARTBEAT_INTERVAL="150"
-ETCD_ELECTION_TIMEOUT="1500"
-#[Clustering]
-ETCD_INITIAL_ADVERTISE_PEER_URLS="https://[${self_ip}]:2380"
-ETCD_ADVERTISE_CLIENT_URLS="http://[${self_ip}]:2379"
-ETCD_INITIAL_CLUSTER="${etcd_initial_cluster}"
-ETCD_INITIAL_CLUSTER_TOKEN="${cluster_name}"
-${init_state}ETCD_INITIAL_CLUSTER_STATE="existing"
-#[Security]
-#ETCD_CERT_FILE=""
-#ETCD_KEY_FILE=""
-#ETCD_CLIENT_CERT_AUTH="false"
-#ETCD_TRUSTED_CA_FILE=""
-#ETCD_AUTO_TLS="false"
-#ETCD_PEER_CERT_FILE=""
-#ETCD_PEER_KEY_FILE=""
-#ETCD_PEER_CLIENT_CERT_AUTH="false"
-#ETCD_PEER_TRUSTED_CA_FILE=""
-ETCD_PEER_AUTO_TLS="true"
-#
-#[Logging]
-#ETCD_DEBUG="false"
-ETCD_LOG_PACKAGE_LEVELS="etcdmain=Notice,etcdserver=Notice"
-# Debug Info Notice Warning Error
-#ETCD_LOG_OUTPUT="default"
-EOF
+    python3 ${srcdir}/tmpl2file.py -t ${srcdir}/${etcd_template} -o /etc/etcd/etcd.conf   \
+                    --dictionary_key_val "ETCD_DATA_DIR=${ETCD_DATA_DIR}"               \
+                    --dictionary_key_val "self_id=${self_id}"                           \
+                    --dictionary_key_val "self_ip=${self_ip}"                           \
+                    --dictionary_key_val "etcd_initial_cluster=${etcd_initial_cluster}" \
+                    --dictionary_key_val "cluster_name=${cluster_name}"                 \
+                    --dictionary_key_val "init_state=${init_state}"                     \
+                    --chmod 644                                                         \
+                    --touch /var/tmp/$(basename $0 .sh).reload
 }
 
 enable() {
@@ -264,7 +252,6 @@ member_remove() {
 version() {
     etcd --version | sed -nr -e "0,/etcd/s|^.*:[[:space:]]*||p"
 }
-
 
 case "$1" in
     'init')

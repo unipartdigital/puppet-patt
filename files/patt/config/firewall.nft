@@ -19,6 +19,11 @@ table ip6 postgres_patroni {
                 elements = {$etcd_peers}
         }
 
+        set raft_peers {
+                type ipv6_addr
+                elements = {$raft_peers}
+        }
+
         set patroni_peers {
                 type ipv6_addr
                 elements = {$patroni_peers}
@@ -77,6 +82,9 @@ table ip6 postgres_patroni {
                 tcp dport { 2380 } ip6 saddr @etcd_peers accept
                 tcp dport { 2379 } ip6 saddr @etcd_peers accept
                 tcp dport { 2379 } ip6 saddr @patroni_peers accept
+                # raft
+                tcp dport { 7204 } ip6 saddr @raft_peers accept
+                tcp dport { 7204 } ip6 saddr @patroni_peers accept
                 # patroni
                 tcp dport { 8008 } ip6 saddr @patroni_peers accept
                 tcp dport { 8008 } ip6 saddr @haproxy_peers accept

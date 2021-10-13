@@ -72,82 +72,6 @@ eof
 EOF
 }
 
-systemd_patroni_tmpl () {
-    postgres_version=${1}
-    postgres_bin=${2}
-    postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
-
-    cat <<EOF
-[Unit]
-Description=Patroni PostgreSQL ${postgres_version} database server
-Documentation=https://www.postgresql.org/docs/${postgres_version}/static/
-After=syslog.target
-After=network.target
-
-[Service]
-Type=simple
-User=postgres
-Group=postgres
-TemporaryFileSystem=/var/cache/pg_stats_temp:nodev,strictatime,mode=0750,uid=`id -u postgres`,gid=`id -g postgres`
-Environment=PGDATA=${postgres_home}/${postgres_version}/data/
-Environment=PATH=${postgres_bin}:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
-OOMScoreAdjust=-1000
-Environment=PG_OOM_ADJUST_FILE=/proc/self/oom_score_adj
-Environment=PG_OOM_ADJUST_VALUE=0
-ExecStart=${postgres_home}/.local/bin/patroni ${postgres_home}/patroni.yaml
-ExecReload=/bin/kill -HUP \$MAINPID
-KillMode=process
-KillSignal=SIGINT
-TimeoutSec=0
-Restart=always
-RestartSec=1
-
-[Install]
-WantedBy=multi-user.target
-EOF
-}
-
-systemd_setup () {
-    postgres_version=${1}
-    postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
-
-    default_postgres_path=$(su - postgres -c "echo $PATH")
-
-    case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
-            systemd_service="postgresql-${postgres_version}.service"
-            postgres_bin="/usr/pgsql-${postgres_version}/bin/"
-            ;;
-        'debian' | 'ubuntu')
-            systemd_service="postgresql.service"
-            postgres_bin="/usr/lib/postgresql/${postgres_version}/bin/"
-            ;;
-        *)
-            echo "${os_id} not implemented" 1>&2
-            exit 1
-            ;;
-    esac
-
-    test -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service && {
-        test "`systemd_patroni_tmpl ${postgres_version} ${postgres_bin} | md5sum | cut -d' ' -f1`" == \
-             "`md5sum /etc/systemd/system/postgresql-${postgres_version}_patroni.service | cut -d' ' -f1`" || {
-            echo "OVERWRITE /etc/systemd/system/postgresql-${postgres_version}_patroni.service"
-            systemd_patroni_tmpl "${postgres_version}" "${postgres_bin}" > \
-                                 /etc/systemd/system/postgresql-${postgres_version}_patroni.service
-            systemctl daemon-reload
-        }
-    }
-
-    test -f /etc/systemd/system/postgresql-${postgres_version}_patroni.service || {
-
-        if systemctl is-enabled --quiet ${systemd_service} ; then systemctl disable  ${systemd_service}; fi
-        if systemctl is-active --quiet ${systemd_service} ; then systemctl stop  ${systemd_service}; fi
-        systemd_patroni_tmpl "${postgres_version}" "${postgres_bin}" > \
-                             /etc/systemd/system/postgresql-${postgres_version}_patroni.service
-        systemctl daemon-reload
-    }
-}
-
 softdog_setup () {
     if [ "x$(cat /proc/1/cgroup  | cut -d '/' -f 2 | sed -e '/^$/d')" != "x" ]; then
         echo "softdog_setup skipped" 2>&1
@@ -223,7 +147,8 @@ init() {
     postgres_version=${1:-"13"}
     patroni_version=${2:-"2.0.2"}
     pe_file="${3}"
-
+    systemd_patroni="${4}"
+    dcs="${5}"
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
     case "${os_id}" in
@@ -248,7 +173,8 @@ init() {
     touch /tmp/patroni_pip.stamp
     cat <<EOF | su - postgres
 PATH=$PATH:~/.local/bin
-python3 -m pip -q install --user patroni[etcd]==${patroni_version}
+python3 -m pip -q install --user -U requests
+python3 -m pip -q install --user patroni[${dcs}]==${patroni_version}
 EOF
 
     test -f "${srcdir}/${pe_file}" || { echo "error ${pe_file}" >&2 ; exit 1 ; }
@@ -256,7 +182,40 @@ EOF
 
     bashrc_setup
     bashprofile_setup
-    systemd_setup ${postgres_version}
+
+    postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
+
+    case "${os_id}" in
+        'rhel' | 'centos' | 'fedora')
+            systemd_service="postgresql-${postgres_version}.service"
+            postgres_bin="/usr/pgsql-${postgres_version}/bin/"
+            ;;
+        'debian' | 'ubuntu')
+            systemd_service="postgresql.service"
+            postgres_bin="/usr/lib/postgresql/${postgres_version}/bin/"
+            ;;
+        *)
+            echo "${os_id} not implemented" 1>&2
+            exit 1
+            ;;
+    esac
+
+    pg_uid=`id -u postgres`
+    pg_gid=`id -g postgres`
+    python3 ${srcdir}/tmpl2file.py -t ${srcdir}/${systemd_patroni}                \
+            -o /etc/systemd/system/postgresql-${postgres_version}_patroni.service \
+            --dictionary_key_val "postgres_version=${postgres_version}"           \
+            --dictionary_key_val "postgres_home=${postgres_home}"                 \
+            --dictionary_key_val "postgres_bin=${postgres_bin}"                   \
+            --dictionary_key_val "pg_uid=$pg_uid"                                 \
+            --dictionary_key_val "pg_gid=$pg_gid"                                 \
+            --chmod 644                                                           \
+            --touch /var/tmp/$(basename $0 .sh).reload
+    test -f /var/tmp/$(basename $0 .sh).reload && systemctl daemon-reload
+
+    if systemctl is-enabled --quiet ${systemd_service} ; then systemctl disable  ${systemd_service}; fi
+    if systemctl is-active --quiet ${systemd_service} ; then systemctl stop  ${systemd_service}; fi
+
 }
 
 enable() {
@@ -274,6 +233,9 @@ enable() {
             elif [ -f "/tmp/patroni.reload" ]; then
                 systemctl reload postgresql-${postgres_version}_patroni && \
                     rm -f "/tmp/patroni.reload"
+            elif [ -f "/tmp/patroni.restart" ]; then
+                systemctl restart postgresql-${postgres_version}_patroni && \
+                    rm -f "/tmp/patroni.restart"
             fi
             ;;
         *)
@@ -286,7 +248,29 @@ enable() {
 
 check() {
     cat <<EOF | su - postgres
-patronictl -c ~/patroni.yaml list
+timout -v 10s patronictl -c ~/patroni.yaml list
+EOF
+}
+
+disable_auto_failover () {
+    postgres_version=$1
+    patroni_service=postgresql-${postgres_version}_patroni.service
+    cat <<EOF | su - postgres
+ {
+  systemctl -q is-active ${patroni_service} || exit 0
+  timeout -v 10s  patronictl -c ~/patroni.yaml pause --wait
+ }
+EOF
+}
+
+enable_auto_failover () {
+    postgres_version=$1
+    patroni_service=postgresql-${postgres_version}_patroni.service
+    cat <<EOF | su - postgres
+ {
+  systemctl -q is-active ${patroni_service} || exit 1
+  timeout -v 10s patronictl -c ~/patroni.yaml resume --wait
+ }
 EOF
 }
 
@@ -305,6 +289,14 @@ EOF
         'check')
             shift 1
             check "$@"
+            ;;
+        'disable_auto_failover')
+            shift 1
+            disable_auto_failover "$@"
+            ;;
+        'enable_auto_failover')
+            shift 1
+            enable_auto_failover "$@"
             ;;
         *)
             cat <<EOF

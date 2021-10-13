@@ -1,55 +1,7 @@
 # -*- mode: python -*-
 
-import sys
-import os
-import json
-from xml.dom.minidom import getDOMImplementation, Document
-from patt_monitoring import EtcdService, PatroniService
-
-class Xml(object):
-    pass
-
-class Xhtml(Xml):
-    def __init__(self):
-        self.dom = getDOMImplementation().createDocument(
-            "http://www.w3.org/1999/xhtml", "html",
-            getDOMImplementation().createDocumentType(
-                "html",
-                "-//W3C//DTD HTML 4.01//EN",
-                "http://www.w3.org/TR/html4/strict.dtd"))
-        self.root = self.dom.documentElement
-        self.id_count = 0
-
-    def append (self, child):
-        self.root.appendChild(child)
-
-    def print (self, file=sys.stdout, encoding='utf-8'):
-        self.dom.writexml(file, addindent='   ', newl='\n', encoding=encoding)
-
-    def to_string(self, encoding='utf-8'):
-        return self.dom.toprettyxml(indent='   ', newl="\n", encoding=encoding)
-
-    def create_element(self, Name, Id=None, Class=None):
-        tmp = self.dom.createElement(Name)
-        if Id:
-            tmp.setAttribute ("id", Id)
-        else:
-            self.id_count += 1
-            tmp.setAttribute ("id", "{}".format(self.id_count))
-        if Class:
-            tmp.setAttribute ("class", Class)
-        else:
-            tmp.setAttribute ("class", Name)
-        return tmp
-
-    def create_text_node (self, text):
-        return self.dom.createTextNode(text)
-
-    def append_child (self, parent, child):
-        parent.appendChild(child)
-
-    def append_text (self, node, text):
-        self.append_child (node, self.create_text_node (text))
+from patt_monitoring import EtcdService, PatroniService, DiskFreeService
+from xhtml import Xhtml
 
 """
  cluster health
@@ -73,12 +25,17 @@ div.etcd_ko{display:table-cell; empty-cells:hide; padding: 10px; border: 1px sol
 div.patroni_ok{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid green;}
 div.patroni_ko{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid red;}
 div.patroni_dump{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid gray; font-family: courier, monospace; white-space: pre-wrap;}
+div.df_ok{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid green;}
+div.df_ko{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid red;}
 ul.etcd{list-style: none;}
 ul.patroni{list-style: none;}
+ul.df{list-style: none;}
 li.etcd_ok::before{content: '\\2600'; display: inline-block; width: 1em; margin-left: -1em; color: green;}
 li.etcd_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
 li.patroni_ok::before{content: '\\2600'; display: inline-block; width: 1em; margin-left: -1em; color: green;}
 li.patroni_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
+li.df_ok::before{content: '\\2600'; display: inline-block; width: 1em; margin-left: -1em; color: green;}
+li.df_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
 """)
     xhtml.append_child (head, style)
 
@@ -152,6 +109,35 @@ li.patroni_ko::before{content: '\\2020'; display: inline-block; width: 1em; marg
     xhtml.append_child (div_patroni_dump, pre_patroni)
     # xhtml.append (div_patroni_dump)
     xhtml.append_child (div_patroni, div_patroni_dump)
+
+    df=DiskFreeService()
+    df_health=df.node_check()
+    df_healthy=df.is_healthy(df_health)
+    service_status.append(df_healthy)
+    df_div_class="df_ok" if df_healthy else "df_ko"
+    div_df = xhtml.create_element ("div", Class=df_div_class)
+    h3_df = xhtml.create_element ("h3", Class="h3_df")
+    xhtml.append_text (h3_df, "Disk Free")
+    xhtml.append_child (div_df, h3_df)
+
+    ul_df = xhtml.create_element ("ul", Class="df")
+    for e in df_health:
+        class_li_df="df_ok" if ('error' in e and e['error'] == False) else "df_ko"
+        li_df = xhtml.create_element ("li", Class=class_li_df)
+        hrr="[OK]" if ('error' in e and e['error'] == False) else "[ER]"
+        xhtml.append_text (li_df, "{} {}".format(hrr, e['node']))
+        if 'urls' in e:
+            ul_df_urls = xhtml.create_element ("ul", Class="df")
+            for i in e['urls']:
+                li_df_url = xhtml.create_element ("li", Class=class_li_df)
+                a_li_df_url = xhtml.create_element ("a", Attr=[('href', '{}'.format(i))])
+                xhtml.append_text (a_li_df_url, "{}".format(i))
+                xhtml.append_child (li_df_url, a_li_df_url)
+                xhtml.append_child (ul_df_urls, li_df_url)
+            xhtml.append_child (li_df, ul_df_urls)
+        xhtml.append_child (ul_df, li_df)
+    xhtml.append_child (div_df, ul_df)
+    xhtml.append_child (div_table, div_df)
 
     output = xhtml.to_string()
     response_headers = [('Content-type', 'text/html'),

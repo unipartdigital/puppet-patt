@@ -40,7 +40,7 @@ class PersistenceSQL3(object):
 
 class ClusterService:
 
-    cluster_keys = ['cluster_name', 'etcd_peers', 'postgres_peers']
+    cluster_keys = ['cluster_name', 'dcs_peers', 'dcs_type', 'postgres_peers', 'sftpd_peers']
     # subset of class Config(object) from patt_cli
 
     def load_cluster_config(self):
@@ -63,8 +63,10 @@ class ClusterService:
             if not hasattr(Gconfig, k):
                 self.load_cluster_config()
                 break
-        self.etcd_peers = Gconfig.etcd_peers
-        self.postgres_peers = Gconfig.postgres_peers
+        self.dcs_peers = Gconfig.dcs_peers if hasattr(Gconfig, 'dcs_peers') else []
+        self.dcs_type = Gconfig.dcs_type if hasattr(Gconfig, 'dcs_type') else None
+        self.postgres_peers = Gconfig.postgres_peers if hasattr(Gconfig, 'postgres_peers') else []
+        self.sftpd_peers = Gconfig.sftpd_peers if hasattr(Gconfig, 'sftpd_peers') else []
 
     def get (self, query=None, start=None, element=None, urls=[]):
         for url in urls:
@@ -101,7 +103,7 @@ class ClusterService:
             if ipaddress.IPv6Address(hostname):
                 tmp = "[{}]:{}".format (n, service_port)
             else:
-                tmp = "[{}]:{}".format (n, service_port)
+                tmp = "{}:{}".format (n, service_port)
             if tmp.startswith('http://') or tmp.startswith('https://'):
                 result.append(tmp)
             else:
@@ -113,8 +115,10 @@ class EtcdService(ClusterService):
 
     def __init__(self):
         super().__init__()
-        if self.etcd_peers:
-            self.init_urls = self.etcd_peers
+        if self.dcs_type in ('etcd', 'etcd3'):
+            self.init_urls = self.dcs_peers
+        else:
+            self.init_urls = []
         self.init_urls = self.http_normalize_url (2379, self.init_urls)
 
     def get_client_urls (self):
@@ -139,10 +143,11 @@ class EtcdService(ClusterService):
 
     def cluster_health(self):
         cluster_client_urls = self.get_client_urls()
+        if self.dcs_type not in ('etcd', 'etcd3'): return [('unneeded', True)]
         if cluster_client_urls:
             return [(c, self.node_health ([c])) for c in cluster_client_urls]
-        return ([(c, False) for c in self.etcd_peers])
-    # return cluster_config.yaml etcd list set to False if all down
+        return ([(c, False) for c in self.dcs_peers])
+    # return cluster_config.yaml dcs_peers list set to False if all down or if dcs is not etcd
 
     def is_healthy(self):
         clth = self.cluster_health()
@@ -358,6 +363,74 @@ class PatroniService(ClusterService):
                 db3.commit()
                 return health
 
+class DiskFreeService(ClusterService):
+
+    def __init__(self, use_ssl=False):
+        self.df_peers = []
+        super().__init__()
+        if self.dcs_peers:
+            self.df_peers = set(self.df_peers) | set (self.dcs_peers)
+        if self.postgres_peers:
+            self.df_peers = set(self.df_peers) | set (self.postgres_peers)
+        if self.sftpd_peers:
+            self.df_peers = set(self.df_peers) | set (self.sftpd_peers)
+        if self.df_peers:
+            self.urls = self.df_peers
+        self.urls = self.http_normalize_url (80, self.urls)
+
+    """
+    return [{'node': n, 'error': False}] if all ok
+    or [{'node': n, 'error': True, 'urls': l}] with l pointing to the plot to check
+    """
+    def node_check (self, alias_monitor="/dfm", alias_plot="/dfp", use_ssl=False):
+        result=[]
+        retry_max=6
+        url_prefix='https://' if use_ssl else 'http://'
+        for c in [i for i in self.urls if i.startswith(url_prefix)]:
+            retry_count=0
+            rj = None
+            for i in range(retry_max):
+                try:
+                    retry_count += 1
+                    r = requests.get("{}{}".format(c, alias_monitor), timeout=(9.0, 10.0)) # (connect, read)
+                    rj = r.json()
+                except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout) as te:
+                    sleep(1)
+                    continue
+                except requests.exceptions.ConnectionError:
+                    sleep(1)
+                    continue
+                except:
+                    raise
+                else:
+                    break
+            try:
+                p = [n for n in self.df_peers if n in c][0]
+                assert 'df' in rj
+                assert rj['df']['error'] == False
+                assert 'result' in rj['df']
+            except (Exception, AssertionError):
+                result.append ({'node': p, 'error': True})
+            else:
+                try:
+                    l = []
+                    for i in rj['df']['result']:
+                        l.append("{}{}?m={}&pivot={}&delta={}".format(c, alias_plot, i[0], i[1], int(i[2])))
+                    if l: result.append ({'node': p, 'error': True, 'urls': l})
+                except Exception as e:
+                    result.append ({'node': p, 'error': True})
+                else:
+                    if l == []: result.append ({'node': p, 'error': False})
+        return result
+
+    def is_healthy(self, df=None):
+        df = df if df else self.node_check()
+        for i in df:
+            if 'node' not in i: return False
+            if 'error' not in i : return False
+            if i['error'] == True: return False
+        return True
+
 
 if __name__ == "__main__":
     import argparse
@@ -372,6 +445,8 @@ if __name__ == "__main__":
         exclude.append('etcd')
     if args.exclude and 'patroni' in args.exclude:
         exclude.append('patroni')
+    if args.exclude and 'df' in args.exclude:
+        exclude.append('df')
     if args.verbose2:
         args.verbose = True
 
@@ -409,6 +484,16 @@ if __name__ == "__main__":
                 print ("replication_health  : {}".format (patroni.replication_health()))
             if args.verbose2 or not patroni_healthy:
                 print ("patroni dump:\n {}".format (patroni.dump()))
+
+    if 'df' not in exclude:
+        df = DiskFreeService()
+        df_check = df.node_check()
+        df_healthy=df.is_healthy(df_check)
+        if args.quiet:
+            status.append(df_healthy)
+        else:
+            print ("Disk Free is healthy: {}".format (df_healthy))
+            print (pp_string(df.node_check()))
 
     if args.quiet:
         if not status: print ("warning no result available", file=stderr)

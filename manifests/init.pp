@@ -4,7 +4,9 @@
 class patt (
  String                  $cluster_name,
  Optional[Array[String]] $add_repo = [],
- Optional[Array[String]] $etcd_peers,
+ Optional[Array[String]] $dcs_peers = [],
+ Optional[Enum['etcd', 'etcd3', 'raft']] $dcs_type = undef,
+ Optional[Array[String]] $etcd_peers = [],
  Array[String]           $floating_ip,
  Optional[Array[String]] $haproxy_peers = [],
  Optional[String]        $haproxy_template_file = '',
@@ -19,6 +21,7 @@ class patt (
  Optional[String]        $walg_release,
  Optional[String]        $walg_url = '',
  Optional[String]        $walg_sha256 = '',
+ Optional[Enum['walg', 'pgbackrest']] $archiver = walg,
  Optional[Array[Struct[{method => Enum[s3, sh],
                         # s3
                         profile => Optional[String],
@@ -30,7 +33,7 @@ class patt (
                         # sh
                         host => Optional[String],
                         identity_file => Optional[String],
-                        }]]] $walg_store = [],
+                        }]]] $archive_store = [],
  Optional[String]        $aws_credentials = '',
  Optional[String]        $ssh_keyfile = '',
  Optional[String]        $ssh_login = '',
@@ -39,9 +42,11 @@ class patt (
 
  Optional[String]        $vol_size_walg  = '2G',
  Optional[String]        $vol_size_etcd  = '2G',
+ Optional[String]        $vol_size_raft  = '1G',
  Optional[String]        $vol_size_pgsql = '2G',
  Optional[String]        $vol_size_pgsql_temp = '0',
  Optional[String]        $vol_size_pgsql_safe = '0',
+ Optional[String]        $vol_size_pgbackrest = '0',
  # size may be increased between run but not shrinked
 
  Optional[String]        $install_dir='/usr/local/libexec/patt',
@@ -64,6 +69,13 @@ class patt (
  Optional[Array[String]] $network_allow_postgres_clients = ['::0/0'],
  Optional[Array[String]] $network_allow_monitoring_clients = ['::0/0'],
  # nftables allowed network clients
+
+
+ Optional[Integer]         $disk_free_alert_threshold_default_mb = 1000,
+ Optional[Integer[0, 100]] $disk_free_alert_threshold_default_pc = 5,
+ Optional[Array[Struct[{path => String, mb_free => Optional[Integer], pc_free => Optional[Integer[0, 100]]}]]] $disk_free_alert_threshold = [],
+ # disk free alert threshold are applied cluster wide
+ # path not found on one node are ignored, only the last value set is relevant if there is duplicate path definition
 
  Optional[Boolean]        $backup_cleanup_dry_run = true,
  Optional[Integer]        $backup_cleanup_keep_days = 0,
@@ -89,14 +101,16 @@ class patt (
 
 $iplist = split(inline_epp('<%=$facts[all_ip]%>'), " ")
 
-if is_array($patt::etcd_peers) {
- $etcd_p = $patt::etcd_peers
+if is_array($patt::dcs_peers) and ! empty($patt::dcs_peers) {
+ $dcs_p = $patt::dcs_peers
+}elsif is_array($patt::etcd_peers) and ! empty($patt::etcd_peers) {
+ $dcs_p = $patt::etcd_peers
 }else{
- $etcd_p = $patt::nodes
+ $dcs_p = $patt::nodes
 }
 
- $is_etcd = inline_epp(@(END))
-<% [$etcd_p].flatten.each |$peer| { -%>
+ $is_dcs = inline_epp(@(END))
+<% [$dcs_p].flatten.each |$peer| { -%>
 <% $iplist.flatten.each |$i| { -%>
 <% if $i == $peer { -%>
 <%=$i == $peer-%>
@@ -105,7 +119,7 @@ if is_array($patt::etcd_peers) {
 <% } -%>
 |- END
 
-if is_array($patt::postgres_peers) {
+if is_array($patt::postgres_peers) and ! empty ($patt::postgres_peers) {
  $postgres_p = $patt::postgres_peers
 }else{
  $postgres_p = $patt::nodes
@@ -121,7 +135,7 @@ if is_array($patt::postgres_peers) {
 <% } -%>
 |- END
 
-if is_array($patt::haproxy_peers) {
+if is_array($patt::haproxy_peers) and ! empty ($patt::haproxy_peers) {
  $haproxy_p = $patt::haproxy_peers
 }else{
  $haproxy_p = []
@@ -137,7 +151,7 @@ if is_array($patt::haproxy_peers) {
 <% } -%>
 |- END
 
-if "${patt::is_etcd}" == "true" {
+if "${patt::is_dcs}" == "true" {
  $is_peer_installer = "true"
 }elsif "${patt::is_postgres}" == "true" {
  $is_peer_installer = "true"
@@ -145,10 +159,23 @@ if "${patt::is_etcd}" == "true" {
  $is_peer_installer = "false"
 }
 
+if "${patt::is_dcs}" == "true" {
+ if "${patt::dcs_type}" == "etcd" or "${patt::dcs_type}" == "etcd3" {
+  $is_etcd = "true"
+ }else{
+  $is_etcd = false
+ }
+}else{
+ $is_etcd = false
+}
+
 # notify {"$iplist":
 #  withpath => true,
 #  }
 notify {"is installer peer: ${is_peer_installer}":
+ withpath => true,
+ }
+notify {"is dcs peer: ${is_dcs}":
  withpath => true,
  }
 notify {"is etcd peer: ${is_etcd}":
@@ -181,7 +208,8 @@ notify {"is haproxy peer: ${is_haproxy}":
 #  - '2001:db8:3c4d:15:f321:3eff:feb9:4802'
 #  - '2001:db8:3c4d:15:f321:3eff:fee0:b279'
 #  - '2001:db8:3c4d:15:f321:3eff:fe21:d83a'
-# patt::etcd_peers:
+# patt::dcs_type: 'etcd'
+# patt::dcs_peers:
 #  - '2001:db8:3c4d:15:f321:3eff:fee0:b279'
 #  - '2001:db8:3c4d:15:f321:3eff:fe21:d83a'
 #  - '2001:db8:3c4d:15:f321:3eff:feb9:4802'
@@ -194,7 +222,7 @@ notify {"is haproxy peer: ${is_haproxy}":
 # patt::postgres_release: '13'
 # patt::patroni_release: '2.0.1'
 # patt::walg_release: 'v0.2.19'
-# patt::walg_store:
+# patt::archive_store:
 #  - {method: 's3', profile: 'default' # should match ~/.aws/credential [profile]',
 #     endpoint: 'http://aws.end.point:8080', prefix: 'bucket_name',
 #     region: 'eu-west-2',
@@ -211,6 +239,7 @@ notify {"is haproxy peer: ${is_haproxy}":
 # patt::ssh_keyfile: ''
 # patt::ssh_login: ''
 # patt::vol_size_etcd: '2G'
+# patt::vol_size_raft: '0'
 # patt::vol_size_pgsql: '8G'
 # patt::vol_size_pgsql_temp = '0',
 # patt::vol_size_pgsql_safe = '0',

@@ -17,75 +17,6 @@ os_version_id="${VERSION_ID}"
 os_major_version_id="$(echo ${VERSION_ID} | cut -d. -f1)"
 os_arch="$(uname -m)"
 
-walg_version () {
-    prefix=/usr/local
-    test -x ${prefix}/bin/wal-g && {
-        for i in 1 2 3; do
-            { ${prefix}/bin/wal-g --version | awk '{print $3}' && break ; } || sleep 1
-        done
-    }
-}
-
-init () {
-    walg_release=${1:-"v0.2.19"}
-    walg_url=${2:-""}
-    walg_sha256=${3:-""}
-    prefix=/usr/local
-    walg_pkg="`basename ${walg_url}`"
-    download_url="https://github.com/wal-g/wal-g/releases/download/${walg_release}/wal-g.linux-amd64.tar.gz"
-
-    downloader=""
-    wget --version > /dev/null 2>&1 && {
-        downloader="wget -q -L"
-    } || {
-        curl --version > /dev/null 2>&1 && {
-            downloader="curl -f -s -O -L"
-        }
-    }
-
-    {
-        test -x ${prefix}/bin/wal-g && \
-            test "`${prefix}/bin/wal-g --version | awk '{print $3}'`" == "${walg_release}" > /dev/null 2>&1
-    } || {
-        cd $srcdir
-        if [ -f "$srcdir/${walg_pkg}" ]; then
-        # walg provided by sftp
-            :
-        else
-            if [ "x${walg_url}" != "x" ]; then
-                download_url=${walg_url}
-            fi
-            ${downloader} ${download_url}
-        fi
-        if [ "x${walg_sha256}" != "x" ]; then
-            echo "sha256sum ${walg_sha256}: `sha256sum ${walg_pkg} | cut -d' ' -f1`"
-            if test "`sha256sum ${walg_pkg} | cut -d' ' -f1`" == "${walg_sha256}" ; then
-                tar xvf ${walg_pkg}
-            else
-                echo "error: sha256sum ${walg_pkg}" >&2
-                exit 1
-            fi
-        else
-            tar xvf ${walg_pkg}
-        fi
-        internal_walg=`tar tf ${walg_pkg}`
-        test -f ./${internal_walg} && {
-            test ! -f wal-g && {
-                mv ./${internal_walg} ./wal-g
-            }
-        }
-        chmod 755 ./wal-g
-        test "`./wal-g --version | awk '{print $3}'`" == "${walg_release}" && {
-            sudo install -o root -g root -m 755 ./wal-g ${prefix}/bin/wal-g
-        }
-        rm -f ${srcdir}/wal-g ${srcdir}/${walg_pkg}
-    } > /dev/null
-
-    for i in 1 2 3 4 5; do
-        { ${prefix}/bin/wal-g --version && break ; } || sleep 1
-    done
-}
-
 ssh_archiving_init () {
     /sbin/semanage -h > /dev/null 2>&1 || {
         case "${os_id}" in
@@ -105,22 +36,23 @@ ssh_archiving_init () {
 
 ssh_archive_keygen() {
     cluster_name="${1}"
-    user_name="${2:-postgres}"
+    tag=${2}
+    user_name="${3:-postgres}"
     group="$(id -ng ${user_name})"
     home="$(getent passwd  ${user_name} | cut -d: -f6)"
     test -d ${home}/.ssh/ || mkdir -m 700 ${home}/.ssh/
     test `stat -c "%U.%G" ${home}/.ssh/` == "${user_name}.${group}" || \
         chown "${user_name}.${group}" ${home}/.ssh/
-    test -f ${home}/.ssh/walg_rsa.pub || {
+    test -f ${home}/.ssh/${tag}_rsa.pub || {
         cat <<EOF | su ${user_name}
-/usr/bin/ssh-keygen -q -t rsa -b 4096 -f ~/.ssh/walg_rsa -N "" -C "walg_${cluster_name}_`hostname -f`"
+/usr/bin/ssh-keygen -q -t rsa -b 4096 -f ~/.ssh/${tag}_rsa -N "" -C "${tag}_${cluster_name}_`hostname -f`"
 EOF
     }
-    test -f ${home}/.ssh/walg_rsa.pub && cat ${home}/.ssh/walg_rsa.pub
-    test -s  ${home}/.ssh/config || {
+    test -f ${home}/.ssh/${tag}_rsa.pub && cat ${home}/.ssh/${tag}_rsa.pub
+    grep -q "${tag}_rsa"  ${home}/.ssh/config > /dev/null 2>&1 || {
         cat <<EOF > ${home}/.ssh/config
 Host *
-IdentityFile  ~/.ssh/walg_rsa
+IdentityFile  ~/.ssh/${tag}_rsa
 IdentityFile  ~/.ssh/id_rsa
 EOF
         chown "${user_name}.${group}" "${home}/.ssh/config"
@@ -130,16 +62,15 @@ EOF
 ssh_archive_user_add () {
     user_name=${1}
     archive_base_dir=${2}
-    initial_login_group=${3:-"walg"}
+    initial_login_group=${3:-"archiver"}
+    user_shell=${4:-"/bin/false"}
     test -d "${archive_base_dir}" || mkdir -p -m 711 "${archive_base_dir}"
     test -d "${archive_base_dir}/${user_name}" || {
         mkdir -p -m 711 "${archive_base_dir}/${user_name}"
         case "${os_id}" in
             'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
-                cat <<EOF | sudo su -
-/sbin/semanage fcontext -a -t user_home_dir_t "${archive_base_dir}/${user_name}"
-/sbin/restorecon -R "${archive_base_dir}/${user_name}"
-EOF
+                /sbin/semanage fcontext -a -t user_home_dir_t "${archive_base_dir}/${user_name}"
+                /sbin/restorecon -R "${archive_base_dir}/${user_name}"
                 ;;
         esac
     }
@@ -151,9 +82,10 @@ EOF
                 --comment "sftp chroot user" \
                 --system \
                 --no-log-init --no-create-home --no-user-group \
-                --shell /bin/false ${user_name}
+                --shell ${user_shell} ${user_name}
         chown "${user_name}"."${initial_login_group}" "${archive_base_dir}/${user_name}"
     }
+    stat -c "%A %U.%G %n" "${archive_base_dir}/${user_name}"
 }
 
 sshd_conf_tmpl () {
@@ -186,15 +118,15 @@ sshd_configure () {
     }
 }
 
-sftpd_configure () {
+sftpd_command () {
     command=${1}
-    sftpd_port=${2:-22}
+    sftpd_port=${2:-2222}
     sftpd_service="sftpd.service"
     cache_dir="/var/cache/sftpd"
     case "${command}" in
         'enable')
             test -d ${cache_dir} || mkdir ${cache_dir}
-            test -f ${cache_dir}/port || echo "2222" > ${cache_dir}/port
+            test -f ${cache_dir}/port || echo "${sftpd_port}" > ${cache_dir}/port
             #
             test "$(nft list set ip6 postgres_patroni sftp_archiving_port | awk '/elements/ {print $4}')" \
                  == "${sftpd_port}" || {
@@ -232,42 +164,29 @@ sftpd_configure () {
     esac
 }
 
-ssh_archiving_add () {
-    cluster_name=${1}
-    sftpd_port=${2}
-    archive_base_dir=/var/lib/walg
-    group="walg"
-    if [ "${sftpd_port}" == 22 ]; then
-        sshd_configure "${archive_base_dir}" "${group}"
-        sftpd_configure "disable"
-    else
-        sftpd_configure "enable" "${sftpd_port}"
-    fi
-    ssh_archive_user_add "${cluster_name}" "${archive_base_dir}" "walg"
-    cat <<EOF | sudo su
-stat -c "%A %U.%G %n" "${archive_base_dir}/${cluster_name}"
-EOF
-}
 
 ssh_authorize_keys () {
-    cluster_name="${1}"
+    user_name="${1}"
     keys_file="${2}"
-    group="walg"
-    archive_base_dir=/var/lib/walg
-    test -d ${archive_base_dir}/${cluster_name}/.ssh/ || {
-        mkdir -p -m 700 ${archive_base_dir}/${cluster_name}/.ssh/
-        chown ${cluster_name}.${group} ${archive_base_dir}/${cluster_name}/.ssh/
+    group=${3:-"`id -n -g ${user_name}`"}
+    home_dir=$(getent passwd ${user_name} | cut -d: -f6)
+    test -d ${home_dir}/.ssh/ || {
+        mkdir -p -m 700 ${home_dir}/.ssh/
+        chown ${user_name}.${group} ${home_dir}/.ssh/
     }
     test -s "${srcdir}/${keys_file}" || { echo "error: ${srcdir}/${keys_file}" ; exit 1 ; }
-    if [ -f "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys" ]; then
-        test "`sort -u ${srcdir}/${keys_file} | md5sum  | cut -d' ' -f1`" == "`sort -u ${archive_base_dir}/${cluster_name}/.ssh/authorized_keys | md5sum | cut -d' ' -f1`" || {
-            cat "${srcdir}/${keys_file}" > ${archive_base_dir}/${cluster_name}/.ssh/authorized_keys
+    if [ -f "${home_dir}/.ssh/authorized_keys" ]; then
+        test "`sort -u ${srcdir}/${keys_file} | md5sum  | cut -d' ' -f1`" == "`sort -u ${home_dir}/.ssh/authorized_keys | md5sum | cut -d' ' -f1`" || {
+            cat "${srcdir}/${keys_file}" > ${home_dir}/.ssh/authorized_keys
         }
     else
-        cat "${srcdir}/${keys_file}" > "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
+        cat "${srcdir}/${keys_file}" > "${home_dir}/.ssh/authorized_keys"
     fi
-    chown "${cluster_name}" "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
-    chmod 600 "${archive_base_dir}/${cluster_name}/.ssh/authorized_keys"
+
+    test `-c "%U" "${home_dir}/.ssh/authorized_keys"` == "${user_name}" || \
+        chown "${user_name}" "${home_dir}/.ssh/authorized_keys"
+    test `stat -c "%a" "${home_dir}/.ssh/authorized_keys"` == "600" || \
+        chmod 600 "${home_dir}/.ssh/authorized_keys"
 }
 
 ssh_known_hosts () {
@@ -302,80 +221,6 @@ ssh_known_hosts () {
         ssh-keyscan -t rsa -p ${archive_port} "${archive_host}" > "${known_hosts}"
         chown "${user_name}"."${group}" "${known_hosts}"
     fi
-}
-
-sh_json () {
-    postgresql_version=${1}
-    cluster_name=${2}
-    archive_host=${3}
-    archive_port=${4}
-    prefix=${5}
-    sh_identity=${6}
-    sh_id_file=${7}
-    sh_config_file=${8}
-    user_name=${9:-"postgres"}
-    comd=${10:-"tmpl2file.py"}
-    tmpl=${11:-"walg-ssh.json"}
-    pg_home=$(getent passwd postgres | cut -d':' -f 6)
-    test "x${pg_home}" != "x" || { echo "pg_home not found"    >&2 ; exit 1 ; }
-    test -d ${pg_home} || { echo "${pg_home} not directory"    >&2 ; exit 1 ; }
-    test -f ${srcdir}/${comd} || { echo "script file not found"   >&2 ; exit 1 ; }
-    test -f ${srcdir}/${tmpl} || { echo "template file not found" >&2 ; exit 1 ; }
-    chown "${user_name}" "${srcdir}"
-    chown "${user_name}" "${srcdir}/${comd}"
-
-    # clean up opposite entry with the same priority
-    prev_base="$(echo `basename ${sh_config_file}` | cut -d'-' -f 1-2)"
-    test -f ${pg_home}/${prev_base}-s3.json && rm -f ${pg_home}/${prev_base}-s3.json
-
-    cat <<EOF | su - ${user_name}
-python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${sh_config_file}` \
---skip '//'                                                                               \
---dictionary_key_val "walg_ssh_prefix=${archive_host}"        \
---dictionary_key_val "prefix=${prefix}"                       \
---dictionary_key_val "ssh_port=${archive_port}"               \
---dictionary_key_val "ssh_username=${sh_identity}"            \
---dictionary_key_val "ssh_id_file=${sh_id_file}"              \
---dictionary_key_val "postgres_version=${postgresql_version}" \
---chmod 640
-EOF
-}
-
-s3_json () {
-    postgresql_version=${1}
-    cluster_name=${2}
-    endpoint=${3}
-    prefix=${4}
-    region=${5}
-    profile=${6}
-    force_path_style=${7}
-    s3_config_file=${8}
-    user_name=${9:-"postgres"}
-    comd=${10:-"tmpl2file.py"}
-    tmpl=${11:-"walg-s3.json"}
-    pg_home=$(getent passwd postgres | cut -d':' -f 6)
-    test "x${pg_home}" != "x" || { echo "pg_home not found"    >&2 ; exit 1 ; }
-    test -d ${pg_home} || { echo "${pg_home} not directory"    >&2 ; exit 1 ; }
-    test -f ${srcdir}/${comd} || { echo "script file not found"   >&2 ; exit 1 ; }
-    test -f ${srcdir}/${tmpl} || { echo "template file not found" >&2 ; exit 1 ; }
-    chown "${user_name}" "${srcdir}"
-    chown "${user_name}" "${srcdir}/${comd}"
-
-    # clean up opposite entry with the same priority
-    prev_base="$(echo `basename ${sh_config_file}` | cut -d'-' -f 1-2)"
-    test -f ${pg_home}/${prev_base}-sh.json && rm -f ${pg_home}/${prev_base}-sh.json
-
-    cat <<EOF | su - ${user_name}
-python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl} -o ${pg_home}/`basename ${s3_config_file}` \
---skip '//'                                                                               \
---dictionary_key_val "aws_endpoint=${endpoint}"                                           \
---dictionary_key_val "prefix=${prefix}"                                                   \
---dictionary_key_val "aws_region=${region}"                                               \
---dictionary_key_val "aws_profile=${profile}"                                             \
---dictionary_key_val "aws_s3_force_path_style=${force_path_style}"                        \
---dictionary_key_val "postgres_version=${postgresql_version}"                             \
---chmod 640
-EOF
 }
 
 aws_credentials () {
@@ -420,11 +265,11 @@ s3_create_bucket () {
     chown "${user_name}" "${srcdir}"
     chown "${user_name}" "${srcdir}/${comd}"
 
-    cat <<EOF | su - ${user_name} > /dev/null
+    cat <<EOF | su ${user_name} > /dev/null
 python3 -c "import boto3" 2> /dev/null || python3 -m pip -q install --user boto3
 EOF
 
-    cat <<EOF | su - ${user_name} | tail -n 1
+    cat <<EOF | su ${user_name} | tail -n 1
 python3 ${srcdir}/${comd} --endpoint_url ${endpoint_url} \
  --bucket ${bucket} \
  --aws_profile ${aws_profile} \
@@ -434,66 +279,13 @@ EOF
 
 }
 
-backup_walg_service () {
-    command=$1
-    postgres_version=$2
-    backup_walg=$3
-
-    test -f /etc/systemd/system/backup_walg-${postgres_version}.service || {
-        echo "systemd file not found: /etc/systemd/system/backup_walg-${postgres_version}.service" 1>&2
-        exit 1
-    }
-    test -f $srcdir/backup_walg.py && {
-        test -f ${backup_walg} || {
-            mkdir -m 755 -p `dirname ${backup_walg}`
-            install -v -m 644 $srcdir/backup_walg.py `dirname ${backup_walg}`
-        }
-    }
-
-    case "${command}" in
-        'enable')
-            /usr/bin/systemctl enable backup_walg-${postgres_version}.service
-            /usr/bin/systemctl -q is-active backup_walg-${postgres_version}.service || {
-                /usr/bin/systemctl --no-block start backup_walg-${postgres_version}.service
-            }
-            ;;
-        'disable')
-            /usr/bin/systemctl enable backup_walg-${postgres_version}.service
-            ;;
-        *)
-            echo "${command} not implemented" 1>&2
-            exit 1
-            ;;
-    esac
-}
-
 touch ${lock_file} 2> /dev/null || true
 case "${1:-''}" in
-    # get wal-g version on postgres peer
-    'walg_version')
-        shift 1
-        { flock -w 10 8 || exit 1
-          walg_version "$@"
-        } 8< ${lock_file}
-        ;;
-    # must be run on each postgres peer
-    'init')
-        shift 1
-        { flock -w 10 8 || exit 1
-          init "$@"
-        } 8< ${lock_file}
-        ;;
     # must be run on the archive server
     'ssh_archiving_init')
         shift 1
         { flock -w 10 8 || exit 1
           ssh_archiving_init "$@"
-        } 8< ${lock_file}
-        ;;
-    'ssh_archiving_add')
-        shift 1
-        { flock -w 10 8 || exit 1
-          ssh_archiving_add "$@"
         } 8< ${lock_file}
         ;;
     'ssh_authorize_keys')
@@ -515,18 +307,6 @@ case "${1:-''}" in
           ssh_known_hosts "$@"
         } 8< ${lock_file}
         ;;
-    'sh_json')
-        shift 1
-        { flock -w 10 8 || exit 1
-          sh_json "$@"
-        } 8< ${lock_file}
-        ;;
-    's3_json')
-        shift 1
-        { flock -w 10 8 || exit 1
-          s3_json "$@"
-        } 8< ${lock_file}
-        ;;
     'aws_credentials')
         shift 1
         { flock -w 10 8 || exit 1
@@ -545,27 +325,37 @@ case "${1:-''}" in
           s3_create_bucket "$@"
         } 8< ${lock_file}
         ;;
-    'backup_walg_service')
+    'ssh_archive_user_add')
         shift 1
         { flock -w 10 8 || exit 1
-          backup_walg_service "$@"
+          ssh_archive_user_add "$@"
+        } 8< ${lock_file}
+        ;;
+    'sshd_configure')
+        shift 1
+        { flock -w 10 8 || exit 1
+          sshd_configure "$@"
+        } 8< ${lock_file}
+        ;;
+    'sftpd_command')
+        shift 1
+        { flock -w 10 8 || exit 1
+          sftpd_command "$@"
         } 8< ${lock_file}
         ;;
     *)
         {
             cat <<EOF
 usage:
- $0 init <wal-g release version> ['v0.2.19']
  $0 ssh_archiving_init
- $0 ssh_archiving_add <cluster name>
  $0 ssh_archive_keygen
  $0 ssh_known_hosts <cluster name> <archive host IP>
- $0 sh_json
- $0 s3_json
  $0 aws_credentials
  $0 aws_credentials_dump
  $0 s3_create_bucket
- $0 backup_walg_service enable <postgres_version> | disable <postgres_version>
+ $0 ssh_archive_user_add user_name archive_base_dir initial_login_group (archiver) user_shell (/bin/false)
+ $0 sshd_configure chroot_dir group
+ $0 sftpd_command enable port | disable
 EOF
             exit 1
         } >&2

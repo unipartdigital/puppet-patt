@@ -8,6 +8,7 @@ Wants=sshd-keygen.target
 Type=notify
 EnvironmentFile=-/etc/crypto-policies/back-ends/opensshserver.config
 EnvironmentFile=-/etc/sysconfig/sshd
+ExecStartPre=-/usr/sbin/nft add element ip6 postgres_patroni sftp_archiving_port { ${listen_port} }
 ExecStart=/usr/sbin/sshd -f /etc/ssh/sftpd_config -D $$OPTIONS $$CRYPTO_POLICY
 ExecReload=/bin/kill -HUP $$MAINPID
 KillMode=process

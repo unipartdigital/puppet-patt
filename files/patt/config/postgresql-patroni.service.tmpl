@@ -1,0 +1,26 @@
+[Unit]
+Description=Patroni PostgreSQL ${postgres_version} database server
+Documentation=https://www.postgresql.org/docs/${postgres_version}/static/
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=postgres
+Group=postgres
+TemporaryFileSystem=/var/cache/pg_stats_temp:nodev,strictatime,mode=0750,uid=${pg_uid},gid=${pg_gid}
+Environment=PGDATA=${postgres_home}/${postgres_version}/data/
+Environment=PATH=${postgres_bin}:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
+OOMScoreAdjust=-1000
+Environment=PG_OOM_ADJUST_FILE=/proc/self/oom_score_adj
+Environment=PG_OOM_ADJUST_VALUE=0
+ExecStart=${postgres_home}/.local/bin/patroni ${postgres_home}/patroni.yaml
+ExecReload=/bin/kill -HUP $$MAINPID
+KillMode=process
+KillSignal=SIGINT
+TimeoutSec=0
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target

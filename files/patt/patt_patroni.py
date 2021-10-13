@@ -20,10 +20,10 @@ take a list of {'database': '', 'user': ''}
 def cert_pg_hba_list (db_user=[], key_db='database', key_user='user', key_cert='cert'):
     default_pg_hba_list = [
         'local    all         all                   ident',
-        'host     all         all         ::/0      md5',
-        'host     all         all         0.0.0.0/0 md5',
-        'host     replication replication ::/0      md5',
-        'host     replication replication 0.0.0.0/0 md5'
+        'host     all         all         ::/0      scram-sha-256',
+        'host     all         all         0.0.0.0/0 scram-sha-256',
+        'host     replication replication ::/0      scram-sha-256',
+        'host     replication replication 0.0.0.0/0 scram-sha-256'
     ]
     result = ["# TYPE   DATABASE   USER   ADDRESS   METHOD"]
     db_user = db_user if db_user else []
@@ -41,12 +41,13 @@ def cert_pg_hba_list (db_user=[], key_db='database', key_user='user', key_cert='
 """
 install patroni packages and dep on each nodes
 """
-def patroni_init(postgres_version, patroni_version, nodes):
+def patroni_init(postgres_version, patroni_version, nodes, dcs="etcd"):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
-
-    result = patt.exec_script (nodes=nodes, src="./dscripts/d30.patroni.sh", payload='config/patroni.te',
-                               args=['init'] + [postgres_version] + [patroni_version] + ['patroni.te'],
+    payload=['config/patroni.te','dscripts/tmpl2file.py', 'config/postgresql-patroni.service.tmpl']
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d30.patroni.sh", payload=payload,
+                               args=['init'] + [postgres_version] + [patroni_version] +
+                               ['patroni.te'] + ['postgresql-patroni.service.tmpl'] + [dcs],
                                sudo=True)
     log_results (result)
 
@@ -69,9 +70,10 @@ def patroni_enable(postgres_version, patroni_version, nodes):
         return ("\n{}".format (r.out))
         logger.warn ("error: {}".format (r.error))
 
-def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_peers,
+def patroni_configure(postgres_version, cluster_name, template_src, nodes,
                       config_file_target, sysuser_pass, postgres_parameters,
-                      pg_hba_list=cert_pg_hba_list(), user=None, enable_pg_temp=False):
+                      pg_hba_list=cert_pg_hba_list(), user=None, enable_pg_temp=False,
+                      etcd_peers=[], raft_peers=[], dcs_type='etcd', raft_data_dir="/var/lib/raft"):
     tmpl=""
     with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as tmpl_file:
         if os.path.isfile(template_src):
@@ -97,15 +99,22 @@ def patroni_configure(postgres_version, cluster_name, template_src, nodes, etcd_
             print(yaml.dump(tmpl, default_flow_style=False), file=tmpl_file)
             tmpl_file.flush()
 
+        opt_args=[]
+        opt_args += ['-e'] + [n.hostname for n in etcd_peers] if etcd_peers else ['-e', []]
+        opt_args += ['-r'] + [n.hostname for n in raft_peers] if raft_peers else ['-r', []]
         result = patt.exec_script (nodes=nodes, src="./dscripts/patroni_config.py", payload=tmpl_file.name,
-                                   args=['-c'] + [cluster_name] + ['-t'] +
+                                   args=['PatroniConfig'] +
+                                   ['-c'] + [cluster_name] + ['-t'] +
                                    [os.path.basename (tmpl_file.name)] +
                                    ['-d'] + [config_file_target] +
                                    ['-u'] + [user] +
                                    ['-v'] + [postgres_version] +
                                    ['-p'] + [n.hostname for n in nodes] +
-                                   ['-e'] + [n.hostname for n in etcd_peers] +
-                                   ['-s'] + ['"' + str(sysuser_pass) + '"'],
+                                   opt_args +
+                                   ['-s'] + ['"' + str(sysuser_pass) + '"'] +
+                                   ['--dcs_type'] + [dcs_type] +
+                                   ['--raft_data_dir'] + [raft_data_dir] +
+                                   ['--debug'],
                                    sudo=True,
                                    log_call=False)
         log_results (result)
@@ -191,3 +200,113 @@ def get_leader (postgres_peers):
                 if m['state'] == 'running':
                     p = [x for x in postgres_peers if x.hostname == host or host in x.ip_aliases]
                     return p
+
+"""
+add only the ['raft'] config elements. to be used with raft only node.
+"""
+def patroni_raft_controller_configure(cluster_name, nodes, config_file_target, user=None,
+                                      raft_peers=[], raft_data_dir="/var/lib/raft"):
+    result = patt.exec_script (nodes=nodes, src="./dscripts/patroni_config.py", payload=[],
+                               args=['RaftConfig'] +
+                               ['-c'] + [cluster_name] +
+                               ['-d'] + [config_file_target] +
+                               ['-u'] + [user] +
+                               ['-p'] + [n.hostname for n in nodes] +
+                               ['-r'] + [n.hostname for n in raft_peers] +
+                               ['--raft_data_dir'] + [raft_data_dir] +
+                               ['--debug'],
+                               sudo=True,
+                               log_call=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+def disable_auto_failover (postgres_version, postgres_peers):
+    for p in postgres_peers:
+        try:
+            result = patt.exec_script (nodes=[p], src="dscripts/d30.patroni.sh",
+                                       args=['disable_auto_failover'] +  [postgres_version], sudo=True)
+            if any(x == True for x in [bool(n.error.strip() == 'Error: Cluster is already paused') for n in result if hasattr(n,'error')]):
+                logger.warning ("Cluster is already paused")
+                return True
+            elif any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')]):
+                logger.error ([n.error.strip() for n in result if hasattr(n,'error')])
+                continue
+            else:
+                log_results (result)
+                return True
+        except Exception:
+            continue
+    return False
+
+def enable_auto_failover (postgres_version, postgres_peers):
+    for p in postgres_peers:
+        try:
+            result = patt.exec_script (nodes=[p], src="dscripts/d30.patroni.sh",
+                                       args=['enable_auto_failover'] +  [postgres_version], sudo=True)
+            if any(x == True for x in [bool(n.error.strip() == 'Error: Cluster is not paused') for n in result if hasattr(n,'error')]):
+                logger.warning ("Cluster is not paused")
+                return True
+            elif any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')]):
+                continue
+            else:
+                log_results (result)
+                return True
+        except Exception:
+            continue
+    return False
+
+"""
+raft only node init
+"""
+def patroni_raft_init (patroni_version, nodes, raft_data_dir="/var/lib/raft", user="raft"):
+    payload=[]
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
+                               args=['init'] +
+                               [patroni_version] + [raft_data_dir] + [user],
+                               sudo=True,
+                               log_call=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+"""
+raft only node configure
+"""
+def patroni_raft_configure (nodes, user="raft"):
+    payload=['dscripts/tmpl2file.py',
+             'config/patroni_raft_controller.service.tmpl',
+             'config/patroni_raft.te']
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
+                               args=['configure'] +
+                               ['patroni_raft_controller.service.tmpl'] + [user] + ['patroni_raft.te'],
+                               sudo=True,
+                               log_call=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+"""
+raft only node service enable
+"""
+def patroni_raft_enable (nodes, user="raft"):
+    payload=[]
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
+                               args=['enable'] +
+                               ['patroni_raft_controller.service'] + [user],
+                               sudo=True,
+                               log_call=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+"""
+postgres peer raft path configure
+"""
+def patroni_pg_node_raft_configure (nodes, raft_data_dir="/var/lib/raft"):
+    payload=['dscripts/tmpl2file.py',
+             'config/patroni_raft_controller.service.tmpl',
+             'config/patroni_raft.te']
+    result = patt.exec_script (nodes=nodes, src="./dscripts/d12.raft_controller.sh", payload=payload,
+                               args=['pg_node_configure'] +
+                               [raft_data_dir] + ['patroni_raft.te'],
+                               sudo=True,
+                               log_call=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])

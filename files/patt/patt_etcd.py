@@ -4,6 +4,7 @@ import patt
 import logging
 import random
 import time
+import os
 
 logger = logging.getLogger('patt_etcd')
 
@@ -105,10 +106,10 @@ def pick_init_node(nodes):
     logger.debug ("pick up etcd node: {}".format(picked_up.hostname))
     return picked_up
 
-def etcd_init(cluster_name, nodes):
+def etcd_init(cluster_name, nodes, etcd_template="config/etcd.conf.tmpl"):
     patt.host_id(nodes)
     patt.check_dup_id (nodes)
-
+    payload=[etcd_template, 'dscripts/tmpl2file.py']
     id_hosts = [n.id + '_' +  n.hostname for n in nodes]
     result = patt.exec_script (nodes=nodes, src="./dscripts/d10.etcd.sh",
                                 args=['init'] + [cluster_name] + id_hosts, sudo=True)
@@ -126,20 +127,12 @@ def etcd_init(cluster_name, nodes):
 
     if not initialized:
 
-        heartbeat_interval=10
-        # rtt_matrix = patt.rtt6 (nodes)
-        # heartbeat_interval=wca(rtt_matrix) * 1.5
-        # if heartbeat_interval < 5:
-        election_timeout=50
-        # else:
-        #     election_timeout=int (10 * heartbeat_interval)
-
         id_hosts = "{}_{}".format (init_node.id, init_node.hostname)
 
-        result = patt.exec_script (nodes=[init_node], src="./dscripts/d10.etcd.sh",
+        result = patt.exec_script (nodes=[init_node], src="./dscripts/d10.etcd.sh", payload=payload,
                                    args=['config'] + ['new'] + [cluster_name] +
+                                   [os.path.basename(etcd_template)] +
                                    [id_hosts], sudo=True)
-        #                                   [heartbeat_interval] + [election_timeout] + id_hosts, sudo=True)
         log_results (result)
 
         result = patt.exec_script (nodes=[init_node], src="./dscripts/d10.etcd.sh",
@@ -197,10 +190,10 @@ def etcd_init(cluster_name, nodes):
             if all(x == False for x in [bool(n.error) for n in result]): break
             time.sleep(3.0)
 
-        result = patt.exec_script (nodes=members, src="./dscripts/d10.etcd.sh",
-                                    args=['config'] + ['existing'] + [cluster_name] +
-                                    id_hosts, sudo=True)
-        # [heartbeat_interval] + [election_timeout] + id_hosts, sudo=True)
+        result = patt.exec_script (nodes=members, src="./dscripts/d10.etcd.sh", payload=payload,
+                                   args=['config'] + ['existing'] + [cluster_name] +
+                                   [os.path.basename(etcd_template)] +
+                                   id_hosts, sudo=True)
         log_results (result)
 
         result = patt.exec_script (nodes=members, src="./dscripts/d10.etcd.sh",
