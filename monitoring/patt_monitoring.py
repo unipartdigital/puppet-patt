@@ -117,6 +117,8 @@ class EtcdService(ClusterService):
         super().__init__()
         if self.dcs_type in ('etcd', 'etcd3'):
             self.init_urls = self.dcs_peers
+        else:
+            self.init_urls = []
         self.init_urls = self.http_normalize_url (2379, self.init_urls)
 
     def get_client_urls (self):
@@ -141,6 +143,7 @@ class EtcdService(ClusterService):
 
     def cluster_health(self):
         cluster_client_urls = self.get_client_urls()
+        if self.dcs_type not in ('etcd', 'etcd3'): return [('unneeded', True)]
         if cluster_client_urls:
             return [(c, self.node_health ([c])) for c in cluster_client_urls]
         return ([(c, False) for c in self.dcs_peers])
