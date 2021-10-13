@@ -11,6 +11,7 @@ CacheDirectory=walg
 
 Environment=PGDATA=${pg_data}
 Environment=PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
+Environment=WALG_VERIFY_PAGE_CHECKSUMS
 
 OOMScoreAdjust=-500
 
