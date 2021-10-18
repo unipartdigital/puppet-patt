@@ -40,7 +40,6 @@ class Config(object):
         self.vol_size_pgbackrest = None
         self.dcs_peers = None
         self.dcs_type = 'etcd'
-        self.etcd_peers = None
         self.etcd_template_file = None
         self.floating_ip = None
         self.haproxy_peers = None
@@ -120,15 +119,16 @@ if __name__ == "__main__":
     cli.add_argument('-l','--ssh_login', help='default ssh login', required=False)
     cli.add_argument('-k','--ssh_keyfile', help='default ssh keyfile', required=False)
     cli.add_argument('-c','--cluster_name', help='cluster name', required=True)
-    cli.add_argument('-e','--etcd_peers', action='append', help='etcd peers', required=False)
+    cli.add_argument('-d','--dcs_peers', action='append', help='dcs peers', required=False)
+    cli.add_argument('-dt','--dcs_type', choices=['etcd', 'etcd3', 'raft'], help='dcs type', required=False)
 
     cli.add_argument('-p','--postgres_peers', action='append', help='postgres peers', required=False)
     cli.add_argument('-r','--postgres_release', help='postgres release version 11|12|13', default="13", required=False)
     cli.add_argument('-pp','--postgres_parameters', help='list of configuration settings for Postgres', default=[""], required=False)
 
-    cli.add_argument('--walg_release', help='wal-g release version', default="v0.2.19", required=False)
+    cli.add_argument('--walg_release', help='wal-g release version', default="v1.1", required=False)
 
-    cli.add_argument('--patroni_release', help='patroni release version', default="2.0.2", required=False)
+    cli.add_argument('--patroni_release', help='patroni release version', default="2.1.1", required=False)
     cli.add_argument('-t','--patroni_template_file', help='patroni template file', required=False)
 
     cli.add_argument('-hp', '--haproxy_peers', help='haproxy peers', required=False)
@@ -557,10 +557,6 @@ if __name__ == "__main__":
             assert patroni_configure_ok, "patroni configure error"
 
             progress_bar (11, 14)
-
-            # disable_auto_failover_ok = patt_patroni.disable_auto_failover (
-            #     cfg.postgres_release, postgres_peers)
-            # assert disable_auto_failover_ok, "disable auto failover error"
 
             patroni_report = patt_patroni.patroni_enable(cfg.postgres_release, cfg.patroni_release,
                                                          postgres_peers)
