@@ -196,6 +196,14 @@ class PatroniService(ClusterService):
             pass
         return self.info
 
+    def _get_history_url(self):
+        return self.get ('history', None, None, self.init_urls)
+
+    def get_history(self):
+        history = self.get ('history', None, None, self.init_urls)
+        if isinstance(history, list): return history[::-1]
+        return []
+
     def has_master(self):
         if not self.info:
             self.get_info
@@ -484,7 +492,11 @@ if __name__ == "__main__":
                 print ("replication_health  : {}".format (patroni.replication_health()))
             if args.verbose2 or not patroni_healthy:
                 print ("patroni dump:\n {}".format (patroni.dump()))
-
+                print ("history (TL, LSN, Reason, Timestamp, New Leader):")
+                for e in patroni.get_history():
+                    for i in e: print ("{}\t".format(i), end="")
+                    print ()
+                print ()
     if 'df' not in exclude:
         df = DiskFreeService()
         df_check = df.node_check()

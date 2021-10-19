@@ -36,6 +36,8 @@ li.patroni_ok::before{content: '\\2600'; display: inline-block; width: 1em; marg
 li.patroni_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
 li.df_ok::before{content: '\\2600'; display: inline-block; width: 1em; margin-left: -1em; color: green;}
 li.df_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
+div.patroni_hist{display:table-cell; float: top; padding: 10px; border: 1px solid gray; font-family: courier, monospace; white-space: pre-wrap;}
+ul.patroni_hist{height:300px; width:70%; overflow:hidden; overflow-x:scroll; overflow-y:scroll;}
 """)
     xhtml.append_child (head, style)
 
@@ -109,6 +111,21 @@ li.df_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-le
     xhtml.append_child (div_patroni_dump, pre_patroni)
     # xhtml.append (div_patroni_dump)
     xhtml.append_child (div_patroni, div_patroni_dump)
+
+    div_patroni_hist = xhtml.create_element ("div", Class="patroni_hist")
+    h3_patroni_hist = xhtml.create_element ("h3", Class="h3_patroni_hist")
+    xhtml.append_text (h3_patroni_hist, "Patroni last timeline history")
+    xhtml.append_child (div_patroni_hist, h3_patroni_hist)
+    h5_patroni_hist = xhtml.create_element ("h5", Class="h5_patroni_hist")
+    xhtml.append_text (h5_patroni_hist, "[ TL, LSN, Reason, Timestamp, New Leader ]")
+    xhtml.append_child (div_patroni_hist, h5_patroni_hist)
+    ul_patroni_hist = xhtml.create_element ("ul", Class="patroni_hist")
+    for tlh in patroni.get_history():
+        li_patroni_hist =  xhtml.create_element ("li", Class="class_li_patroni_hist")
+        xhtml.append_text (li_patroni_hist, "{}".format(tlh))
+        xhtml.append_child (ul_patroni_hist, li_patroni_hist)
+    xhtml.append_child (div_patroni_hist, ul_patroni_hist)
+    xhtml.append_child (div_patroni, div_patroni_hist)
 
     df=DiskFreeService()
     df_health=df.node_check()
