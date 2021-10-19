@@ -1,6 +1,6 @@
 # -*- mode: python -*-
 
-from patt_monitoring import EtcdService, PatroniService, DiskFreeService
+from patt_monitoring import EtcdService, RaftService, PatroniService, DiskFreeService
 from xhtml import Xhtml
 
 """
@@ -22,16 +22,21 @@ def application(environ, start_response):
 div.table{display:table; padding: 10px; border: 1px ;   float:left; width: 50%;}
 div.etcd_ok{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid green;}
 div.etcd_ko{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid red;}
+div.raft_ok{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid green;}
+div.raft_ko{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid red;}
 div.patroni_ok{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid green;}
 div.patroni_ko{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid red;}
 div.patroni_dump{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid gray; font-family: courier, monospace; white-space: pre-wrap;}
 div.df_ok{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid green;}
 div.df_ko{display:table-cell; empty-cells:hide; padding: 10px; border: 1px solid red;}
 ul.etcd{list-style: none;}
+ul.raft{list-style: none;}
 ul.patroni{list-style: none;}
 ul.df{list-style: none;}
 li.etcd_ok::before{content: '\\2600'; display: inline-block; width: 1em; margin-left: -1em; color: green;}
 li.etcd_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
+li.raft_ok::before{content: '\\2600'; display: inline-block; width: 1em; margin-left: -1em; color: green;}
+li.raft_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
 li.patroni_ok::before{content: '\\2600'; display: inline-block; width: 1em; margin-left: -1em; color: green;}
 li.patroni_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
 li.df_ok::before{content: '\\2600'; display: inline-block; width: 1em; margin-left: -1em; color: green;}
@@ -68,7 +73,26 @@ ul.patroni_hist{height:300px; width:70%; overflow:hidden; overflow-x:scroll; ove
         xhtml.append_child (ul_etcd, li_etcd)
     xhtml.append_child (div_etcd, ul_etcd)
     xhtml.append_child (div_table, div_etcd)
-    #xhtml.append (div_etcd)
+
+    raft=RaftService()
+    raft_healthy=raft.is_healthy()
+    service_status.append(raft_healthy)
+    raft_div_class="raft_ok" if raft_healthy else "raft_ko"
+    div_raft = xhtml.create_element ("div", Class=raft_div_class)
+    h3_raft = xhtml.create_element ("h3", Class="h3_raft")
+    xhtml.append_text (h3_raft, "Raft")
+    xhtml.append_child (div_raft, h3_raft)
+
+    raft_cluster_health=raft.cluster_health()
+    ul_raft = xhtml.create_element ("ul", Class="raft")
+    for e in raft_cluster_health:
+        class_li_raft="raft_ok "if e[1] else "raft_ko"
+        li_raft = xhtml.create_element ("li", Class=class_li_raft)
+        hrr="[OK]" if e[1] else "[ER]"
+        xhtml.append_text (li_raft, "{} {}".format(hrr, e[0]))
+        xhtml.append_child (ul_raft, li_raft)
+    xhtml.append_child (div_raft, ul_raft)
+    xhtml.append_child (div_table, div_raft)
 
     patroni=PatroniService()
     patroni.get_info()

@@ -101,7 +101,7 @@ configure () {
         useradd --home-dir "/home/${wsgi_user}" --user-group  \
                 --comment "cluster health user" \
                 --system --no-log-init \
-                --shell /bin/false ${wsgi_user}
+                --shell /sbin/nologin ${wsgi_user}
     }
     test -d /home/${wsgi_user} || {
         mkdir -m 711 -p /home/${wsgi_user}
@@ -221,6 +221,7 @@ configure () {
     cat <<EOF | su "${wsgi_user}" -s /bin/bash
 cd ${srcdir}
 python3 -c "import yaml" > /dev/null 2>&1 || python3 -m pip install --user pyyaml
+python3 -c "import pysyncobj" > /dev/null 2>&1 || python3 -m pip install --user pysyncobj
 python3 df_monitor.wsgi -f ${cluster_config}
 EOF
 }

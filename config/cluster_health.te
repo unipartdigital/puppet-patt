@@ -27,6 +27,7 @@ allow httpd_t unreserved_port_t:tcp_socket name_connect;
 allow httpd_t user_home_t:file { ioctl open read };
 allow httpd_t user_home_t:dir read;
 allow httpd_t gconf_home_t:dir read;
+allow httpd_t gconf_home_t:file { getattr ioctl open read };
 allow httpd_t cache_home_t:dir { add_name remove_name write };
 allow httpd_t cache_home_t:file { getattr lock create open read unlink write map };
 

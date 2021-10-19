@@ -147,7 +147,50 @@ class EtcdService(ClusterService):
         if cluster_client_urls:
             return [(c, self.node_health ([c])) for c in cluster_client_urls]
         return ([(c, False) for c in self.dcs_peers])
-    # return cluster_config.yaml dcs_peers list set to False if all down or if dcs is not etcd
+    # return cluster_config.yaml dcs_peers list set to False if all down or True if dcs is not etcd
+
+    def is_healthy(self):
+        clth = self.cluster_health()
+        if clth:
+            return all([c[1] for c in clth]) and len (clth) > 0
+
+class RaftService(ClusterService):
+
+    def __init__(self, default_port=7204):
+        super().__init__()
+        if self.dcs_type in 'raft':
+            self.init_urls = self.dcs_peers
+            from pysyncobj import TcpUtility as raft_util
+            self.raft_util = raft_util
+        else:
+            self.init_urls = []
+        self.init_urls = ["{}:{}".format (n, default_port) for n in self.init_urls]
+
+    def connection_status (self):
+        result_all = []
+        if self.dcs_type not in 'raft': return []
+        util = self.raft_util(None)
+        message = ['status']
+        m = 'partner_node_status_server_'
+        for c in self.init_urls:
+            try:
+                result = util.executeCommand(c, message)
+            except Exception as e:
+                continue
+            else:
+                partner_node_status_servers_key = [key for key in result if key.startswith(m)]
+                for i in [(k.replace(m,'').rpartition(':')[0], result[k] == 2) for
+                          k in partner_node_status_servers_key]:
+                    if i not in result_all: result_all.append(i)
+        return result_all
+
+    def cluster_health(self):
+        if self.dcs_type not in 'raft': return [('unneeded', True)]
+        result_all = []
+        cs = self.connection_status()
+        if cs: return cs
+        return ([(c, False) for c in self.dcs_peers])
+        # return cluster_config.yaml dcs_peers list set to False if all down or True if dcs is not raft
 
     def is_healthy(self):
         clth = self.cluster_health()
@@ -475,6 +518,16 @@ if __name__ == "__main__":
             print ("Etcd    cluster is healthy: {}".format(etcd_healthy))
             if args.verbose2 or not etcd_healthy:
                 print ("EtcdService cluster members:\n{}".format (pp_string(etcd.cluster_health())))
+
+    if 'raft' not in exclude:
+        raft=RaftService()
+        raft_healthy=raft.is_healthy()
+        if args.quiet:
+            status.append(raft_healthy)
+        else:
+            print ("Raft    cluster is healthy: {}".format(raft_healthy))
+            if args.verbose2 or not etcd_healthy:
+                print ("RaftService cluster partner online:\n{}".format (pp_string(raft.cluster_health())))
 
     if 'patroni' not in exclude:
         patroni=PatroniService()
