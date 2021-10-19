@@ -42,7 +42,7 @@ li.patroni_ko::before{content: '\\2020'; display: inline-block; width: 1em; marg
 li.df_ok::before{content: '\\2600'; display: inline-block; width: 1em; margin-left: -1em; color: green;}
 li.df_ko::before{content: '\\2020'; display: inline-block; width: 1em; margin-left: -1em; color: red;}
 div.patroni_hist{display:table-cell; float: top; padding: 10px; border: 1px solid gray; font-family: courier, monospace; white-space: pre-wrap;}
-ul.patroni_hist{height:300px; width:70%; overflow:hidden; overflow-x:scroll; overflow-y:scroll;}
+ul.patroni_hist{height:300px; width:80%; overflow:hidden; overflow-x:scroll; overflow-y:scroll;}
 """)
     xhtml.append_child (head, style)
 
@@ -121,7 +121,6 @@ ul.patroni_hist{height:300px; width:70%; overflow:hidden; overflow-x:scroll; ove
         xhtml.append_text (li_patroni, "{} {}".format(hrr, p[0]))
         xhtml.append_child (ul_patroni, li_patroni)
     xhtml.append_child (div_patroni, ul_patroni)
-    #xhtml.append (div_patroni)
     xhtml.append_child (div_table, div_patroni)
 
     div_patroni_dump = xhtml.create_element ("div", Class="patroni_dump")
@@ -134,7 +133,6 @@ ul.patroni_hist{height:300px; width:70%; overflow:hidden; overflow-x:scroll; ove
     xhtml.append_text (code_patroni, "\n{}".format(patroni.dump()))
     xhtml.append_child (pre_patroni, code_patroni)
     xhtml.append_child (div_patroni_dump, pre_patroni)
-    # xhtml.append (div_patroni_dump)
     xhtml.append_child (div_patroni, div_patroni_dump)
 
     div_patroni_hist = xhtml.create_element ("div", Class="patroni_hist")

@@ -1,6 +1,6 @@
 # -*- mode: python -*-
 
-from patt_monitoring import EtcdService, PatroniService, DiskFreeService
+from patt_monitoring import EtcdService, RaftService, PatroniService, DiskFreeService
 from xhtml import Xhtml
 
 OK_TEXT="all good"
@@ -28,6 +28,10 @@ def application(environ, start_response):
     etcd_healthy=etcd.is_healthy()
     service_status.append(etcd_healthy)
 
+    raft=RaftService()
+    raft_healthy=raft.is_healthy()
+    service_status.append(raft_healthy)
+
     patroni=PatroniService()
     patroni.get_info()
     patroni_health=[
@@ -36,7 +40,8 @@ def application(environ, start_response):
         ("match config",patroni.match_config()),
         ("replayed delta", patroni.replica_received_replayed_delta_ok()),
         ("timeline match", patroni.timeline_match()),
-        ("replication health", patroni.replication_health())]
+        ("replication health", patroni.replication_health()),
+        ("cluster management", not patroni.is_paused())]
 
     patroni_healthy=all([n[1] == True for n in patroni_health])
     service_status.append(patroni_healthy)
