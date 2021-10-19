@@ -78,7 +78,8 @@ ul.patroni_hist{height:300px; width:70%; overflow:hidden; overflow-x:scroll; ove
         ("match config",patroni.match_config()),
         ("replayed delta", patroni.replica_received_replayed_delta_ok()),
         ("timeline match", patroni.timeline_match()),
-        ("replication health", patroni.replication_health())]
+        ("replication health", patroni.replication_health()),
+        ("cluster management", not patroni.is_paused())]
 
     patroni_healthy=all([n[1] == True for n in patroni_health])
     service_status.append(patroni_healthy)

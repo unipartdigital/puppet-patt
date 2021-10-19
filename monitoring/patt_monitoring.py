@@ -204,6 +204,12 @@ class PatroniService(ClusterService):
         if isinstance(history, list): return history[::-1]
         return []
 
+    def is_paused(self):
+        if not self.info:
+            self.get_info
+        return any([n.pause == True
+                    for n in self.info if hasattr(n, 'pause')])
+
     def has_master(self):
         if not self.info:
             self.get_info
@@ -490,6 +496,7 @@ if __name__ == "__main__":
                     patroni.replica_received_replayed_delta()))
                 print ("timeline_ok         : {}".format (patroni.timeline_match()))
                 print ("replication_health  : {}".format (patroni.replication_health()))
+                print ("cluster management  : {}".format(not patroni.is_paused()))
             if args.verbose2 or not patroni_healthy:
                 print ("patroni dump:\n {}".format (patroni.dump()))
                 print ("history (TL, LSN, Reason, Timestamp, New Leader):")
