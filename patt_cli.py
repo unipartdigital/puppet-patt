@@ -19,6 +19,7 @@ import patt_etcd
 import patt_postgres
 from patt_archiver import Archiver
 from patt_archiver_walg import ArchiverWalg
+from patt_archiver_dumping import ArchiverDumping
 from patt_archiver_pgbackrest import ArchiverPgbackrest
 import patt_patroni
 import patt_haproxy
@@ -71,6 +72,7 @@ class Config(object):
         self.disk_free_alert_threshold = []
         self.disk_free_alert_threshold_default_mb = 500
         self.disk_free_alert_threshold_default_pc = 5
+        self.dumping_calendar_events = []
 
     def from_argparse_cli(self, args):
         for a in args._get_kwargs():
@@ -420,6 +422,10 @@ if __name__ == "__main__":
             assert s3_create_bucket_ok, "create bucket error"
 
             # systemd backup service setup
+            backup_service_install_ok = archiver.backup_service_install(
+                nodes=postgres_peers)
+            assert backup_service_install_ok, "backup service install error"
+            # systemd backup service setup
             backup_service_setup_ok = archiver.backup_service_setup(
                 postgres_version=cfg.postgres_release,
                 nodes=postgres_peers)
@@ -465,6 +471,26 @@ if __name__ == "__main__":
                         archiving_server=n[1].hostname,
                         archiving_server_port=n[1].port)
                     assert known_hosts_ok, "error validating known_hosts file"
+        # dumping
+        if postgres_peers:
+            dumping = ArchiverDumping()
+            init_ok = dumping.package_init(nodes=postgres_peers)
+            assert init_ok, "dumping package init error"
+            # systemd backup service setup
+            backup_service_install_ok = dumping.backup_service_install(
+                nodes=postgres_peers)
+            assert backup_service_install_ok, "backup service install error"
+            backup_service_setup_ok = dumping.backup_service_setup(
+                postgres_version=cfg.postgres_release,
+                dumping_root_dir="/var/lib/pg_safe",
+                nodes=postgres_peers)
+            assert backup_service_setup_ok, "backup service setup error"
+            backup_service_command_ok = dumping.backup_service_command(
+                nodes=postgres_peers,
+                command='enable',
+                postgres_version=cfg.postgres_release,
+                calendar_events=cfg.dumping_calendar_events)
+            assert backup_service_command_ok, "backup service command error"
 
         progress_bar (8, 14)
 

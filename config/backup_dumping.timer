@@ -1,0 +1,12 @@
+[Unit]
+Description=PostgreSQL Backup pgdump Timer
+
+[Timer]
+# calendar_events = ["OnCalendar=Mon..Fri 22:30", "OnCalendar=Sat,Sun 20:00"]
+${calendar_events}
+AccuracySec=3h
+Persistent=true
+RandomizedDelaySec=7200
+
+[Install]
+WantedBy=timers.target

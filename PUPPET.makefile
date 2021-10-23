@@ -35,6 +35,8 @@ puppet-module:
 
 	install -m 644 config/pg_create_tablespace.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/backup_walg.service $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/backup_dumping.service $(DESTDIR)/patt/files/patt/config
+	install -m 644 config/backup_dumping.timer $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/df-recorder.service $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/patroni_raft_controller.service.tmpl $(DESTDIR)/patt/files/patt/config
 	install -m 644 config/patroni_raft.te $(DESTDIR)/patt/files/patt/config
@@ -49,11 +51,13 @@ puppet-module:
 	install -m 644 dscripts/d27.archiver.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d27.archiver-walg.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d27.archiver-pgbackrest.sh $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/d27.archiver-dumping.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d30.patroni.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d40.haproxy.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/d50.health.sh $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/create_bucket.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/backup_walg.py $(DESTDIR)/patt/files/patt/dscripts/
+	install -m 644 dscripts/backup_dumping.py $(DESTDIR)/patt/files/patt/dscripts/
 
 	install -m 644 dscripts/haproxy_config.py $(DESTDIR)/patt/files/patt/dscripts/
 	install -m 644 dscripts/nft_config.py $(DESTDIR)/patt/files/patt/dscripts/
@@ -91,6 +95,7 @@ puppet-module:
 	install -m 644 patt_archiver.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_archiver_walg.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_archiver_pgbackrest.py $(DESTDIR)/patt/files/patt/.
+	install -m 644 patt_archiver_dumping.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 patt_health.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 file_lock.py $(DESTDIR)/patt/files/patt/.
 	install -m 644 requirements.txt $(DESTDIR)/patt/files/patt/.

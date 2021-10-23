@@ -320,7 +320,10 @@ if __name__ == "__main__":
     system_identifier = pgd.system_identifier()
     compress = args.compress if args.compress is not None else cfg.dumping_compress
     dumping_format = args.dumping_format if args.dumping_format else cfg.dumping_format
-    dumping_root_dir = args.dumping_root_dir if args.dumping_root_dir is not None else cfg.dumping_root_dir
+    dumping_root_dir = None
+    dumping_root_dir = cfg.dumping_root_dir if cfg.dumping_root_dir is not None else dumping_root_dir
+    dumping_root_dir = os.getenv('DUMPING_ROOT_DIR', default=dumping_root_dir)
+    dumping_root_dir = args.dumping_root_dir if args.dumping_root_dir is not None else dumping_root_dir
     dumping_root_dir = dumping_root_dir if dumping_root_dir != '-' else None
     dumping_dir = os.path.abspath("{}/{}".format(
         dumping_root_dir, system_identifier)) if dumping_root_dir else None
@@ -398,11 +401,11 @@ if __name__ == "__main__":
                                  compress=compress,
                                  file=db_file)
     except Exception as e:
-        if os.path.isdir (dumping_dir):
+        if dumping_dir and os.path.isdir (dumping_dir):
             rmtree(dumping_dir)
         raise
     else:
-        if os.path.isdir (dumping_dir):
+        if dumping_dir and os.path.isdir (dumping_dir):
             stamp = "{}/stamp".format(dumping_dir)
             with open(stamp, 'a'):
                 os.utime(stamp, None)

@@ -1,0 +1,25 @@
+[Unit]
+Description=PostgreSQL Backup pgdump Driver
+After=network-online.target syslog.service
+Wants=network-online.target syslog.service
+
+[Service]
+Type=simple
+User=postgres
+Group=postgres
+
+Environment=DUMPING_ROOT_DIR=${dumping_root_dir}
+Environment=PGDATA=${pg_data}
+Environment=PATH=${pg_path}:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
+
+OOMScoreAdjust=-500
+
+ExecStartPre=/bin/test -d "${dumping_root_dir}"
+ExecStartPre=/bin/test -r "${cluster_config}"
+ExecStartPre=${pg_path}/pg_isready -q
+ExecStart=/usr/bin/python3 ${backup_dumping} -f ${cluster_config}
+Restart=on-failure
+RestartSec=3600
+
+[Install]
+WantedBy=multi-user.target

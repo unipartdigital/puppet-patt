@@ -310,6 +310,9 @@ class Archiver(object):
     def sh_config(self, postgres_version, cluster_name, nodes, archive_store):
         return True
 
+    def backup_service_install(self, nodes, command=""):
+        return True
+
     def backup_service_setup(self, nodes, postgres_version, tmpl=""):
         return True
 

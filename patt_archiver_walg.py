@@ -173,7 +173,8 @@ class ArchiverWalg(Archiver):
                 else:
                     sh_config_file="walg-{}-sh.json".format(count)
 
-                result = patt.exec_script (nodes=nodes, src="./dscripts/d27.archiver-walg.sh", payload=[comd, tmpl],
+                result = patt.exec_script (nodes=nodes, src="./dscripts/d27.archiver-walg.sh",
+                                           payload=[comd, tmpl],
                                            args=['sh_json'] + [postgres_version] + [cluster_name] +
                                            [hostname] + [port] + [prefix] + [login] +
                                            [identity_file] + [sh_config_file] +
@@ -186,11 +187,27 @@ class ArchiverWalg(Archiver):
         return all(x == True for x in isok)
 
     """
+    install in /usr/local/bin/backup_walg.py
+    """
+    def backup_service_install(self, nodes, command="./dscripts/backup_walg.py"):
+        logger.info ("walg_backup_service_install processing {}".format ([n.hostname for n in nodes]))
+        patt.host_id(nodes)
+        comd="./dscripts/tmpl2file.py"
+        result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
+                                   payload=command,
+                                   args=['-t'] + [os.path.basename (command)] +
+                                   ['-o'] + ["/usr/local/bin/{}".format (os.path.basename (command))] +
+                                   ['--chmod'] + ['755'],
+                                   sudo=True)
+        log_results (result)
+        return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+    """
     configure the systemd schedule backup service (named after the postgres version)
     """
     def backup_service_setup(self, nodes, postgres_version,
                              tmpl="./config/backup_walg.service"):
-        logger.info ("walg_s3_backup_service processing {}".format ([n.hostname for n in nodes]))
+        logger.info ("walg_backup_service_setup processing {}".format ([n.hostname for n in nodes]))
         patt.host_id(nodes)
         comd="./dscripts/tmpl2file.py"
         pg_data_rhl_fam="/var/lib/pgsql/{}/data".format(postgres_version)
@@ -202,7 +219,7 @@ class ArchiverWalg(Archiver):
                                    ['-o'] + ["/etc/systemd/system/{}".format (systemd_service)] +
                                    ['--dictionary_key_val'] +
                                    ["backup_walg={}".format(
-                                       "/usr/local/libexec/patt/dscripts/backup_walg.py")] +
+                                       "/usr/local/bin/backup_walg.py")] +
                                    ['--dictionary_key_val'] +
                                    ["cluster_config={}".format("/usr/local/etc/cluster_config.yaml")] +
                                    ['--dictionary-rhel'] +
@@ -221,7 +238,7 @@ class ArchiverWalg(Archiver):
         return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
 
     def backup_service_command(self, nodes, command, postgres_version):
-        logger.info ("walg_s3_backup_service processing {}".format ([n.hostname for n in nodes]))
+        logger.info ("walg_backup_service_command processing {}".format ([n.hostname for n in nodes]))
         patt.host_id(nodes)
         result = patt.exec_script (nodes=nodes, src="./dscripts/d27.archiver-walg.sh",
                                    payload="dscripts/backup_walg.py",
