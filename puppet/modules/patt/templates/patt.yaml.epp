@@ -1,14 +1,14 @@
 #!!python/object:__main__.Config
 add_repo:
 <% [$patt::add_repo].flatten.each |$repo| { -%>
-- <%= $repo %>
+  - <%= $repo %>
 <% } -%>
 cluster_name: <%=$patt::cluster_name%>
 <% if ! empty($patt::dcs_peers) { -%>
 dcs_type: <%=$patt::dcs_type%>
 dcs_peers:
 <% [$patt::dcs_peers].flatten.each |$peer| { -%>
-- <%= $peer %>
+  - <%= $peer %>
 <% } -%>
 <% }elsif ! empty($patt::etcd_peers) { -%>
 <% if $patt::dcs_type == 'etcd' or $patt::dcs_type == 'etcd3' { -%>
@@ -18,43 +18,43 @@ dcs_type: 'etcd'
 <% } -%>
 dcs_peers:
 <% [$patt::etcd_peers].flatten.each |$peer| { -%>
-- <%= $peer %>
+  - <%= $peer %>
 <% } -%>
 <% } -%>
 floating_ip:
 <% [$patt::floating_ip].flatten.each |$fip| { -%>
-- <%= $fip %>
+  - <%= $fip %>
 <% } -%>
 haproxy_peers:
 <% [$patt::haproxy_peers].flatten.each |$peer| { -%>
-- <%= $peer %>
+  - <%= $peer %>
 <% } -%>
 haproxy_template_file: <%=$patt::haproxy_template_file%>
 log_file: <%=$patt::log_file%>
 loglevel: <%=$patt::patt_loglevel%>
 nodes:
 <% [$patt::nodes].flatten.each |$n| { -%>
-- <%= $n %>
+  - <%= $n %>
 <% } -%>
 patroni_release: <%=$patt::patroni_release%>
 patroni_template_file: <%=$patt::patroni_template_file%>
 postgres_peers:
 <% [$patt::postgres_peers].flatten.each |$peer| { -%>
-- <%= $peer %>
+  - <%= $peer %>
 <% } -%>
 postgres_parameters:
 <% [$patt::postgres_parameters].flatten.each |$pp| { -%>
-- <%= $pp %>
+  - <%= $pp %>
 <% } -%>
 postgres_release: <%=$patt::postgres_release%>
 
 network_postgres_clients:
 <% [$patt::network_allow_postgres_clients].flatten.each |$np| { -%>
-- <%= $np %>
+  - <%= $np %>
 <% } -%>
 network_monitoring_clients:
 <% [$patt::network_allow_monitoring_clients].flatten.each |$nm| { -%>
-- <%= $nm %>
+  - <%= $nm %>
 <% } -%>
 
 walg_release: <%=$patt::walg_release%>
@@ -66,25 +66,25 @@ archiver: <%=$patt::archiver%>
 archive_store:
 <%- [$patt::archive_store].flatten.each |$store| { -%>
  <%- if $store["method"] == "s3" { -%>
-- {
-   method: 's3',
-   profile: '<%=$store["profile"]%>',
-   endpoint: '<%=$store["endpoint"]%>',
-   prefix: '<%=$store["prefix"]%>',
-   region: '<%=$store["region"]%>',
-   <%- if $store["force_path_style"] == "false" { -%>
-   force_path_style: 'false'
+  - {
+    method: 's3',
+    profile: '<%=$store["profile"]%>',
+    endpoint: '<%=$store["endpoint"]%>',
+    prefix: '<%=$store["prefix"]%>',
+    region: '<%=$store["region"]%>',
+<%- if $store["force_path_style"] == "false" { -%>
+    force_path_style: 'false'
 <%- }else{ -%>
-   force_path_style: 'true'
+    force_path_style: 'true'
 <%- } -%>
   }
 <%- } -%>
  <%- if $store["method"] == "sh" { -%>
-- {
-   method: 'sh',
-   host: '<%=$store["host"]%>',
-   prefix: '<%=$store["prefix"]%>',
-   identity_file: '<%=$store["identity_file"]%>'
+  - {
+    method: 'sh',
+    host: '<%=$store["host"]%>',
+    prefix: '<%=$store["prefix"]%>',
+    identity_file: '<%=$store["identity_file"]%>'
   }
 <%- } -%>
 <%- } -%>
@@ -94,14 +94,14 @@ ssh_keyfile: <%=$patt::ssh_keyfile%>
 ssh_login: <%=$patt::ssh_login%>
 create_role:
 <% $patt::pg_create_role.flatten.each|$n| { -%>
-- {name: <%= $n['name'] %>, options: <%= $n['options'] %>}
+  - {name: <%= $n['name'] %>, options: <%= $n['options'] %>}
 <% } -%>
 create_database:
 <% $patt::pg_create_database.flatten.each|$n| { -%>
 <%- if $n["cert"] == "true" or $n["cert"] == true { -%>
-- {name: <%= $n['name'] %>, owner: <%= $n['owner']  %>, cert: <%= $n['cert'] -%>}
+  - {name: <%= $n['name'] %>, owner: <%= $n['owner']  %>, cert: <%= $n['cert'] -%>}
 <%- } else { -%>
-- {name: <%= $n['name'] %>, owner: <%= $n['owner'] -%>}
+  - {name: <%= $n['name'] %>, owner: <%= $n['owner'] -%>}
 <% } -%>
 <% } -%>
 vol_size_walg: <%=$patt::vol_size_walg%>
