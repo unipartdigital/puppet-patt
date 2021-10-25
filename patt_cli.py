@@ -375,6 +375,17 @@ if __name__ == "__main__":
 
         progress_bar (8, 14)
 
+        # /usr/local/etc/cluster_config.yaml
+        all_nodes_config = []
+        for n in postgres_peers + dcs_peers + sftpd_peers:
+            if n.id not in [m.id for m in all_nodes_config]:
+                all_nodes_config.append(n)
+        if os.path.isfile(args.yaml_config_file):
+            cp_cluster_config_ok = patt_syst.cp_cluster_config(
+                nodes=all_nodes_config,
+                source=args.yaml_config_file)
+            assert cp_cluster_config_ok, "cp cluster config error"
+
         # archiving/backup
         if cfg.archiver == 'walg':
             # wal-g archiving

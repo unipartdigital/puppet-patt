@@ -168,3 +168,21 @@ def tuned_postgresql(nodes):
                                args=['enable'], sudo=True)
     log_results (result)
     return not any (x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
+
+"""
+copy cluster_config.yaml accross nodes if necessary
+"""
+def cp_cluster_config(nodes, source="", destination="/usr/local/etc/cluster_config.yaml"):
+    logger.info ("cp_cluster_config processing {}".format ([n.hostname for n in nodes]))
+    patt.host_id(nodes)
+    patt.check_dup_id (nodes)
+    comd="./dscripts/tmpl2file.py"
+    result = patt.exec_script (nodes=nodes, src="./dscripts/tmpl2file.py",
+                               payload=source,
+                               args=['-t'] + [os.path.basename (source)] +
+                               ['-o'] + [destination] +
+                               ['--chmod'] + ['644'] +
+                               ['--touch'] + ['/var/tmp/cluster-config'],
+                               sudo=True)
+    log_results (result)
+    return not any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')])
