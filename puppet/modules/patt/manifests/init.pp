@@ -96,6 +96,25 @@ class patt (
                          {day => 'Sat', schedule => []},
                          {day => 'Sun', schedule => []}],
 
+Optional[Array[String]]             $dumping_db_exclude = [],
+Optional[Array[String]]             $dumping_db_exclude_default = ['postgres', 'template1', 'template0'],
+Optional[Array[String]]             $dumping_role_exclude = ['postgres', 'replication', 'rewind_user'],
+Optional[String]                    $dumping_log_file = undef,
+Optional[Integer]                   $dumping_log_level = 20,
+# https://docs.python.org/3/library/logging.html#logging-levels
+Optional[String]                    $dumping_root_dir = undef,
+Optional[Enum['p', 'c', 'd', 't']]  $dumping_format = 'c',
+# [p]lain, [c]ustom, [d]irectory, [t]ar
+Optional[Integer[0, 9]]             $dumping_compress = 3,
+# 0 no compression
+Optional[Integer[1, 999]]           $dumping_rotate = 7,
+# number of rotation before delete the oldest
+Optional[Array[String]]             $dumping_calendar_events = [],
+# dumping_calendar_events as in systemd-timer
+# [ "OnCalendar=Mon..Fri 22:30", "OnCalendar=Sat,Sun 20:00" ]
+# events a randomised by system RandomizedDelaySec=7200
+
+
 )
 {
 

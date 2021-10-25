@@ -150,3 +150,26 @@ disk_free_alert_threshold:
     }
 <%- } -%>
 <%- } -%>
+
+dumping_db_exclude:
+<% $patt::dumping_db_exclude.flatten.each|$d| { -%>
+  - <%= $fd %>
+<% } -%>
+dumping_db_exclude_default:
+<% $patt::dumping_db_exclude_default.flatten.each|$d| { -%>
+  - <%= $d %>
+<% } -%>
+dumping_role_exclude:
+<% $patt::dumping_role_exclude.flatten.each|$d| { -%>
+  - <%= $d %>
+<% } -%>
+dumping_log_file: <%=$patt::dumping_log_file%>
+dumping_log_level: <%=$patt::dumping_log_level%>
+dumping_root_dir: <%=$patt::dumping_root_dir%>
+dumping_format: <%=$patt::dumping_format%>
+dumping_compress: <%=$patt::dumping_compress%>
+dumping_rotate: <%=$patt::dumping_rotate%>
+dumping_calendar_events:
+<% $patt::dumping_calendar_events.flatten.each|$d| { -%>
+  - <%= $d %>
+<% } -%>
