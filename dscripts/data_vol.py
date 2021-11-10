@@ -62,6 +62,17 @@ def bdev_by_mnt(bdev, mnt=None):
             tmp = tmp + p['children']
    return result
 
+def parent_mnt (mnt=None, bdev=None):
+    tmp = bdev[:] if bdev else get_bdev()
+    result = []
+    while len(tmp) > 0:
+        p=tmp.pop(0)
+        if 'children' in p.keys():
+            for l in p['children']:
+                if 'mountpoint' in l and l['mountpoint'] == mnt:
+                    result.append (p)
+    return result
+
 """
 return device list not mounted ordered by size (bigger first)
 device with size <= min_size don't show up
@@ -335,6 +346,21 @@ def init_mount_point (mnt, lv_size='1G', extend_full=False, mkfs="xfs",
                continue
          except:
             raise
+   # resize pv
+   for p in parent_mnt(mnt=mnt):
+       dev=p['name'] if 'name' in p else None
+       if not dev: continue
+       try:
+           pvresize_cmd = subprocess.run(["/sbin/pvresize", "/dev/{}".format(dev)],
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+           # result.append (pvresize_cmd.returncode)
+           if pvresize_cmd.returncode == 0:
+               print (pvresize_cmd.stdout.decode(), flush=True)
+           else:
+               print (pvresize_cmd.stderr.decode(), file=stderr)
+               continue
+       except:
+           raise
 
    if (os.path.isdir(mnt) and len(os.listdir(mnt)) == 0) or not os.path.isdir(mnt):
       # create
@@ -375,7 +401,7 @@ if __name__ == "__main__":
    parser.set_defaults(fstab_uuid=True)
 
    args = parser.parse_args()
-   os.chdir (os.path.dirname (__file__))
+   os.chdir (os.path.dirname (os.path.abspath(__file__)))
 
    if args.fs_type:
       assert args.fs_type in ['ext4', 'xfs']
