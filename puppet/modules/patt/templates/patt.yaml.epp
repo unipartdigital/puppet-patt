@@ -110,7 +110,7 @@ vol_size_raft: <%=$patt::vol_size_raft%>
 vol_size_pgsql: <%=$patt::vol_size_pgsql%>
 vol_size_pgsql_temp: <%=$patt::vol_size_pgsql_temp%>
 vol_size_pgsql_safe: <%=$patt::vol_size_pgsql_safe%>
-vol_size_pgsql_safe: <%=$patt::vol_size_pgbackrest%>
+vol_size_pgbackrest: <%=$patt::vol_size_pgbackrest%>
 
 gc_cron_df_pc: <%=$patt::gc_cron_df_pc%>
 gc_cron_target: <%=$patt::gc_cron_target%>

@@ -82,7 +82,6 @@ class Config(object):
     def to_yaml(self):
         result = yaml.dump(self)
         print (result.replace("!!python/object", "#!!python/object"))
-        sys.exit(0)
 
     def from_yaml_file(self, yaml_file):
         result=None
@@ -151,6 +150,7 @@ if __name__ == "__main__":
         cfg.from_argparse_cli (args)
         if args.yaml_dump:
             cfg.to_yaml()
+            sys.exit(0)
     elif args.interface == 'yaml':
         cfg.from_yaml_file (args.yaml_config_file)
         cluster_config=args.yaml_config_file
