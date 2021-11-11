@@ -159,7 +159,7 @@ class BackupDumping(object):
             conn.close()
 
     def db_list_all(self, exclude=[], exclude_default=['postgres', 'template1', 'template0']):
-        exclude = exclude + exclude_default if isinstance(exclude, list) else None
+        exclude = exclude + exclude_default if isinstance(exclude, list) else exclude_default
         conn = psycopg2.connect("dbname=postgres")
         try:
             cur = conn.cursor()
