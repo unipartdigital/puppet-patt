@@ -3,6 +3,7 @@ Description=OpenSSH secure file transfer only daemon
 Documentation=man:sshd(8) man:sshd_config(5) man:sftp-server(8)
 After=network.target sshd-keygen.target
 Wants=sshd-keygen.target
+PartOf=sshd.service
 
 [Service]
 Type=notify
