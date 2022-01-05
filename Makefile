@@ -14,17 +14,18 @@ help:
 	@echo
 	@echo "other target:"
 	@echo " make depend"
-	@echo " make $(PY_MOD)"
+	@echo
 
 $(PY_MOD):
 	@echo DEP $@
-	${PYTHON} -c "import `echo $@ | tr A-Z a-z`" || ${PYTHON} -m pip install --user $@;
-
-depend: $(PY_MOD) paramiko
-
-paramiko:
+ifeq ($@, paramiko)
 	python3 -c "import paramiko;import sys; paramiko.__version__[:3] >= str('2.7') or sys.exit(1)" || \
 ${PYTHON} -m pip install -U --user paramiko
+else
+	${PYTHON} -c "import `echo $@ | tr A-Z a-z`" || ${PYTHON} -m pip install --user $@;
+endif
+
+depend: $(PY_MOD) paramiko
 
 -include PUPPET.makefile
 
@@ -34,3 +35,7 @@ find ./* ! -ipath "./patt-puppet.tar.xz" -delete && \
 tar xvf patt-puppet.tar.xz --strip-components=2 && \
 rm -f patt-puppet.tar.xz && \
 git add . && git commit -m "`date +%s`" || true
+
+clean:
+	find . -type f -name "*~" -delete
+	find . -type f -name "*.pyc" -delete
