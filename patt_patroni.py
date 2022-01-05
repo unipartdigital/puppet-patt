@@ -225,7 +225,9 @@ def disable_auto_failover (postgres_version, postgres_peers):
         try:
             result = patt.exec_script (nodes=[p], src="dscripts/d30.patroni.sh",
                                        args=['disable_auto_failover'] +  [postgres_version], sudo=True)
-            if any(x == True for x in [bool(n.error.strip() == 'Error: Cluster is already paused') for n in result if hasattr(n,'error')]):
+            if any(x == True for x in [
+                    bool(n.error.strip() == 'Error: Cluster is already paused'
+                         ) for n in result if hasattr(n,'error') and n.error is not None]):
                 logger.warning ("Cluster is already paused")
                 return True
             elif any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')]):
@@ -234,7 +236,8 @@ def disable_auto_failover (postgres_version, postgres_peers):
             else:
                 log_results (result)
                 return True
-        except Exception:
+        except Exception as e:
+            logger.exception (e)
             continue
     return False
 
@@ -243,7 +246,9 @@ def enable_auto_failover (postgres_version, postgres_peers):
         try:
             result = patt.exec_script (nodes=[p], src="dscripts/d30.patroni.sh",
                                        args=['enable_auto_failover'] +  [postgres_version], sudo=True)
-            if any(x == True for x in [bool(n.error.strip() == 'Error: Cluster is not paused') for n in result if hasattr(n,'error')]):
+            if any(x == True for x in [
+                    bool(n.error.strip() == 'Error: Cluster is not paused'
+                         ) for n in result if hasattr(n,'error') and n.error is not None]):
                 logger.warning ("Cluster is not paused")
                 return True
             elif any(x == True for x in [bool(n.error) for n in result if hasattr(n,'error')]):
@@ -251,7 +256,8 @@ def enable_auto_failover (postgres_version, postgres_peers):
             else:
                 log_results (result)
                 return True
-        except Exception:
+        except Exception as e:
+            logger.exception (e)
             continue
     return False
 
