@@ -452,10 +452,10 @@ class DiskFreeService(ClusterService):
                     r = requests.get("{}{}".format(c, alias_monitor), timeout=(9.0, 10.0)) # (connect, read)
                     rj = r.json()
                 except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout) as te:
-                    sleep(1)
+                    time.sleep(1)
                     continue
                 except requests.exceptions.ConnectionError:
-                    sleep(1)
+                    time.sleep(1)
                     continue
                 except:
                     raise
