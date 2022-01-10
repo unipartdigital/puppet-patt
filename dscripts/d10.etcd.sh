@@ -22,7 +22,7 @@ case "${os_id}" in
         export DEBIAN_FRONTEND=noninteractive
         ETCD_CONF="/etc/default/etcd"
         ;;
-    'rhel' | 'centos' | 'fedora')
+    'rhel' | 'centos' | 'fedora' | 'rocky')
         ETCD_CONF="/etc/etcd/etcd.conf"
         ;;
 esac
@@ -35,7 +35,7 @@ init() {
 
     etcd --version > /dev/null 2>&1 || {
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky')
                 # centos8 don't provide etcd yet
                 dnf -q -y --nogpgcheck install etcd
                 ;;
@@ -168,7 +168,7 @@ enable() {
     cluster_nodes=$*
 
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'rocky' | 'debian' | 'ubuntu')
             test "$(readlink /etc/systemd/system/etcd.service)" == "/dev/null" && \
                 rm -f /etc/systemd/system/etcd.service && systemctl daemon-reload
             systemctl reload-or-restart etcd
@@ -203,7 +203,7 @@ disable() {
     cluster_nodes=$*
 
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'rocky' | 'debian' | 'ubuntu')
             systemctl stop etcd
             if [ -r ${ETCD_CONF} ]; then
                 . ${ETCD_CONF}

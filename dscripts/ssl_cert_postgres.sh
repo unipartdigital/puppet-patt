@@ -27,7 +27,7 @@ init() {
     py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
     test "${py_ver}" -ge 38 || {
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky')
                 dnf -q -y install python38
                 alternatives --set python3 /usr/bin/python3.8
                 py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
@@ -38,7 +38,7 @@ init() {
     }
     python3 -c "import cryptography.hazmat,cryptography.x509" || {
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky')
                 py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
                 dnf -q -y install python${py_ver}-cryptography
                 ;;
@@ -59,7 +59,7 @@ copy_ca() {
 
     cd $srcdir
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'rocky' | 'debian' | 'ubuntu')
             postgres_home=$(getent passwd postgres | cut -d: -f6)
             if [  ! -d "${postgres_home}/.postgresql/" ]; then
                 mkdir -m 700 "${postgres_home}/.postgresql/"

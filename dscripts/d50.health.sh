@@ -27,7 +27,7 @@ selinux_policy () {
         test -x /usr/sbin/semodule && test -x /usr/bin/checkmodule && test -x /usr/bin/semodule_package
     } || {
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky')
                 dnf -q -y install checkpolicy policycoreutils
                 ;;
             'debian' | 'ubuntu')
@@ -58,7 +58,7 @@ selinux_policy () {
 
 init () {
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             { test -x /usr/sbin/httpd && test -f /usr/lib64/httpd/modules/mod_wsgi_python3.so ; } || {
                 py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
                 dnf -q -y install python${py_ver}-mod_wsgi httpd
@@ -136,7 +136,7 @@ configure () {
     done
 
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             test -d /etc/httpd/conf/conf.minimal.d || mkdir -p /etc/httpd/conf/conf.minimal.d
             share_gnuplot_js=`find /usr/share/gnuplot/*/js -maxdepth 1 -type d`
             python3 ${srcdir}/${comd} -t ${srcdir}/${tmpl1} -o /etc/httpd/conf/${httpd_instance}.conf \
@@ -230,7 +230,7 @@ enable () {
     httpd_instance=${1:-"patt_health"}
 
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             httpd_service="httpd@${httpd_instance}"
             ;;
         'debian' | 'ubuntu')

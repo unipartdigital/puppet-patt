@@ -25,7 +25,7 @@ esac
 
 init() {
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
             rpm_pkg="haproxy policycoreutils"
             dnf -q -y install epel-release ${rpm_pkg}
@@ -46,7 +46,7 @@ init() {
 
 enable () {
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'rocky' | 'debian' | 'ubuntu')
             test "$(readlink /etc/systemd/system/haproxy.service)" == "/dev/null" && \
                 rm -f /etc/systemd/system/haproxy.service && systemctl daemon-reload
             if haproxy -f /etc/haproxy/haproxy.cfg -c; then

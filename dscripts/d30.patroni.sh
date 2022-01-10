@@ -114,7 +114,7 @@ selinux_policy () {
         test -x /usr/sbin/semodule && test -x /usr/bin/checkmodule && test -x /usr/bin/semodule_package
     } || {
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky')
                 dnf -q -y install checkpolicy policycoreutils
                 ;;
             'debian' | 'ubuntu')
@@ -152,7 +152,7 @@ init() {
     rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
 
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             py_ver=$(python3 -c 'import sys; print ("".join(sys.version.split()[0].split(".")[0:2]))')
             test "${py_ver}" -ge 38 || {
                 echo "python36 use python3-pip 9.0.3 which start to be quiet old." >&2; exit 1 ; }
@@ -186,7 +186,7 @@ EOF
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             systemd_service="postgresql-${postgres_version}.service"
             postgres_bin="/usr/pgsql-${postgres_version}/bin/"
             ;;
@@ -223,7 +223,7 @@ enable() {
     postgres_home=$(getent passwd postgres | cut -d ':' -f 6)
 
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'rocky' | 'debian' | 'ubuntu')
             if [ "x$(ps --no-header -C patroni -o pid)" == "x" ]; then
                 systemctl start postgresql-${postgres_version}_patroni && {
                     systemctl enable postgresql-${postgres_version}_patroni; }

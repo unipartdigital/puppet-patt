@@ -25,7 +25,7 @@ pgbackrest_version () {
 
 pkg_init () {
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             pkg="pgbackrest"
             dnf -q -y install $pkg
             ;;

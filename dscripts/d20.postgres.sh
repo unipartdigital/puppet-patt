@@ -28,7 +28,7 @@ init() {
 
     case "${os_id}" in
 
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             /usr/pgsql-${postgresql_version}/bin/postgres --version > /dev/null 2>&1 || {
                 rel_repo="https://download.postgresql.org/pub/repos/yum/reporpms/EL-${os_major_version_id}-${os_arch}/pgdg-redhat-repo-latest.noarch.rpm"
                 rel_epel="https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major_version_id}.noarch.rpm"
@@ -91,7 +91,7 @@ EOF
             # ensure sane permission
         }
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             /usr/pgsql-${postgresql_version}/bin/postgres --version
             ;;
         'debian' | 'ubuntu')

@@ -26,7 +26,7 @@ esac
 tune () {
     tuned --version > /dev/null 2>&1 || {
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky')
                 dnf -q -y install tuned
                 ;;
             'debian' | 'ubuntu')

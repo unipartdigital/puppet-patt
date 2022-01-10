@@ -25,7 +25,7 @@ pg_dump_version () {
 
 pkg_init () {
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora' | "debian" | "ubuntu")
+        'rhel' | 'centos' | 'fedora' | 'rocky' | "debian" | "ubuntu")
             :
             ;;
         *)

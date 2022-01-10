@@ -32,7 +32,7 @@ init() {
     } || {
 
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky')
                 pkg="util-linux xfsprogs lvm2 cryptsetup psmisc"
                 dnf -q -y install $pkg
                 ;;

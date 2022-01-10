@@ -27,7 +27,7 @@ selinux_policy () {
         test -x /usr/sbin/semodule && test -x /usr/bin/checkmodule && test -x /usr/bin/semodule_package
     } || {
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky')
                 dnf -q -y install checkpolicy policycoreutils
                 ;;
             'debian' | 'ubuntu')
@@ -129,7 +129,7 @@ enable () {
     raft_user=${2:-"${raft_controller_user}"}
     raft_home=$(getent passwd ${raft_user} | cut -d ':' -f 6)
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'rocky' | 'debian' | 'ubuntu')
             if ! systemctl is-active --quiet ${systemd_service} ; then
                 systemctl start ${systemd_service} && systemctl enable ${systemd_service}
             elif [ "x" != "x$(find -L ${raft_home}/.local/bin/patroni_raft_controller -newer /tmp/patroni_pip.stamp)" ]; then

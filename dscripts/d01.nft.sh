@@ -34,7 +34,7 @@ init() {
     } || {
 
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky')
                 dnf -q -y install $pkg
                 nftables_conf="/etc/sysconfig/nftables.conf"
                 ;;
@@ -51,7 +51,7 @@ init() {
     }
 
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             nftables_conf="/etc/sysconfig/nftables.conf"
             ;;
         "debian" | "ubuntu")
@@ -83,7 +83,7 @@ EOF
 
 nftables_enable() {
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
+        'rhel' | 'centos' | 'fedora' | 'rocky' | 'debian' | 'ubuntu')
             systemctl is-enabled nftables || systemctl enable --now nftables
             if [ -f /etc/nftables/postgres_patroni.nft ]; then
                 if nft -c 'flush ruleset; include "/etc/nftables/postgres_patroni.nft";'; then

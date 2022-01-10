@@ -20,7 +20,7 @@ os_arch="$(uname -m)"
 ssh_archiving_init () {
     /sbin/semanage -h > /dev/null 2>&1 || {
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora')
+            'rhel' | 'centos' | 'fedora' | 'rocky' | 'rocky')
                 dnf -q -y install policycoreutils-python-utils
                 ;;
             'debian' | 'ubuntu')
@@ -68,7 +68,7 @@ ssh_archive_user_add () {
     test -d "${archive_base_dir}/${user_name}" || {
         mkdir -p -m 711 "${archive_base_dir}/${user_name}"
         case "${os_id}" in
-            'rhel' | 'centos' | 'fedora' | 'debian' | 'ubuntu')
+            'rhel' | 'centos' | 'fedora' | 'rocky' | 'rocky' | 'debian' | 'ubuntu')
                 /sbin/semanage fcontext -a -t user_home_dir_t "${archive_base_dir}/${user_name}"
                 /sbin/restorecon -R "${archive_base_dir}/${user_name}"
                 ;;

@@ -33,7 +33,7 @@ logger () {
 add_repo () {
     repo_url="$*"
     case "${os_id}" in
-        'rhel' | 'centos' | 'fedora')
+        'rhel' | 'centos' | 'fedora' | 'rocky')
             for r in ${repo_url[*]}; do
                 test "x$r" == "x" && continue
                 repo_name=$(basename ${r} .repo)
