@@ -128,6 +128,8 @@ class Archiver(object):
                                    ["subsystem=/usr/libexec/openssh/sftp-server"] +
                                    ['--dictionary-centos'] +
                                    ["subsystem=/usr/libexec/openssh/sftp-server"] +
+                                   ['--dictionary-rocky'] +
+                                   ["subsystem=/usr/libexec/openssh/sftp-server"] +
                                    ['--dictionary-debian'] +
                                    ["subsystem=/usr/lib/openssh/sftp-server"] +
                                    ['--dictionary-ubuntu'] +

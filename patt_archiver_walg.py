@@ -228,6 +228,8 @@ class ArchiverWalg(Archiver):
                                    ["pg_data={}".format(pg_data_rhl_fam)] +
                                    ['--dictionary-centos'] +
                                    ["pg_data={}".format(pg_data_rhl_fam)] +
+                                   ['--dictionary-rocky'] +
+                                   ["pg_data={}".format(pg_data_rhl_fam)] +
                                    ['--dictionary-debian'] +
                                    ["pg_data={}".format(pg_data_deb_fam)] +
                                    ['--dictionary-ubuntu'] +

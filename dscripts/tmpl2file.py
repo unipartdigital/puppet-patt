@@ -39,7 +39,7 @@ def os_release ():
                     os_release_dict['MAJOR_VERSION_ID'] = os_release_dict['VERSION_ID'].split('.')[0]
     return os_release_dict
 
-os_id = ['rhel', 'fedora', 'centos', 'debian', 'ubuntu']
+os_id = ['rhel', 'fedora', 'centos', 'rocky', 'debian', 'ubuntu']
 
 def touch(fname, times=None):
     with open(fname, 'a'):

@@ -426,7 +426,7 @@ if __name__ == "__main__":
          # use well know vendor moutpoint
          osr = os_release()
          if args.user_name == "postgres":
-            if osr['ID'] in ['rhel', 'centos', 'fedora']:
+            if osr['ID'] in ['rhel', 'centos', 'fedora', 'rocky']:
                mount_point = "/var/lib/pgsql"
             elif osr['ID'] in ['debian', 'ubuntu']:
                mount_point = "/var/lib/postgresql"

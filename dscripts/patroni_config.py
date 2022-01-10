@@ -220,7 +220,7 @@ class PatroniConfig(BaseConfig):
       self.tmpl['scope'] = cluster_name
       self.tmpl['postgresql']['connect_address'] = my_ip + ':5432'
 
-      if osr['ID'] in ['rhel', 'centos', 'fedora']:
+      if osr['ID'] in ['rhel', 'centos', 'fedora', 'rocky']:
          self.tmpl['postgresql']['data_dir'] = "/var/lib/pgsql/{}/data".format (postgres_version.strip())
          self.tmpl['postgresql']['bin_dir'] = "/usr/pgsql-{}/bin".format (postgres_version.strip())
          self.tmpl['postgresql']['pgpass'] = "/var/lib/pgsql/pgpass"
